@@ -181,13 +181,17 @@ case ${REFERENCE_OPERATION} in
         ;;
 esac
 
-cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}
 
 # Access existing build info
 SLICE_ARRAY=(${SLICE_LIST})
 CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
 CODE_TAG_ARRAY=(${CODE_TAG_LIST})
 CODE_REPO_ARRAY=(${CODE_REPO_LIST})
+
+if [[ -d "${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}" ]]; then
+    # Some operations require access to the build settings
+    cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}
+fi
 
 if [[ "${REFERENCE_OPERATION}" == "${REFERENCE_OPERATION_LISTFULL}" ]]; then
     # Update the slice list with all slices

@@ -1,0 +1,3 @@
+# Set the default behavior - its Linux so use LF for everything
+* text eol=lf
+

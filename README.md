@@ -1,4 +1,4 @@
-# gen3
+# gen3-automation
 CI/CD process management via automation tools.
 
 It is part of the broader [CodeOnTap](http://codeontap.io) devops framework.

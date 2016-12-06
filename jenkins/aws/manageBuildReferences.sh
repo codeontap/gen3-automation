@@ -280,7 +280,9 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
             # Update the build reference
             # Use newer naming and clean up legacy named build reference files
             echo -n "${BUILD_REFERENCE}" > "${NEW_BUILD_FILE}"
-            if [[ -e "${LEGACY_BUILD_FILE}" ]]; then rm "${LEGACY_BUILD_FILE}"
+            if [[ -e "${LEGACY_BUILD_FILE}" ]]; then
+                rm "${LEGACY_BUILD_FILE}"
+            fi
             ;;
     
         ${REFERENCE_OPERATION_VERIFY})

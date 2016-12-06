@@ -19,7 +19,7 @@ function usage() {
     echo -e "    -h shows this text"
     echo -e "(o) -i INFRASTRUCTURE_REFERENCE is the git reference for the config repo"
     echo -e "(o) -n initialise repos if not already initialised"
-    echo -e "(o) -p GENERATION_PATTERN_REFERENCE is the git reference for the generation framework patterns repo"
+    echo -e "(o) -p GENERATION_PATTERNS_REFERENCE is the git reference for the generation framework patterns repo"
     echo -e "(o) -r if the product directories should not be included"
     echo -e "(o) -s GENERATION_STARTUP_REFERENCE is the git reference for the generation framework startup repo"
     echo -e "\nDEFAULTS:\n"

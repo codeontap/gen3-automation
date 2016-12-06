@@ -166,8 +166,8 @@ if [[ -z "${GENERATION_DIR}" ]]; then
             exit
         fi
     fi
-    # echo "GENERATION_DIR=${GENERATION_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-    echo "GENERATION_DIR=${GENERATION_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
+    echo "GENERATION_DIR=${GENERATION_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
+    # echo "GENERATION_DIR=${GENERATION_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 fi
 
 # Pull in the patterns repo if not overridden by product or locally installed
@@ -186,8 +186,8 @@ if [[ -z "${GENERATION_PATTERNS_DIR}" ]]; then
                 exit
             fi
         fi
-    #    echo "GENERATION_PATTERNS_DIR=${GENERATION_PATTERNS_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "GENERATION_PATTERNS_DIR=${GENERATION_PATTERNS_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        echo "GENERATION_PATTERNS_DIR=${GENERATION_PATTERNS_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        # echo "GENERATION_PATTERNS_DIR=${GENERATION_PATTERNS_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
     fi
 fi
 

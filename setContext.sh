@@ -229,6 +229,7 @@ for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
     CODE_REPO="${!PRODUCT_CODE_REPO_VAR}"
 
     CODE_REPO_ARRAY+=("${CODE_REPO:-?}")
+done
 
 # Capture any provided git commit
 case ${AUTOMATION_PROVIDER} in
@@ -397,7 +398,7 @@ if [[ -z "${PRODUCT_CONFIG_REPO}" ]]; then
     if [[ -z "${!PRODUCT_CONFIG_REPO_VAR}" ]]; then
         PRODUCT_CONFIG_REPO_VAR="${PRODUCT_UPPER}_CONFIG_REPO"
     fi
-    PRODUCT_CONFIG_REPO="$(basename ${!PRODUCT_CONFIG_REPO_VAR:-$PRODUCT-config})"
+    PRODUCT_CONFIG_REPO="${!PRODUCT_CONFIG_REPO_VAR:-$PRODUCT-config}"
     if [[ -n "${PRODUCT_CONFIG_REPO}" ]]; then
         PRODUCT_CONFIG_REPO="$(basename ${PRODUCT_CONFIG_REPO})"
     fi

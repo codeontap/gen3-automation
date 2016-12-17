@@ -14,7 +14,7 @@ CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
 
 ${AUTOMATION_DIR}/manageRepo.sh -p \
     -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT} \
-    -n config \
+    -l "config" \
     -m "${DETAIL_MESSAGE}" \
     -b ${PRODUCT_CONFIG_REFERENCE}
 RESULT=$?

@@ -2,36 +2,67 @@
 
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+AUTOMATION_BASE_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd )
 
+DEPLOYMENT_MODE_UPDATE="update"
+DEPLOYMENT_MODE_STOPSTART="stopstart"
+DEPLOYMENT_MODE_STOP="stop"
+DEPLOYMENT_MODE_DEFAULT="${DEPLOYMENT_MODE_UPDATE}"
+RELEASE_MODE_DYNAMIC="dynamic"
+RELEASE_MODE_SELECTIVE="selective"
+RELEASE_MODE_PROMOTION="promotion"
+RELEASE_MODE_HOTFIX="hotfix"
+RELEASE_MODE_DEFAULT="${RELEASE_MODE_DYNAMIC}"
 function usage() {
     echo -e "\nDetermine key settings for an tenant/account/product/segment" 
-    echo -e "\nUsage: $(basename $0) -t TENANT -a ACCOUNT -p PRODUCT -c SEGMENT"
+    echo -e "\nUsage: $(basename $0) -i INTEGRATOR -t TENANT -a ACCOUNT -p PRODUCT -e ENVIRONMENT -s SEGMENT -r RELEASE_MODE -d DEPLOYMENT_MODE"
     echo -e "\nwhere\n"
     echo -e "(o) -a ACCOUNT is the tenant account name e.g. \"env01\""
-    echo -e "(o) -c SEGMENT is the SEGMENT name e.g. \"production\""
+    echo -e "(o) -d DEPLOYMENT_MODE is the mode to be used for deployment activity"
+    echo -e "(o) -e ENVIRONMENT is the environment name"
     echo -e "    -h shows this text"
+    echo -e "(o) -i INTEGRATOR is the integrator name"
     echo -e "(o) -p PRODUCT is the product name e.g. \"eticket\""
+    echo -e "(o) -r RELEASE_MODE is the mode to be used for release preparation"
+    echo -e "(o) -s SEGMENT is the SEGMENT name e.g. \"production\""
     echo -e "(o) -t TENANT is the tenant name e.g. \"env\""
+    echo -e "\nDEFAULTS:\n"
+    echo -e "DEPLOYMENT_MODE = ${DEPLOYMENT_MODE_DEFAULT}"
+    echo -e "RELEASE_MODE = ${RELEASE_MODE_DEFAULT}"
     echo -e "\nNOTES:\n"
     echo -e "1. The setting values are saved in context.properties in the current directory"
+    echo -e "2. DEPLOYMENT_MODE is one of \"${DEPLOYMENT_MODE_UPDATE}\", \"${DEPLOYMENT_MODE_STOPSTART}\" and \"${DEPLOYMENT_MODE_STOP}\""
+    echo -e "3. RELEASE_MODE is one of \"${RELEASE_MODE_DYNAMIC}\", \"${RELEASE_MODE_SELECTIVE}\", \"${RELEASE_MODE_PROMOTION}\" and \"${RELEASE_MODE_HOTFIX}\""
     echo -e ""
     exit
 }
 
 # Parse options
-while getopts ":a:c:hp:t:" opt; do
-    case $opt in
+while getopts ":a:e:hi:p:s:t:" OPT; do
+    case "${OPT}" in
         a)
             ACCOUNT="${OPTARG}"
             ;;
-        c)
-            SEGMENT="${OPTARG}"
+        d)
+            DEPLOYMENT_MODE="${OPTARG}"
+            ;;
+        e)
+            ENVIRONMENT="${OPTARG}"
             ;;
         h)
             usage
             ;;
+        i)
+            INTEGRATOR="${OPTARG}"
+            ;;
         p)
             PRODUCT="${OPTARG}"
+            ;;
+        r)
+            RELEASE_MODE="${OPTARG}"
+            ;;
+        s)
+            SEGMENT="${OPTARG}"
             ;;
         t)
             TENANT="${OPTARG}"
@@ -47,17 +78,243 @@ while getopts ":a:c:hp:t:" opt; do
      esac
 done
 
+function defineSetting() {
+    DV_NAME="${1^^}"
+    DV_VALUE="${2}"
+    DV_CAPITALISATION="${3,,}"
+    
+    case "${DV_CAPITALISATION}" in
+        lower)
+            DV_VALUE="${DV_VALUE,,}"
+            ;;
+        upper)
+            DV_VALUE="${DV_VALUE^^}"
+            ;;
+    esac
+    
+    declare -g ${DV_NAME}="${DV_VALUE}"
+    echo "${DV_NAME}=${DV_VALUE}" >> ${AUTOMATION_DATA_DIR}/context.properties
+}
+
+function findAndDefineSetting() {
+    # Find the value for a name
+    TLNV_NAME="${1^^}"
+    TLNV_SUFFIX="${2^^}"
+    TLNV_LEVEL1="${3^^}"
+    TLNV_LEVEL2="${4^^}"
+    TLNV_DECLARE="${5,,}"
+    TLNV_DEFAULT="${6}"
+    
+    # Variables to check
+    declare NAME_VAR="${TLNV_NAME}"
+    declare NAME_LEVEL2_VAR="${TLNV_LEVEL1}_${TLNV_LEVEL2}_${TLNV_SUFFIX}"
+    declare NAME_LEVEL1_VAR="${TLNV_LEVEL1}_${TLNV_SUFFIX}"
+
+    # Already defined?    
+    if [[ (-z "${NAME_VAR}") || (-z "${!NAME_VAR}") ]]; then
+
+        # Two level definition?
+        if [[ (-n "${TLNV_LEVEL2}") && (-n "${!NAME_LEVEL2_VAR}") ]]; then
+            NAME_VAR="${NAME_LEVEL2_VAR}"
+        else
+            # One level definition?
+            if [[ (-n "${TLNV_LEVEL1}") && (-n "${!NAME_LEVEL1_VAR}") ]]; then
+                NAME_VAR="${NAME_LEVEL1_VAR}"
+            fi
+        fi
+    fi
+
+    if [[ -n "${!NAME_VAR}" ]]; then
+        # Value found
+        NAME_VALUE="${!NAME_VAR}"
+    else
+        # Use the default
+        NAME_VAR=""
+        NAME_VALUE="${TLNV_DEFAULT}"
+    fi
+
+    case "${TLNV_DECLARE}" in
+        value)
+            defineSetting "${TLNV_NAME}" "${NAME_VALUE}" "lower"
+            ;;
+    
+        name)
+            defineSetting "${TLNV_NAME}" "${NAME_VAR}" "upper"
+            ;;
+    esac
+}
+
+GIT_PROVIDERS=()
+function defineGitProviderSettings() {
+    # Define key values about use of a git provider
+    DGPD_USE="${1}"
+    DGPD_SUBUSE="${2}"
+    DGPD_LEVEL1="${3}"
+    DGPD_LEVEL2="${4}"
+    DGPD_DEFAULT="${5}"
+    DGPD_SUBUSE_PREFIX="${6}"
+    DGPD_SUBUSE_PREFIX_PROVIDED="${6+x}"
+
+    # Provider type
+    DGPD_PROVIDER_TYPE="GIT"
+
+    # Format subuse
+    if [[ -n "${DGPD_SUBUSE}" ]]; then
+        DGPD_SUBUSE="${DGPD_SUBUSE}_"
+    fi
+
+    # Default subuse prefix if not explicitly provided
+    if [[ -z "${DGPD_SUBUSE_PREFIX_PROVIDED}" ]]; then
+        DGPD_SUBUSE_PREFIX="${DGPD_SUBUSE}"
+    fi
+
+    # Format subuse prefix
+    if [[ -n "${DGPD_SUBUSE_PREFIX}" ]]; then
+        DGPD_SUBUSE_PREFIX="${DGPD_SUBUSE_PREFIX}_"
+    fi
+
+    # Find the provider
+    findAndDefineSetting "${DGPD_USE}_${DGPD_SUBUSE}${DGPD_PROVIDER_TYPE}_PROVIDER" \
+        "${DGPD_SUBUSE_PREFIX}${DGPD_PROVIDER_TYPE}_PROVIDER" \
+        "${DGPD_LEVEL1}" "${DGPD_LEVEL2}" "value" "${DGPD_DEFAULT}"
+    DGPD_PROVIDER="${NAME_VALUE,,}"
+
+    # Already seen?
+    for PROVIDER in ${GIT_PROVIDERS[@]}; do
+        if [[ "${PROVIDER}" == "${DGPD_PROVIDER}" ]]; then
+            return
+        fi
+    done
+    
+    # Seen now
+    GIT_PROVIDERS+=("${DGPD_PROVIDER}")
+
+    # Ensure all attributes defined
+    
+    # Dereferenced provider attributes 
+    for ATTRIBUTE in CREDENTIALS; do
+        findAndDefineSetting  "${DGPD_PROVIDER}_${DGPD_PROVIDER_TYPE}_${ATTRIBUTE}_VAR" \
+            "${ATTRIBUTE}" "${DGPD_PROVIDER}" "${DGPD_PROVIDER_TYPE}" "name"
+    done
+
+    # Provider attributes
+    for ATTRIBUTE in ORG DNS; do
+        findAndDefineSetting "${DGPD_PROVIDER}_${DGPD_PROVIDER_TYPE}_${ATTRIBUTE}" \
+            "${ATTRIBUTE}" "${DGPD_PROVIDER}" "${DGPD_PROVIDER_TYPE}" "value"
+    done
+
+    # API_DNS defaults to DNS
+    # NOTE: NAME_VALUE use assumes DNS was last setting defined
+    findAndDefineSetting "${DGPD_PROVIDER}_${DGPD_PROVIDER_TYPE}_API_DNS" \
+        "API_DNS" "${DGPD_PROVIDER}" "${DGPD_PROVIDER_TYPE}" "value" "api.${NAME_VALUE}"
+}
+
+DOCKER_PROVIDERS=()
+function defineDockerProviderSettings() {
+    # Define key values about use of a docker provider
+    DDPD_USE="$1"
+    DDPD_SUBUSE="$2"
+    DDPD_LEVEL1="$3"
+    DDPD_LEVEL2="$4"
+    DDPD_DEFAULT="$5"
+    DDPD_SUBUSE_PREFIX="$6"
+    DDPD_SUBUSE_PREFIX_PROVIDED="${6+x}"
+    
+    # Provider type
+    DDPD_PROVIDER_TYPE="DOCKER"
+
+    # Format subuse
+    if [[ -n "${DDPD_SUBUSE}" ]]; then
+        DDPD_SUBUSE="${DDPD_SUBUSE}_"
+    fi
+
+    # Default subuse prefix if not explicitly provided
+    if [[ -z "${DDPD_SUBUSE_PREFIX_PROVIDED}" ]]; then
+        DDPD_SUBUSE_PREFIX="${DDPD_SUBUSE}"
+    fi
+
+    # Format subuse prefix
+    if [[ -n "${DDPD_SUBUSE_PREFIX}" ]]; then
+        DDPD_SUBUSE_PREFIX="${DDPD_SUBUSE_PREFIX}_"
+    fi
+
+    # Find the provider
+    findAndDefineSetting "${DDPD_USE}_${DDPD_SUBUSE}${DDPD_PROVIDER_TYPE}_PROVIDER" \
+        "${DDPD_SUBUSE_PREFIX}${DDPD_PROVIDER_TYPE}_PROVIDER" \
+        "${DDPD_LEVEL1}" "${DDPD_LEVEL2}" "value" "${DDPD_DEFAULT}"
+    DDPD_PROVIDER="${NAME_VALUE,,}"
+
+    # Already seen?
+    for PROVIDER in ${DOCKER_PROVIDERS[@]}; do
+        if [[ "${PROVIDER}" == "${DDPD_PROVIDER}" ]]; then
+            return
+        fi
+    done
+    
+    # Seen now
+    DOCKER_PROVIDERS+=("${DDPD_PROVIDER}")
+
+    # Ensure all attributes defined
+    
+    # Dereferenced provider attributes 
+    for ATTRIBUTE in USER PASSWORD; do
+        findAndDefineSetting "${DDPD_PROVIDER}_${DDPD_PROVIDER_TYPE}_${ATTRIBUTE}_VAR" \
+            "${ATTRIBUTE}" "${DDPD_PROVIDER}" "${DDPD_PROVIDER_TYPE}" "name"
+    done
+
+    # Provider attributes
+    for ATTRIBUTE in DNS; do
+        findAndDefineSetting "${DDPD_PROVIDER}_${DDPD_PROVIDER_TYPE}_${ATTRIBUTE}" \
+        "${ATTRIBUTE}" "${DDPD_PROVIDER}" "${DDPD_PROVIDER_TYPE}" "value"
+    done
+
+    # API_DNS defaults to DNS 
+    # NOTE: NAME_VALUE use assumes DNS was last setting defined
+    findAndDefineSetting "${DDPD_PROVIDER}_${DDPD_PROVIDER_TYPE}_API_DNS" \
+        "API_DNS" "${DDPD_PROVIDER}" "${DDPD_PROVIDER_TYPE}" "value" "${NAME_VALUE}"
+}
+
+function defineRepoSettings() {
+    # Define key values about use of a code repo
+    DRD_USE="$1"
+    DRD_SUBUSE="$2"
+    DRD_LEVEL1="$3"
+    DRD_LEVEL2="$4"
+    DRD_DEFAULT="$5"
+    DRD_TYPE="$6"
+
+    # Optional repo type
+    DRD_TYPE_PREFIX=""
+    if [[ -n "${DRD_TYPE}" ]]; then
+        DRD_TYPE_PREFIX="${DRD_TYPE}_"
+    fi
+
+    # Find the repo
+    findAndDefineSetting "${DRD_USE}_${DRD_SUBUSE}_${DRD_TYPE_PREFIX}REPO" "${DRD_TYPE:-${DRD_SUBUSE}}_REPO" \
+        "${DRD_LEVEL1}" "${DRD_LEVEL2}" "" "${DRD_DEFAULT}"
+
+    # Strip off any path info for legacy compatability
+    if [[ -n "${NAME_VALUE}" ]]; then
+        NAME_VALUE="$(basename ${NAME_VALUE})"
+    fi
+
+    defineSetting "${DRD_USE}_${DRD_SUBUSE}_${DRD_TYPE_PREFIX}REPO" "${NAME_VALUE}"
+}
+
+
+### Automation framework details ###
+
 # First things first - what automation provider are we?
-AUTOMATION_BASE_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd )
 if [[ -n "${JOB_NAME}" ]]; then
     AUTOMATION_PROVIDER="${AUTOMATION_PROVIDER:-jenkins}"
 fi
 AUTOMATION_PROVIDER="${AUTOMATION_PROVIDER,,}"
-AUTOMATION_PROVIDER_UPPER="${AUTOMATION_PROVIDER^^}"
 AUTOMATION_PROVIDER_DIR="${AUTOMATION_BASE_DIR}/${AUTOMATION_PROVIDER}"
-# AUTOMATION_PROVIDER_DIR="${AUTOMATION_BASE_DIR}"
 
-case ${AUTOMATION_PROVIDER} in
+
+### Context from automation provider ###
+
+case "${AUTOMATION_PROVIDER}" in
     jenkins)
         # Determine the integrator/tenant/product/environment/segment from 
         # the job name if not already defined or provided on the command line
@@ -139,58 +396,106 @@ case ${AUTOMATION_PROVIDER} in
 
         # Working directory
         AUTOMATION_DATA_DIR="${WORKSPACE}"
+        
+        # Job identifier
+        AUTOMATION_JOB_IDENTIFIER="${BUILD_NUMBER}"
         ;;
 esac
 
-TENANT=${TENANT,,}
-TENANT_UPPER=${TENANT^^}
 
-PRODUCT=${PRODUCT,,}
-PRODUCT_UPPER=${PRODUCT^^}
+### Core settings ###
+
+findAndDefineSetting "TENANT" "" "" "" "value"
+findAndDefineSetting "PRODUCT" "" "" "" "value"
 
 # Default SEGMENT and ENVIRONMENT - normally they are the same
-SEGMENT=${SEGMENT:-${ENVIRONMENT}}
-ENVIRONMENT=${ENVIRONMENT:-${SEGMENT}}
-
-SEGMENT=${SEGMENT,,}
-SEGMENT_UPPER=${SEGMENT^^}
+findAndDefineSetting "SEGMENT"     "" "" "" "value" "${ENVIRONMENT}"
+findAndDefineSetting "ENVIRONMENT" "" "" "" "value" "${SEGMENT}"
 
 # Determine the account from the product/segment combination
 # if not already defined or provided on the command line
-if [[ -z "${ACCOUNT}" ]]; then
-    ACCOUNT_VAR="${PRODUCT_UPPER}_${SEGMENT_UPPER}_ACCOUNT"
-    if [[ -z "${!ACCOUNT_VAR}" ]]; then
-        ACCOUNT_VAR="${PRODUCT_UPPER}_ACCOUNT"
-    fi
-    ACCOUNT="${!ACCOUNT_VAR}"
-fi
+findAndDefineSetting "ACCOUNT" "ACCOUNT" "${PRODUCT}" "${SEGMENT}" "value"
 
-ACCOUNT=${ACCOUNT,,}
-ACCOUNT_UPPER=${ACCOUNT^^}
+# Default account/product git provider - "github"
+# ORG is product specific so not defaulted here
+findAndDefineSetting "GITHUB_GIT_DNS" "" "" "" "value" "github.com"
 
-# Default "GITHUB" git provider
-GITHUB_DNS="${GITHUB_DNS:-github.com}"
+# Default generation framework git provider - "codeontap"
+findAndDefineSetting "CODEONTAP_GIT_DNS" "" "" "" "value" "github.com"
+findAndDefineSetting "CODEONTAP_GIT_ORG" "" "" "" "value" "codeontap"
 
 # Default who to include as the author if git updates required
-GIT_USER="${GIT_USER:-$GIT_USER_DEFAULT}"
-GIT_USER="${GIT_USER:-alm}"
-GIT_EMAIL="${GIT_EMAIL:-$GIT_EMAIL_DEFAULT}"
+findAndDefineSetting "GIT_USER"  "" "" "" "value" "${GIT_USER_DEFAULT:-alm}"
+findAndDefineSetting "GIT_EMAIL" "" "" "" "value" "${GIT_EMAIL_DEFAULT}"
 
-# Defaults for generation framework
-# TODO: Add ability for ACCOUNT/PRODUCT override
-GENERATION_GIT_DNS="${GENERATION_GIT_DNS:-github.com}"
-GENERATION_GIT_ORG="${GENERATION_GIT_ORG:-codeontap}"
-GENERATION_BIN_REPO="${GENERATION_BIN_REPO:-gen3.git}"
-GENERATION_PATTERNS_REPO="${GENERATION_PATTERNS_REPO:-gen3-patterns.git}"
-GENERATION_STARTUP_REPO="${GENERATION_STARTUP_REPO:-gen3-startup.git}"
+# Separator when specifying a git reference for a slice 
+findAndDefineSetting "TAG_SEPARATOR" "" "${PRODUCT}" "${SEGMENT}" "value" "!"
 
-# Determine the slice list and optional corresponding code tags and repos
-# A slice can be followed by an optional code tag separated by an "!"
-TAG_SEPARATOR='!'
+# Modes
+findAndDefineSetting "DEPLOYMENT_MODE" "" "" "" "value" "${MODE:-${DEPLOYMENT_MODE_DEFAULT}}"
+findAndDefineSetting "RELEASE_MODE" "" "" "" "value" "${RELEASE_MODE_DEFAULT}"
+
+### Account details ###
+
+# - provider
+findAndDefineSetting "ACCOUNT_PROVIDER" "ACCOUNT_PROVIDER" "${ACCOUNT}" "" "value" "aws"
+AUTOMATION_DIR="${AUTOMATION_PROVIDER_DIR}/${ACCOUNT_PROVIDER}"
+
+# - access credentials
+case "${ACCOUNT_PROVIDER}" in
+    aws)
+        . ${AUTOMATION_DIR}/setCredentials.sh "${ACCOUNT}"
+        echo "ACCOUNT_AWS_ACCESS_KEY_ID_VAR=${AWS_CRED_AWS_ACCESS_KEY_ID_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        echo "ACCOUNT_AWS_SECRET_ACCESS_KEY_VAR=${AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        echo "ACCOUNT_TEMP_AWS_ACCESS_KEY_ID=${AWS_CRED_TEMP_AWS_ACCESS_KEY_ID}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        echo "ACCOUNT_TEMP_AWS_SECRET_ACCESS_KEY=${AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        echo "ACCOUNT_TEMP_AWS_SESSION_TOKEN=${AWS_CRED_TEMP_AWS_SESSION_TOKEN}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        ;;
+esac
+
+# - cmdb git provider
+defineGitProviderSettings "ACCOUNT" "" "${ACCOUNT}" "" "github"
+
+# - cmdb repos
+defineRepoSettings "ACCOUNT" "CONFIG"         "${ACCOUNT}" "" "${ACCOUNT}-config"
+defineRepoSettings "ACCOUNT" "INFRASTRUCTURE" "${ACCOUNT}" "" "${ACCOUNT}-infrastructure"
+
+
+### Product details ###
+
+# - cmdb git provider
+defineGitProviderSettings "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT_GIT_PROVIDER}"
+
+# - cmdb repos
+defineRepoSettings "PRODUCT" "CONFIG"         "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-config"
+defineRepoSettings "PRODUCT" "INFRASTRUCTURE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-infrastructure"
+
+# - code git provider
+defineGitProviderSettings "PRODUCT" "CODE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT_GIT_PROVIDER}"
+
+# - local docker provider
+defineDockerProviderSettings "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT}"
+
+
+### Generation framework details ###
+
+# - git provider
+defineGitProviderSettings "GENERATION" ""  "${PRODUCT}" "${SEGMENT}" "codeontap"
+
+# - repos
+defineRepoSettings "GENERATION" "BIN"      "${PRODUCT}" "${SEGMENT}" "gen3.git"
+defineRepoSettings "GENERATION" "PATTERNS" "${PRODUCT}" "${SEGMENT}" "gen3-patterns.git"
+defineRepoSettings "GENERATION" "STARTUP"  "${PRODUCT}" "${SEGMENT}" "gen3-startup.git"
+
+
+### Application slice details ###
+
+# Determine the slice list and optional corresponding code tags/commits and repos
 SLICE_ARRAY=()
 CODE_COMMIT_ARRAY=()
 CODE_TAG_ARRAY=()
 CODE_REPO_ARRAY=()
+CODE_PROVIDER_ARRAY=()
 for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
     SLICE_PART="${CURRENT_SLICE%%${TAG_SEPARATOR}*}"
     # Note that if there is no tag, then TAG_PART = SLICE_PART
@@ -222,13 +527,12 @@ for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
 
     # Determine code repo for the slice - there may be none
     CODE_SLICE=$(echo "${SLICE_PART^^}" | tr "-" "_")
-    PRODUCT_CODE_REPO_VAR="${PRODUCT_UPPER}_${CODE_SLICE^^}_CODE_REPO"
-    if [[ -z "${!PRODUCT_CODE_REPO_VAR}" ]]; then
-        PRODUCT_CODE_REPO_VAR="${PRODUCT_UPPER}_CODE_REPO"
-    fi
-    CODE_REPO="${!PRODUCT_CODE_REPO_VAR}"
-
-    CODE_REPO_ARRAY+=("${CODE_REPO:-?}")
+    defineRepoSettings "PRODUCT" "${CODE_SLICE}" "${PRODUCT}" "${CODE_SLICE}" "?" "CODE"
+    CODE_REPO_ARRAY+=("${NAME_VALUE}")
+    
+    # Assume all code covered by one provider for now
+    # Remaining code works off this array so easy to change in the future
+    CODE_PROVIDER_ARRAY+=("${PRODUCT_CODE_GIT_PROVIDER}")
 done
 
 # Capture any provided git commit
@@ -255,214 +559,69 @@ for INDEX in $( seq 0 $((${#SLICE_ARRAY[@]}-1)) ); do
     SLICE_SEPARATOR=" "
 done
 
-# Determine the account provider
-if [[ -z "${ACCOUNT_PROVIDER}" ]]; then
-    ACCOUNT_PROVIDER_VAR="${ACCOUNT_UPPER}_ACCOUNT_PROVIDER"
-    ACCOUNT_PROVIDER="${!ACCOUNT_PROVIDER_VAR}"
-    ACCOUNT_PROVIDER="${ACCOUNT_PROVIDER:-aws}"
-fi
-ACCOUNT_PROVIDER="${ACCOUNT_PROVIDER,,}"
-ACCOUNT_PROVIDER_UPPER="${ACCOUNT_PROVIDER^^}"
-AUTOMATION_DIR="${AUTOMATION_PROVIDER_DIR}/${ACCOUNT_PROVIDER}"
-# AUTOMATION_DIR="${AUTOMATION_PROVIDER_DIR}"
+# Save for subsequent processing
+echo "SLICE_LIST=${SLICE_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "CODE_REPO_LIST=${CODE_REPO_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "CODE_PROVIDER_LIST=${CODE_PROVIDER_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+if [[ -n "${UPDATED_SLICES}" ]]; then echo "SLICES=${UPDATED_SLICES}" >> ${AUTOMATION_DATA_DIR}/context.properties; fi
 
-# Determine the account access credentials
-case ${ACCOUNT_PROVIDER} in
-    aws)
-        . ${AUTOMATION_DIR}/setCredentials.sh ${ACCOUNT_UPPER}
-        ;;
-esac
 
-# Determine the account git provider
-if [[ -z "${ACCOUNT_GIT_PROVIDER}" ]]; then
-    ACCOUNT_GIT_PROVIDER_VAR="${ACCOUNT_UPPER}_GIT_PROVIDER"
-    ACCOUNT_GIT_PROVIDER="${!ACCOUNT_GIT_PROVIDER_VAR}"
-    ACCOUNT_GIT_PROVIDER="${ACCOUNT_GIT_PROVIDER:-GITHUB}"
-fi
+### Release management ###
+ 
+if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
+    # Release tag
+    RELEASE_TAG_BODY="${RELEASE_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
+    defineSetting "RELEASE_TAG" "r${RELEASE_TAG_BODY}-${SEGMENT}"
+    
+    case "${RELEASE_MODE}" in
+        # Promotion details
+        ${RELEASE_MODE_PROMOTION}|${RELEASE_MODE_SELECTIVE})
+            findAndDefineSetting "PROMOTION_FROM_SEGMENT" "PROMOTION_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
+            findAndDefineSetting "PROMOTION_FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "value"
+            if [[ (-n "${PROMOTION_FROM_SEGMENT}") && 
+                    (-n "${PROMOTION_FROM_ACCOUNT}")]]; then
+                defineGitProviderSettings    "PROMOTION_FROM_ACCOUNT" "" "${PROMOTION_FROM_ACCOUNT}" "" "github"
+                defineGitProviderSettings    "PROMOTION_FROM" "" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "${PROMOTION_FROM_ACCOUNT_GIT_PROVIDER}"
+                defineRepoSettings           "PROMOTION_FROM" "CONFIG" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "${PRODUCT}-config"
+                defineDockerProviderSettings "PROMOTION_FROM" "" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "${PROMOTION_FROM_ACCOUNT}"
+                defineSetting "PROMOTION_TAG" "p${RELEASE_TAG_BODY}-${SEGMENT}"
+            else
+                echo -e "\nPROMOTION segment/account not defined"
+                exit
+            fi
+            ;;
 
-ACCOUNT_GIT_PROVIDER=${ACCOUNT_GIT_PROVIDER,,}
-ACCOUNT_GIT_PROVIDER_UPPER=${ACCOUNT_GIT_PROVIDER^^}
+        #  Hotfix details
+        ${RELEASE_MODE_HOTFIX})
+            findAndDefineSetting "HOTFIX_FROM_SEGMENT" "HOTFIX_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
+            findAndDefineSetting "HOTFIX_FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"
+            if [[ (-n "${HOTFIX_FROM_SEGMENT}") && 
+                    (-n "${HOTFIX_FROM_ACCOUNT}")]]; then
+                defineDockerProviderSettings "HOTFIX_FROM" "" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "${HOTFIX_FROM_ACCOUNT}"
+                defineSetting "HOTFIX_TAG" "h${RELEASE_TAG_BODY}-${SEGMENT}"
+            else
+                echo -e "\HOTFIX segment/account not defined"
+                exit
+            fi
+            ;;
+    esac
 
-ACCOUNT_GIT_USER_VAR="${ACCOUNT_GIT_PROVIDER_UPPER}_USER"
-ACCOUNT_GIT_PASSWORD_VAR="${ACCOUNT_GIT_PROVIDER_UPPER}_PASSWORD"
-ACCOUNT_GIT_CREDENTIALS_VAR="${ACCOUNT_GIT_PROVIDER_UPPER}_CREDENTIALS"
+    # Acceptance tag
+    case "${RELEASE_MODE}" in
+        ${RELEASE_MODE_PROMOTION}|)
+            defineSetting "ACCEPTANCE_TAG" "r${RELEASE_TAG_BODY}-${PROMOTION_FROM_SEGMENT}"
+            ;;
 
-ACCOUNT_GIT_ORG_VAR="${ACCOUNT_GIT_PROVIDER_UPPER}_ORG"
-ACCOUNT_GIT_ORG="${!ACCOUNT_GIT_ORG_VAR}"
-
-ACCOUNT_GIT_DNS_VAR="${ACCOUNT_GIT_PROVIDER_UPPER}_DNS"
-ACCOUNT_GIT_DNS="${!ACCOUNT_GIT_DNS_VAR}"
-
-ACCOUNT_GIT_API_DNS_VAR="${ACCOUNT_GIT_PROVIDER_UPPER}_API_DNS"
-ACCOUNT_GIT_API_DNS="${!ACCOUNT_GIT_API_DNS_VAR:-api.$ACCOUNT_GIT_DNS}"
-
-# Determine account repos
-if [[ -z "${ACCOUNT_CONFIG_REPO}" ]]; then
-    ACCOUNT_CONFIG_REPO_VAR="${ACCOUNT_UPPER}_CONFIG_REPO"
-    ACCOUNT_CONFIG_REPO="${!ACCOUNT_CONFIG_REPO_VAR:-$ACCOUNT-config}"
-    if [[ -n "${ACCOUNT_CONFIG_REPO}" ]]; then
-        ACCOUNT_CONFIG_REPO="$(basename ${ACCOUNT_CONFIG_REPO})"
-    fi
-fi
-if [[ -z "${ACCOUNT_INFRASTRUCTURE_REPO}" ]]; then
-    ACCOUNT_INFRASTRUCTURE_REPO_VAR="${ACCOUNT_UPPER}_INFRASTRUCTURE_REPO"
-    ACCOUNT_INFRASTRUCTURE_REPO="${!ACCOUNT_INFRASTRUCTURE_REPO_VAR:-$ACCOUNT-infrastructure}"
-    if [[ -n "${ACCOUNT_INFRASTRUCTURE_REPO}" ]]; then
-        ACCOUNT_INFRASTRUCTURE_REPO="$(basename ${ACCOUNT_INFRASTRUCTURE_REPO})"
-    fi
-fi
-
-# Determine the product git provider
-if [[ -z "${PRODUCT_GIT_PROVIDER}" ]]; then
-    PRODUCT_GIT_PROVIDER_VAR="${PRODUCT_UPPER}_${SEGMENT_UPPER}_GIT_PROVIDER"
-    if [[ -z "${!PRODUCT_GIT_PROVIDER_VAR}" ]]; then
-        PRODUCT_GIT_PROVIDER_VAR="${PRODUCT_UPPER}_GIT_PROVIDER"
-    fi
-    PRODUCT_GIT_PROVIDER="${!PRODUCT_GIT_PROVIDER_VAR}"
-    PRODUCT_GIT_PROVIDER="${PRODUCT_GIT_PROVIDER:-$ACCOUNT_GIT_PROVIDER}"
+        ${RELEASE_MODE_DYNAMIC}|${RELEASE_MODE_SELECTIVE}|${RELEASE_MODE_HOTFIX})
+            defineSetting "ACCEPTANCE_TAG" "latest"
+            ;;
+    esac
 fi
 
-PRODUCT_GIT_PROVIDER=${PRODUCT_GIT_PROVIDER,,}
-PRODUCT_GIT_PROVIDER_UPPER=${PRODUCT_GIT_PROVIDER^^}
 
-PRODUCT_GIT_USER_VAR="${PRODUCT_GIT_PROVIDER_UPPER}_USER"
-PRODUCT_GIT_PASSWORD_VAR="${PRODUCT_GIT_PROVIDER_UPPER}_PASSWORD"
-PRODUCT_GIT_CREDENTIALS_VAR="${PRODUCT_GIT_PROVIDER_UPPER}_CREDENTIALS"
-
-PRODUCT_GIT_ORG_VAR="${PRODUCT_GIT_PROVIDER_UPPER}_ORG"
-PRODUCT_GIT_ORG="${!PRODUCT_GIT_ORG_VAR}"
-
-PRODUCT_GIT_DNS_VAR="${PRODUCT_GIT_PROVIDER_UPPER}_DNS"
-PRODUCT_GIT_DNS="${!PRODUCT_GIT_DNS_VAR}"
-
-PRODUCT_GIT_API_DNS_VAR="${PRODUCT_GIT_PROVIDER_UPPER}_API_DNS"
-PRODUCT_GIT_API_DNS="${!PRODUCT_GIT_API_DNS_VAR:-api.$PRODUCT_GIT_DNS}"
-
-# Determine the product local docker provider
-if [[ -z "${PRODUCT_DOCKER_PROVIDER}" ]]; then
-    PRODUCT_DOCKER_PROVIDER_VAR="${PRODUCT_UPPER}_${SEGMENT_UPPER}_DOCKER_PROVIDER"
-    if [[ -z "${!PRODUCT_DOCKER_PROVIDER_VAR}" ]]; then
-        PRODUCT_DOCKER_PROVIDER_VAR="${PRODUCT_UPPER}_DOCKER_PROVIDER"
-    fi
-    PRODUCT_DOCKER_PROVIDER="${!PRODUCT_DOCKER_PROVIDER_VAR}"
-    PRODUCT_DOCKER_PROVIDER="${PRODUCT_DOCKER_PROVIDER:-$ACCOUNT}"
-fi
-
-PRODUCT_DOCKER_PROVIDER=${PRODUCT_DOCKER_PROVIDER,,}
-PRODUCT_DOCKER_PROVIDER_UPPER=${PRODUCT_DOCKER_PROVIDER^^}
-
-PRODUCT_DOCKER_USER_VAR="${PRODUCT_DOCKER_PROVIDER_UPPER}_USER"
-PRODUCT_DOCKER_PASSWORD_VAR="${PRODUCT_DOCKER_PROVIDER_UPPER}_PASSWORD"
-
-PRODUCT_DOCKER_DNS_VAR="${PRODUCT_DOCKER_PROVIDER_UPPER}_DNS"
-PRODUCT_DOCKER_DNS="${!PRODUCT_DOCKER_DNS_VAR}"
-
-PRODUCT_DOCKER_API_DNS_VAR="${PRODUCT_DOCKER_PROVIDER_UPPER}_API_DNS"
-PRODUCT_DOCKER_API_DNS="${!PRODUCT_DOCKER_API_DNS_VAR:-$PRODUCT_DOCKER_DNS}"
-
-# Determine the product remote docker provider (for sourcing new images)
-if [[ -z "${PRODUCT_REMOTE_DOCKER_PROVIDER}" ]]; then
-    PRODUCT_REMOTE_DOCKER_PROVIDER_VAR="${PRODUCT_UPPER}_${SEGMENT_UPPER}_REMOTE_DOCKER_PROVIDER"
-    if [[ -z "${!PRODUCT_REMOTE_DOCKER_PROVIDER_VAR}" ]]; then
-        PRODUCT_REMOTE_DOCKER_PROVIDER_VAR="${PRODUCT_UPPER}_REMOTE_DOCKER_PROVIDER"
-    fi
-    PRODUCT_REMOTE_DOCKER_PROVIDER="${!PRODUCT_REMOTE_DOCKER_PROVIDER_VAR}"
-    PRODUCT_REMOTE_DOCKER_PROVIDER="${PRODUCT_REMOTE_DOCKER_PROVIDER:-$PRODUCT_DOCKER_PROVIDER}"
-fi
-
-PRODUCT_REMOTE_DOCKER_PROVIDER=${PRODUCT_REMOTE_DOCKER_PROVIDER,,}
-PRODUCT_REMOTE_DOCKER_PROVIDER_UPPER=${PRODUCT_REMOTE_DOCKER_PROVIDER^^}
-
-PRODUCT_REMOTE_DOCKER_USER_VAR="${PRODUCT_REMOTE_DOCKER_PROVIDER_UPPER}_USER"
-PRODUCT_REMOTE_DOCKER_PASSWORD_VAR="${PRODUCT_REMOTE_DOCKER_PROVIDER_UPPER}_PASSWORD"
-
-PRODUCT_REMOTE_DOCKER_DNS_VAR="${PRODUCT_REMOTE_DOCKER_PROVIDER_UPPER}_DNS"
-PRODUCT_REMOTE_DOCKER_DNS="${!PRODUCT_REMOTE_DOCKER_DNS_VAR}"
-
-PRODUCT_REMOTE_DOCKER_API_DNS_VAR="${PRODUCT_REMOTE_DOCKER_PROVIDER_UPPER}_API_DNS"
-PRODUCT_REMOTE_DOCKER_API_DNS="${!PRODUCT_REMOTE_DOCKER_API_DNS_VAR:-$PRODUCT_REMOTE_DOCKER_DNS}"
-
-# Determine the suffix to add to verification identifiers to form the remote tag
-# used when sourcing new images
-if [[ -z "${PRODUCT_REMOTE_DOCKER_TAG_SUFFIX}" ]]; then
-    PRODUCT_REMOTE_DOCKER_TAG_SUFFIX_VAR="${PRODUCT_UPPER}_${SEGMENT_UPPER}_REMOTE_DOCKER_TAG_SUFFIX"
-    if [[ -z "${!PRODUCT_REMOTE_DOCKER_TAG_SUFFIX_VAR}" ]]; then
-        PRODUCT_REMOTE_DOCKER_TAG_SUFFIX_VAR="${PRODUCT_UPPER}_REMOTE_DOCKER_TAG_SUFFIX"
-    fi
-    PRODUCT_REMOTE_DOCKER_TAG_SUFFIX="${!PRODUCT_REMOTE_DOCKER_TAG_SUFFIX_VAR}"
-fi
-
-# Determine product repos
-if [[ -z "${PRODUCT_CONFIG_REPO}" ]]; then
-    PRODUCT_CONFIG_REPO_VAR="${PRODUCT_UPPER}_${SEGMENT_UPPER}_CONFIG_REPO"
-    if [[ -z "${!PRODUCT_CONFIG_REPO_VAR}" ]]; then
-        PRODUCT_CONFIG_REPO_VAR="${PRODUCT_UPPER}_CONFIG_REPO"
-    fi
-    PRODUCT_CONFIG_REPO="${!PRODUCT_CONFIG_REPO_VAR:-$PRODUCT-config}"
-    if [[ -n "${PRODUCT_CONFIG_REPO}" ]]; then
-        PRODUCT_CONFIG_REPO="$(basename ${PRODUCT_CONFIG_REPO})"
-    fi
-fi
-if [[ -z "${PRODUCT_INFRASTRUCTURE_REPO}" ]]; then
-    PRODUCT_INFRASTRUCTURE_REPO_VAR="${PRODUCT_UPPER}_${SEGMENT_UPPER}_INFRASTRUCTURE_REPO"
-    if [[ -z "${!PRODUCT_INFRASTRUCTURE_REPO_VAR}" ]]; then
-        PRODUCT_INFRASTRUCTURE_REPO_VAR="${PRODUCT_UPPER}_INFRASTRUCTURE_REPO"
-    fi
-    PRODUCT_INFRASTRUCTURE_REPO="${!PRODUCT_INFRASTRUCTURE_REPO_VAR:-$PRODUCT-infrastructure}"
-    if [[ -n "${PRODUCT_INFRASTRUCTURE_REPO}" ]]; then
-        PRODUCT_INFRASTRUCTURE_REPO="$(basename ${PRODUCT_INFRASTRUCTURE_REPO})"
-    fi
-fi
-
-# Determine the product code git provider
-if [[ -z "${PRODUCT_CODE_GIT_PROVIDER}" ]]; then
-    PRODUCT_CODE_GIT_PROVIDER_VAR="${PRODUCT_UPPER}_${SEGMENT_UPPER}_GIT_PROVIDER"
-    if [[ -z "${!PRODUCT_CODE_GIT_PROVIDER_VAR}" ]]; then
-        PRODUCT_CODE_GIT_PROVIDER_VAR="${PRODUCT_UPPER}_GIT_PROVIDER"
-    fi
-    PRODUCT_CODE_GIT_PROVIDER="${!PRODUCT_CODE_GIT_PROVIDER_VAR}"
-    PRODUCT_CODE_GIT_PROVIDER="${PRODUCT_CODE_GIT_PROVIDER:-$PRODUCT_GIT_PROVIDER}"
-fi
-
-PRODUCT_CODE_GIT_PROVIDER=${PRODUCT_CODE_GIT_PROVIDER,,}
-PRODUCT_CODE_GIT_PROVIDER_UPPER=${PRODUCT_CODE_GIT_PROVIDER^^}
-
-PRODUCT_CODE_GIT_USER_VAR="${PRODUCT_CODE_GIT_PROVIDER_UPPER}_USER"
-PRODUCT_CODE_GIT_PASSWORD_VAR="${PRODUCT_CODE_GIT_PROVIDER_UPPER}_PASSWORD"
-PRODUCT_CODE_GIT_CREDENTIALS_VAR="${PRODUCT_CODE_GIT_PROVIDER_UPPER}_CREDENTIALS"
-
-PRODUCT_CODE_GIT_ORG_VAR="${PRODUCT_CODE_GIT_PROVIDER_UPPER}_ORG"
-PRODUCT_CODE_GIT_ORG="${!PRODUCT_CODE_GIT_ORG_VAR}"
-
-PRODUCT_CODE_GIT_DNS_VAR="${PRODUCT_CODE_GIT_PROVIDER_UPPER}_DNS"
-PRODUCT_CODE_GIT_DNS="${!PRODUCT_CODE_GIT_DNS_VAR}"
-
-PRODUCT_CODE_GIT_API_DNS_VAR="${PRODUCT_CODE_GIT_PROVIDER_UPPER}_API_DNS"
-PRODUCT_CODE_GIT_API_DNS="${!PRODUCT_CODE_GIT_API_DNS_VAR:-api.$PRODUCT_CODE_GIT_DNS}"
-
-# Determine the release and verification tag
-RELEASE_TAG="r${BUILD_NUMBER}-${SEGMENT}"
-if [[ -n "${RELEASE_IDENTIFIER}" ]]; then
-    RELEASE_TAG="${RELEASE_IDENTIFIER}-${SEGMENT}"
-    if [[ "${RELEASE_IDENTIFIER}" =~ ^-?[0-9]+$ ]]; then
-        # It is a number - assume identifier defaulted to build number
-        # Note that this won't work is user decides to use their own
-        # integer based scheme. Advise is thus to add a non-numeric prefix/suffix
-        # as long as its not a prefix of "r"
-        RELEASE_TAG="r${RELEASE_TAG}"
-    fi
-fi
-
-if [[ -n "${VERIFICATION_IDENTIFIER}" ]]; then
-    VERIFICATION_TAG="${VERIFICATION_IDENTIFIER}${PRODUCT_REMOTE_DOCKER_TAG_SUFFIX}"
-    if [[ "${VERIFICATION_IDENTIFIER}" =~ ^-?[0-9]+$ ]]; then
-        # It is a number - assume identifier defaulted to build number
-        # Note that this won't work is user decides to use their own
-        # integer based scheme. Advise is thus to add a non-numeric prefix/suffix
-        # as long as its not a prefix of "r"
-        VERIFICATION_TAG="r${VERIFICATION_TAG}"
-    fi
-fi
+### Capture details for logging etc ###
 
 # Basic details for git commits/slack notification (enhanced by other scripts)
 DETAIL_MESSAGE="product=${PRODUCT}"
@@ -476,74 +635,10 @@ if [[ -n "${TASKS}" ]];                     then DETAIL_MESSAGE="${DETAIL_MESSAG
 if [[ -n "${GIT_USER}" ]];                  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, user=${GIT_USER}"; fi
 if [[ -n "${MODE}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, mode=${MODE}"; fi
 
-# Save for future steps
-echo "TENANT=${TENANT}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "ACCOUNT=${ACCOUNT}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT=${PRODUCT}" >> ${AUTOMATION_DATA_DIR}/context.properties
-if [[ -n "${SEGMENT}" ]]; then echo "SEGMENT=${SEGMENT}" >> ${AUTOMATION_DATA_DIR}/context.properties; fi
-if [[ -n "${UPDATED_SLICES}" ]]; then echo "SLICES=${UPDATED_SLICES}" >> ${AUTOMATION_DATA_DIR}/context.properties; fi
-
-echo "GIT_USER=${GIT_USER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "GIT_EMAIL=${GIT_EMAIL}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "GENERATION_GIT_DNS=${GENERATION_GIT_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "GENERATION_GIT_ORG=${GENERATION_GIT_ORG}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "GENERATION_BIN_REPO=${GENERATION_BIN_REPO}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "GENERATION_PATTERNS_REPO=${GENERATION_PATTERNS_REPO}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "GENERATION_STARTUP_REPO=${GENERATION_STARTUP_REPO}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "SLICE_LIST=${SLICE_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "CODE_REPO_LIST=${CODE_REPO_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "ACCOUNT_PROVIDER=${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "ACCOUNT_GIT_PROVIDER=${ACCOUNT_GIT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "ACCOUNT_GIT_USER_VAR=${ACCOUNT_GIT_USER_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "ACCOUNT_GIT_PASSWORD_VAR=${ACCOUNT_GIT_PASSWORD_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "ACCOUNT_GIT_CREDENTIALS_VAR=${ACCOUNT_GIT_CREDENTIALS_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "ACCOUNT_GIT_ORG=${ACCOUNT_GIT_ORG}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "ACCOUNT_GIT_DNS=${ACCOUNT_GIT_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "ACCOUNT_GIT_API_DNS=${ACCOUNT_GIT_API_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "ACCOUNT_CONFIG_REPO=${ACCOUNT_CONFIG_REPO}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "ACCOUNT_INFRASTRUCTURE_REPO=${ACCOUNT_INFRASTRUCTURE_REPO}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "PRODUCT_GIT_PROVIDER=${PRODUCT_GIT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_GIT_USER_VAR=${PRODUCT_GIT_USER_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_GIT_PASSWORD_VAR=${PRODUCT_GIT_PASSWORD_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_GIT_CREDENTIALS_VAR=${PRODUCT_GIT_CREDENTIALS_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_GIT_ORG=${PRODUCT_GIT_ORG}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_GIT_DNS=${PRODUCT_GIT_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_GIT_API_DNS=${PRODUCT_GIT_API_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "PRODUCT_DOCKER_PROVIDER=${PRODUCT_DOCKER_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_DOCKER_USER_VAR=${PRODUCT_DOCKER_USER_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_DOCKER_PASSWORD_VAR=${PRODUCT_DOCKER_PASSWORD_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_DOCKER_DNS=${PRODUCT_DOCKER_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_DOCKER_API_DNS=${PRODUCT_DOCKER_API_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "PRODUCT_REMOTE_DOCKER_PROVIDER=${PRODUCT_REMOTE_DOCKER_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_REMOTE_DOCKER_USER_VAR=${PRODUCT_REMOTE_DOCKER_USER_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_REMOTE_DOCKER_PASSWORD_VAR=${PRODUCT_REMOTE_DOCKER_PASSWORD_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_REMOTE_DOCKER_DNS=${PRODUCT_REMOTE_DOCKER_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_REMOTE_DOCKER_API_DNS=${PRODUCT_REMOTE_DOCKER_API_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "PRODUCT_CONFIG_REPO=${PRODUCT_CONFIG_REPO}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_INFRASTRUCTURE_REPO=${PRODUCT_INFRASTRUCTURE_REPO}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "PRODUCT_CODE_GIT_PROVIDER=${PRODUCT_CODE_GIT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_CODE_GIT_USER_VAR=${PRODUCT_CODE_GIT_USER_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_CODE_GIT_PASSWORD_VAR=${PRODUCT_CODE_GIT_PASSWORD_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_CODE_GIT_CREDENTIALS_VAR=${PRODUCT_CODE_GIT_CREDENTIALS_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_CODE_GIT_ORG=${PRODUCT_CODE_GIT_ORG}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_CODE_GIT_DNS=${PRODUCT_CODE_GIT_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_CODE_GIT_API_DNS=${PRODUCT_CODE_GIT_API_DNS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-echo "RELEASE_TAG=${RELEASE_TAG}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "VERIFICATION_TAG=${VERIFICATION_TAG}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "DETAIL_MESSAGE=${DETAIL_MESSAGE}" >> ${AUTOMATION_DATA_DIR}/context.properties
+
+
+### Remember automation details ###
 
 echo "AUTOMATION_BASE_DIR=${AUTOMATION_BASE_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_PROVIDER=${AUTOMATION_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
@@ -551,15 +646,6 @@ echo "AUTOMATION_PROVIDER_DIR=${AUTOMATION_PROVIDER_DIR}" >> ${AUTOMATION_DATA_D
 echo "AUTOMATION_DIR=${AUTOMATION_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_DATA_DIR=${AUTOMATION_DATA_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
-case ${ACCOUNT_PROVIDER} in
-    aws)
-        echo "ACCOUNT_AWS_ACCESS_KEY_ID_VAR=${AWS_CRED_AWS_ACCESS_KEY_ID_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "ACCOUNT_AWS_SECRET_ACCESS_KEY_VAR=${AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "ACCOUNT_TEMP_AWS_ACCESS_KEY_ID=${AWS_CRED_TEMP_AWS_ACCESS_KEY_ID}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "ACCOUNT_TEMP_AWS_SECRET_ACCESS_KEY=${AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "ACCOUNT_TEMP_AWS_SESSION_TOKEN=${AWS_CRED_TEMP_AWS_SESSION_TOKEN}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        ;;
-esac
 
 # All good
 RESULT=0

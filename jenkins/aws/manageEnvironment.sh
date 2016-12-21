@@ -34,7 +34,7 @@ for LEVEL in segment solution; do
 		# Update the infrastructure repo to capture any stack changes
         ${AUTOMATION_DIR}/manageRepo.sh -p \
             -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/infrastructure/${PRODUCT} \
-            -n infrastructure \
+            -l "infrastructure" \
             -m "Stack changes as a result of applying ${MODE} mode to the ${LEVEL} level stack for the ${SLICE} slice of the ${SEGMENT} segment"
             
 	    RESULT=$?

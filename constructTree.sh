@@ -106,9 +106,9 @@ BASE_DIR="${AUTOMATION_DATA_DIR}/${ACCOUNT}"
 if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
     
     # Pull in the product config repo
-    PRODUCT_URL="https://${!PRODUCT_GIT_CREDENTIALS_VAR}@${PRODUCT_GIT_DNS}/${PRODUCT_GIT_ORG}/${PRODUCT_CONFIG_REPO}"
     PRODUCT_DIR="${BASE_DIR}/config/${PRODUCT}"
-    ${AUTOMATION_DIR}/manageRepo.sh -c -n "product config" -u "${PRODUCT_URL}" \
+    ${AUTOMATION_DIR}/manageRepo.sh -c -l "product config" \
+        -n "${PRODUCT_CONFIG_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
         -d "${PRODUCT_DIR}" -b "${PRODUCT_CONFIG_REFERENCE}"
     RESULT=$?
     if [[ ${RESULT} -ne 0 ]]; then
@@ -117,7 +117,8 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
     
     # Initialise if necessary
     if [[ "${INIT_REPOS}" == "true" ]]; then
-        ${AUTOMATION_DIR}/manageRepo.sh -i -n "product config" -u "${PRODUCT_URL}" \
+        ${AUTOMATION_DIR}/manageRepo.sh -i -l "product config" \
+            -n "${PRODUCT_CONFIG_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
             -d "${PRODUCT_DIR}"
         RESULT=$?
         if [[ ${RESULT} -ne 0 ]]; then
@@ -131,9 +132,9 @@ fi
 if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
 
     # Pull in the account config repo
-    ACCOUNT_URL="https://${!ACCOUNT_GIT_CREDENTIALS_VAR}@${ACCOUNT_GIT_DNS}/${ACCOUNT_GIT_ORG}/${ACCOUNT_CONFIG_REPO}"
     ACCOUNT_DIR="${BASE_DIR}/config/${ACCOUNT}"
-    ${AUTOMATION_DIR}/manageRepo.sh -c -n "account config" -u "${ACCOUNT_URL}" \
+    ${AUTOMATION_DIR}/manageRepo.sh -c -l "account config" \
+        -n "${ACCOUNT_CONFIG_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
         -d "${ACCOUNT_DIR}"
     RESULT=$?
     if [[ ${RESULT} -ne 0 ]]; then
@@ -142,7 +143,8 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
 
     # Initialise if necessary
     if [[ "${INIT_REPOS}" == "true" ]]; then
-        ${AUTOMATION_DIR}/manageRepo.sh -i -n "account config" -u "${ACCOUNT_URL}" \
+        ${AUTOMATION_DIR}/manageRepo.sh -i -l "account config" \
+            -n "${ACCOUNT_CONFIG_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
             -d "${ACCOUNT_DIR}"
         RESULT=$?
         if [[ ${RESULT} -ne 0 ]]; then
@@ -158,8 +160,8 @@ if [[ -z "${GENERATION_DIR}" ]]; then
         mkdir -p "${GENERATION_DIR}"
         cp -rp ${BASE_DIR}/config/${PRODUCT}/bin "${GENERATION_DIR}"
     else
-        GENERATION_URL="https://${GENERATION_GIT_DNS}/${GENERATION_GIT_ORG}/${GENERATION_BIN_REPO}"
-        ${AUTOMATION_DIR}/manageRepo.sh -c -n "generation bin" -u "${GENERATION_URL}" \
+        ${AUTOMATION_DIR}/manageRepo.sh -c -l "generation bin" \
+            -n "${GENERATION_BIN_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
             -d "${GENERATION_DIR}" -b "${GENERATION_BIN_REFERENCE}"
         RESULT=$?
         if [[ ${RESULT} -ne 0 ]]; then
@@ -167,7 +169,6 @@ if [[ -z "${GENERATION_DIR}" ]]; then
         fi
     fi
     echo "GENERATION_DIR=${GENERATION_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-    # echo "GENERATION_DIR=${GENERATION_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 fi
 
 # Pull in the patterns repo if not overridden by product or locally installed
@@ -178,8 +179,8 @@ if [[ -z "${GENERATION_PATTERNS_DIR}" ]]; then
             mkdir -p "${GENERATION_PATTERNS_DIR}"
             cp -rp ${BASE_DIR}/config/${PRODUCT}/patterns "${GENERATION_PATTERNS_DIR}"
         else
-            GENERATION_URL="https://${GENERATION_GIT_DNS}/${GENERATION_GIT_ORG}/${GENERATION_PATTERNS_REPO}"
-            ${AUTOMATION_DIR}/manageRepo.sh -c -n "generation patterns" -u "${GENERATION_URL}" \
+            ${AUTOMATION_DIR}/manageRepo.sh -c -l "generation patterns" \
+                -n "${GENERATION_PATTERNS_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
                 -d "${GENERATION_PATTERNS_DIR}" -b "${GENERATION_PATTERNS_REFERENCE}"
             RESULT=$?
             if [[ ${RESULT} -ne 0 ]]; then
@@ -187,16 +188,15 @@ if [[ -z "${GENERATION_PATTERNS_DIR}" ]]; then
             fi
         fi
         echo "GENERATION_PATTERNS_DIR=${GENERATION_PATTERNS_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        # echo "GENERATION_PATTERNS_DIR=${GENERATION_PATTERNS_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
     fi
 fi
 
 if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
     
     # Pull in the product infrastructure repo
-    PRODUCT_URL="https://${!PRODUCT_GIT_CREDENTIALS_VAR}@${PRODUCT_GIT_DNS}/${PRODUCT_GIT_ORG}/${PRODUCT_INFRASTRUCTURE_REPO}"
     PRODUCT_DIR="${BASE_DIR}/infrastructure/${PRODUCT}"
-    ${AUTOMATION_DIR}/manageRepo.sh -c -n "product infrastructure" -u "${PRODUCT_URL}" \
+    ${AUTOMATION_DIR}/manageRepo.sh -c -l "product infrastructure" \
+        -n "${PRODUCT_INFRASTRUCTURE_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
         -d "${PRODUCT_DIR}" -b "${PRODUCT_INFRASTRUCTURE_REFERENCE}"
     RESULT=$?
     if [[ ${RESULT} -ne 0 ]]; then
@@ -205,7 +205,8 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
     
     # Initialise if necessary
     if [[ "${INIT_REPOS}" == "true" ]]; then
-        ${AUTOMATION_DIR}/manageRepo.sh -i -n "product infrastructure" -u "${PRODUCT_URL}" \
+        ${AUTOMATION_DIR}/manageRepo.sh -i -l "product infrastructure" \
+            -n "${PRODUCT_INFRASTRUCTURE_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
             -d "${PRODUCT_DIR}"
         RESULT=$?
         if [[ ${RESULT} -ne 0 ]]; then
@@ -219,9 +220,9 @@ fi
 if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
 
     # Pull in the account infrastructure repo
-    ACCOUNT_URL="https://${!ACCOUNT_GIT_CREDENTIALS_VAR}@${ACCOUNT_GIT_DNS}/${ACCOUNT_GIT_ORG}/${ACCOUNT_INFRASTRUCTURE_REPO}"
     ACCOUNT_DIR="${BASE_DIR}/infrastructure/${ACCOUNT}"
-    ${AUTOMATION_DIR}/manageRepo.sh -c -n "account infrastructure" -u "${ACCOUNT_URL}" \
+    ${AUTOMATION_DIR}/manageRepo.sh -c -l "account infrastructure" \
+        -n "${ACCOUNT_INFRASTRUCTURE_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
         -d "${ACCOUNT_DIR}"
     RESULT=$?
     if [[ ${RESULT} -ne 0 ]]; then
@@ -230,7 +231,8 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
 
     # Initialise if necessary
     if [[ "${INIT_REPOS}" == "true" ]]; then
-        ${AUTOMATION_DIR}/manageRepo.sh -i -n "account infrastructure" -u "${ACCOUNT_URL}" \
+        ${AUTOMATION_DIR}/manageRepo.sh -i -l "account infrastructure" \
+            -n "${ACCOUNT_INFRASTRUCTURE_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
             -d "${ACCOUNT_DIR}"
         RESULT=$?
         if [[ ${RESULT} -ne 0 ]]; then
@@ -247,8 +249,8 @@ if [[ -z "${GENERATION_STARTUP_DIR}" ]]; then
             mkdir -p "${GENERATION_STARTUP_DIR}"
             cp -rp ${BASE_DIR}/infrastructure/${PRODUCT}/startup "${GENERATION_STARTUP_DIR}"
         else
-            GENERATION_URL="https://${GENERATION_GIT_DNS}/${GENERATION_GIT_ORG}/${GENERATION_STARTUP_REPO}"
-            ${AUTOMATION_DIR}/manageRepo.sh -c -n "generation startup" -u "${GENERATION_URL}" \
+            ${AUTOMATION_DIR}/manageRepo.sh -c -l "generation startup" \
+                -n "${GENERATION_STARTUP_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
                 -d "${GENERATION_STARTUP_DIR}" -b "${GENERATION_STARTUP_REFERENCE}"
             RESULT=$?
             if [[ ${RESULT} -ne 0 ]]; then

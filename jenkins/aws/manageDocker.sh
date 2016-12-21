@@ -5,11 +5,16 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 DOCKER_TAG_DEFAULT="latest"
 DOCKER_IMAGE_SOURCE_DEFAULT="remote"
-DOCKER_OPERATION_DEFAULT="verify"
+DOCKER_OPERATION_BUILD="build"
+DOCKER_OPERATION_VERIFY="verify"
+DOCKER_OPERATION_TAG="tag"
+DOCKER_OPERATION_PULL="pull"
+DOCKER_OPERATION_DEFAULT="${DOCKER_OPERATION_VERIFY}"
 function usage() {
     echo -e "\nManage docker images"
-    echo -e "\nUsage: $(basename $0) -b -v -p -k -l DOCKER_REPO -t DOCKER_TAG -i REMOTE_DOCKER_REPO -r REMOTE_DOCKER_TAG -u DOCKER_IMAGE_SOURCE  -d DOCKER_PRODUCT -s DOCKER_SLICE -g DOCKER_CODE_COMMIT"
+    echo -e "\nUsage: $(basename $0) -b -v -p -k -a DOCKER_PROVIDER -l DOCKER_REPO -t DOCKER_TAG -z REMOTE_DOCKER_PROVIDER -i REMOTE_DOCKER_REPO -r REMOTE_DOCKER_TAG -u DOCKER_IMAGE_SOURCE  -d DOCKER_PRODUCT -s DOCKER_SLICE -g DOCKER_CODE_COMMIT"
     echo -e "\nwhere\n"
+    echo -e "(o) -a DOCKER_PROVIDER is the local docker provider"
     echo -e "(o) -b perform docker build and save in local registry"
     echo -e "(o) -d DOCKER_PRODUCT is the product to use when defaulting DOCKER_REPO"
     echo -e "(o) -g DOCKER_CODE_COMMIT to use when defaulting DOCKER_REPO"
@@ -23,10 +28,13 @@ function usage() {
     echo -e "(o) -t DOCKER_TAG is the local tag"
     echo -e "(o) -u DOCKER_IMAGE_SOURCE is the registry to pull from"
     echo -e "(o) -v verify image is present in local registry"
+    echo -e "(o) -z REMOTE_DOCKER_PROVIDER is the docker provider to pull from"
     echo -e "\nDEFAULTS:\n"
+    echo -e "DOCKER_PROVIDER=\$PRODUCT_DOCKER_PROVIDER"
     echo -e "DOCKER_REPO=\"DOCKER_PRODUCT/DOCKER_SLICE-DOCKER_CODE_COMMIT\" or "
     echo -e "\"DOCKER_PRODUCT/DOCKER_CODE_COMMIT\" if no DOCKER_SLICE defined"
     echo -e "DOCKER_TAG=${DOCKER_TAG_DEFAULT}"
+    echo -e "REMOTE_DOCKER_PROVIDER=\$PRODUCT_REMOTE_DOCKER_PROVIDER"
     echo -e "REMOTE_DOCKER_REPO=DOCKER_REPO"
     echo -e "REMOTE_DOCKER_TAG=DOCKER_TAG"
     echo -e "DOCKER_IMAGE_SOURCE=${DOCKER_IMAGE_SOURCE_DEFAULT}"
@@ -35,9 +43,67 @@ function usage() {
     echo -e "\nNOTES:\n"
     echo -e "1. DOCKER_IMAGE_SOURCE can be \"remote\" or \"dockerhub\""
     echo -e ""
-    RESULT=1
     exit
 }
+
+# Parse options
+while getopts ":a:bd:g:hki:l:pr:s:t:u:vz:" opt; do
+    case $opt in
+        a)
+            DOCKER_PROVIDER="${OPTARG}"
+            ;;
+        b)
+            DOCKER_OPERATION="${DOCKER_OPERATION_BUILD}"
+            ;;
+        d)
+            DOCKER_PRODUCT="${OPTARG}"
+            ;;
+        g)
+            DOCKER_CODE_COMMIT="${OPTARG}"
+            ;;
+        h)
+            usage
+            ;;
+        i)
+            REMOTE_DOCKER_REPO="${OPTARG}"
+            ;;
+        k)
+            DOCKER_OPERATION="${DOCKER_OPERATION_TAG}"
+            ;;
+        l)
+            DOCKER_REPO="${OPTARG}"
+            ;;
+        p)
+            DOCKER_OPERATION="${DOCKER_OPERATION_PULL}"
+            ;;
+        r)
+            REMOTE_DOCKER_TAG="${OPTARG}"
+            ;;
+        s)
+            DOCKER_SLICE="${OPTARG}"
+            ;;
+        t)
+            DOCKER_TAG="${OPTARG}"
+            ;;
+        u)
+            DOCKER_IMAGE_SOURCE="${OPTARG}"
+            ;;
+        v)
+            DOCKER_OPERATION="${DOCKER_OPERATION_VERIFY}"
+            ;;
+        z)
+            REMOTE_DOCKER_PROVIDER="${OPTARG}"
+            ;;
+        \?)
+            echo -e "\nInvalid option: -${OPTARG}"
+            usage
+            ;;
+        :)
+            echo -e "\nOption -${OPTARG} requires an argument"
+            usage
+            ;;
+     esac
+done
 
 # Determine if a docker registry is hosted by AWS
 # $1 = registry
@@ -124,64 +190,26 @@ function createRepository() {
     return 0
 }
 
-# Parse options
-while getopts ":bd:g:hki:l:pr:s:t:u:v" opt; do
-    case $opt in
-        b)
-            DOCKER_OPERATION="build"
-            ;;
-        d)
-            DOCKER_PRODUCT="${OPTARG}"
-            ;;
-        g)
-            DOCKER_CODE_COMMIT="${OPTARG}"
-            ;;
-        h)
-            usage
-            ;;
-        i)
-            REMOTE_DOCKER_REPO="${OPTARG}"
-            ;;
-        k)
-            DOCKER_OPERATION="tag"
-            ;;
-        l)
-            DOCKER_REPO="${OPTARG}"
-            ;;
-        p)
-            DOCKER_OPERATION="pull"
-            ;;
-        r)
-            REMOTE_DOCKER_TAG="${OPTARG}"
-            ;;
-        s)
-            DOCKER_SLICE="${OPTARG}"
-            ;;
-        t)
-            DOCKER_TAG="${OPTARG}"
-            ;;
-        u)
-            DOCKER_IMAGE_SOURCE="${OPTARG}"
-            ;;
-        v)
-            DOCKER_OPERATION="verify"
-            ;;
-        \?)
-            echo -e "\nInvalid option: -${OPTARG}"
-            usage
-            ;;
-        :)
-            echo -e "\nOption -${OPTARG} requires an argument"
-            usage
-            ;;
-     esac
-done
+# Define docker provider attributes
+# $1 = provider
+# $2 = variable prefix
+function defineDockerProviderAttributes() {
+    DDPA_PROVIDER="${1^^}"
+    DDPA_PREFIX="${2^^}"
+
+    # Attribute variable names
+    for DDPA_ATTRIBUTE in "DNS" "API_DNS" "USER_VAR" "PASSWORD_VAR"; do
+        DDPA_PROVIDER_VAR="${DDPA_PROVIDER}_DOCKER_${DDPA_ATTRIBUTE}"
+        declare -g ${DDPA_PREFIX}_${DDPA_ATTRIBUTE}="${!DDPA_PROVIDER_VAR}"
+    done
+}
 
 # Apply local registry defaults
-DOCKER_TAG="${DOCKER_TAG:-$DOCKER_TAG_DEFAULT}"
-DOCKER_IMAGE_SOURCE="${DOCKER_IMAGE_SOURCE:-$DOCKER_IMAGE_SOURCE_DEFAULT}"
-DOCKER_OPERATION="${DOCKER_OPERATION:-$DOCKER_OPERATION_DEFAULT}"
-DOCKER_PRODUCT="${DOCKER_PRODUCT:-$PRODUCT}"
+DOCKER_PROVIDER="${DOCKER_PROVIDER:-${PRODUCT_DOCKER_PROVIDER}}"
+DOCKER_TAG="${DOCKER_TAG:-${DOCKER_TAG_DEFAULT}}"
+DOCKER_IMAGE_SOURCE="${DOCKER_IMAGE_SOURCE:-${DOCKER_IMAGE_SOURCE_DEFAULT}}"
+DOCKER_OPERATION="${DOCKER_OPERATION:-${DOCKER_OPERATION_DEFAULT}}"
+DOCKER_PRODUCT="${DOCKER_PRODUCT:-${PRODUCT}}"
 
 # Default local repository is based on standard image naming conventions
 if [[ (-n "${DOCKER_PRODUCT}") && 
@@ -193,6 +221,9 @@ if [[ (-n "${DOCKER_PRODUCT}") &&
     fi
 fi
 
+# Determine docker provider details
+defineDockerProviderAttributes "${DOCKER_PROVIDER}" "DOCKER_PROVIDER"
+
 # Ensure the local repository has been determined
 if [[ -z "${DOCKER_REPO}" ]]; then
 	echo -e "\nJob requires the local repository name, or the product/slice/commit"
@@ -200,18 +231,29 @@ if [[ -z "${DOCKER_REPO}" ]]; then
 fi
 
 # Apply remote registry defaults
+REMOTE_DOCKER_PROVIDER="${REMOTE_DOCKER_PROVIDER:-${PRODUCT_REMOTE_DOCKER_PROVIDER}}"
 REMOTE_DOCKER_REPO="${REMOTE_DOCKER_REPO:-$DOCKER_REPO}"
 REMOTE_DOCKER_TAG="${REMOTE_DOCKER_TAG:-$DOCKER_TAG}"
 
+# Determine remote docker provider details
+defineDockerProviderAttributes "${REMOTE_DOCKER_PROVIDER}" "REMOTE_DOCKER_PROVIDER"
+
+# pull = tag if local provider = remote provider
+if [[ ("${DOCKER_PROVIDER}" == "${REMOTE_DOCKER_PROVIDER}") &&
+        ("${DOCKER_OPERATION}" == "${${DOCKER_OPERATION_PULL}}") ]]; then
+    DOCKER_OPERATION="${DOCKER_OPERATION_TAG}"
+fi
+
+
 # Formulate the local registry details
 DOCKER_IMAGE="${DOCKER_REPO}:${DOCKER_TAG}"
-FULL_DOCKER_IMAGE="${PRODUCT_DOCKER_DNS}/${DOCKER_IMAGE}"
+FULL_DOCKER_IMAGE="${DOCKER_PROVIDER_DNS}/${DOCKER_IMAGE}"
 
 # Confirm access to the local registry
-dockerLogin ${PRODUCT_DOCKER_DNS} ${PRODUCT_DOCKER_PROVIDER} ${!PRODUCT_DOCKER_USER_VAR} ${!PRODUCT_DOCKER_PASSWORD_VAR}
+dockerLogin ${DOCKER_PROVIDER_DNS} ${DOCKER_PROVIDER} ${!DOCKER_PROVIDER_USER_VAR} ${!DOCKER_PROVIDER_PASSWORD_VAR}
 RESULT=$?
 if [[ "$RESULT" -ne 0 ]]; then
-   echo -e "\nCan't log in to ${PRODUCT_DOCKER_DNS}"
+   echo -e "\nCan't log in to ${DOCKER_PROVIDER_DNS}"
    exit
 fi
 
@@ -224,7 +266,7 @@ case ${DOCKER_OPERATION} in
             echo -e "\nCannot build image ${DOCKER_IMAGE}"
             exit
         fi
-        createRepository ${PRODUCT_DOCKER_DNS} ${DOCKER_REPO}
+        createRepository ${DOCKER_PROVIDER_DNS} ${DOCKER_REPO}
         RESULT=$?
         if [ $RESULT -ne 0 ]; then
             echo -e "\nUnable to create repository ${DOCKER_REPO} in the local registry"
@@ -239,14 +281,14 @@ case ${DOCKER_OPERATION} in
     verify)
         # Check whether the image is already in the local registry
         # Use the docker API to avoid having to download the image to verify its existence
-        isAWSRegistry ${PRODUCT_DOCKER_DNS}
+        isAWSRegistry ${DOCKER_PROVIDER_DNS}
         if [[ $? -eq 0 ]]; then
             DOCKER_IMAGE_PRESENT=$(aws --region ${AWS_REGISTRY_REGION} ecr list-images --registry-id ${AWS_REGISTRY_ID} --repository-name "${DOCKER_REPO}" | jq ".imageIds[] | select(.imageTag==\"${DOCKER_TAG}\") | select(.!=null)")
         else
             # Be careful of @ characters in the username or password
-            DOCKER_USER=$(echo ${!PRODUCT_DOCKER_USER_VAR} | sed "s/@/%40/g")
-            DOCKER_PASSWORD=$(echo ${!PRODUCT_DOCKER_PASSWORD_VAR} | sed "s/@/%40/g")
-            DOCKER_IMAGE_PRESENT=$(curl -s https://${DOCKER_USER}:${DOCKER_PASSWORD}@${PRODUCT_DOCKER_API_DNS}/v1/repositories/${DOCKER_REPO}/tags | jq ".[\"${DOCKER_TAG}\"] | select(.!=null)")
+            DOCKER_USER=$(echo ${!DOCKER_PROVIDER_USER_VAR} | sed "s/@/%40/g")
+            DOCKER_PASSWORD=$(echo ${!DOCKER_PROVIDER_PASSWORD_VAR} | sed "s/@/%40/g")
+            DOCKER_IMAGE_PRESENT=$(curl -s https://${DOCKER_USER}:${DOCKER_PASSWORD}@${DOCKER_PROVIDER_API_DNS}/v1/repositories/${DOCKER_REPO}/tags | jq ".[\"${DOCKER_TAG}\"] | select(.!=null)")
         fi
 
         if [[ -n "${DOCKER_IMAGE_PRESENT}" ]]; then
@@ -261,13 +303,13 @@ case ${DOCKER_OPERATION} in
     tag)
         # Formulate the tag details
         REMOTE_DOCKER_IMAGE="${REMOTE_DOCKER_REPO}:${REMOTE_DOCKER_TAG}"
-        FULL_REMOTE_DOCKER_IMAGE="${PRODUCT_DOCKER_DNS}/${REMOTE_DOCKER_IMAGE}"
+        FULL_REMOTE_DOCKER_IMAGE="${DOCKER_PROVIDER_DNS}/${REMOTE_DOCKER_IMAGE}"
 
         # Pull in the local image
         docker pull ${FULL_DOCKER_IMAGE}
         RESULT=$?
         if [[ "$RESULT" -ne 0 ]]; then
-            echo -e "\nCan't pull ${DOCKER_IMAGE} from ${PRODUCT_DOCKER_DNS}"
+            echo -e "\nCan't pull ${DOCKER_IMAGE} from ${DOCKER_PROVIDER_DNS}"
         else
             # Tag the image ready to push to the registry
             docker tag ${FULL_DOCKER_IMAGE} ${FULL_REMOTE_DOCKER_IMAGE}
@@ -276,7 +318,7 @@ case ${DOCKER_OPERATION} in
                 echo -e "\nCouldn't tag image ${FULL_DOCKER_IMAGE} with ${FULL_REMOTE_DOCKER_IMAGE}"
             else
                 # Push to registry
-                createRepository ${PRODUCT_DOCKER_DNS} ${REMOTE_DOCKER_REPO}
+                createRepository ${DOCKER_PROVIDER_DNS} ${REMOTE_DOCKER_REPO}
                 RESULT=$?
                 if [ $RESULT -ne 0 ]; then
                     echo -e "\nUnable to create repository ${REMOTE_DOCKER_REPO} in the local registry"
@@ -297,13 +339,13 @@ case ${DOCKER_OPERATION} in
 
         case ${DOCKER_IMAGE_SOURCE} in
             remote)
-                FULL_REMOTE_DOCKER_IMAGE="${PRODUCT_REMOTE_DOCKER_DNS}/${REMOTE_DOCKER_IMAGE}"
+                FULL_REMOTE_DOCKER_IMAGE="${REMOTE_DOCKER_PROVIDER_DNS}/${REMOTE_DOCKER_IMAGE}"
 
                 # Confirm access to the remote registry
-                dockerLogin ${PRODUCT_REMOTE_DOCKER_DNS} ${PRODUCT_REMOTE_DOCKER_PROVIDER} ${!PRODUCT_REMOTE_DOCKER_USER_VAR} ${!PRODUCT_REMOTE_DOCKER_PASSWORD_VAR}
+                dockerLogin ${REMOTE_DOCKER_PROVIDER_DNS} ${REMOTE_DOCKER_PROVIDER} ${!REMOTE_DOCKER_PROVIDER_USER_VAR} ${!REMOTE_DOCKER_PROVIDER_PASSWORD_VAR}
                 RESULT=$?
                 if [[ "$RESULT" -ne 0 ]]; then
-                    echo -e "\nCan't log in to ${PRODUCT_REMOTE_DOCKER_DNS}"
+                    echo -e "\nCan't log in to ${REMOTE_DOCKER_PROVIDER_DNS}"
                     exit
                 fi
                 ;;
@@ -326,7 +368,7 @@ case ${DOCKER_OPERATION} in
                 echo -e "\nCouldn't tag image ${FULL_REMOTE_DOCKER_IMAGE} with ${FULL_DOCKER_IMAGE}"
             else
                 # Push to registry
-                createRepository ${PRODUCT_DOCKER_DNS} ${DOCKER_REPO}
+                createRepository ${REMOTE_DOCKER_PROVIDER_DNS} ${DOCKER_REPO}
                 RESULT=$?
                 if [ $RESULT -ne 0 ]; then
                     echo -e "\nUnable to create repository ${DOCKER_REPO} in the local registry"

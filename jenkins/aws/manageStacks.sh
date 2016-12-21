@@ -3,18 +3,18 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
-MODE_DEFAULT="update"
+DEPLOYMENT_MODE_DEFAULT="update"
 TYPE_DEFAULT="application"
 function usage() {
     echo -e "\Manage stacks for one or more slices"
-    echo -e "\nUsage: $(basename $0) -s SLICE_LIST -t TYPE -m MODE "
+    echo -e "\nUsage: $(basename $0) -s SLICE_LIST -t TYPE -m DEPLOYMENT_MODE"
     echo -e "\nwhere\n"
     echo -e "    -h shows this text"
-    echo -e "(m) -m MODE is the template type - \"update\", \"stopstart\" or \"stop\""
+    echo -e "(m) -m DEPLOYMENT_MODE is the deployment mode"
     echo -e "(m) -s SLICE_LIST is the list of slices to process"
-    echo -e "(m) -t TYPE is the template type - \"account\", \"product\", \"segment\", \"solution\" or \"application\""
+    echo -e "(m) -t TYPE is the template type"
     echo -e "\nDEFAULTS:\n"
-    echo -e "MODE = \"${MODE_DEFAULT}\""
+    echo -e "DEPLOYMENT_MODE = \"${DEPLOYMENT_MODE_DEFAULT}\""
     echo -e "TYPE = \"${TYPE_DEFAULT}\""
     echo -e "\nNOTES:\n"
     echo -e "1. ACCOUNT, PRODUCT and SEGMENT must already be defined"
@@ -29,7 +29,7 @@ while getopts ":hm:s:t:" opt; do
             usage
             ;;
         m)
-            MODE="${OPTARG}"
+            DEPLOYMENT_MODE="${OPTARG}"
             ;;
         s)
             SLICE_LIST="${OPTARG}"
@@ -49,11 +49,11 @@ while getopts ":hm:s:t:" opt; do
 done
 
 # Apply defaults
-export MODE="${MODE:-${MODE_DEFAULT}}"
+export DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-${DEPLOYMENT_MODE_DEFAULT}}"
 export TYPE="${TYPE:-${TYPE_DEFAULT}}"
 
 # Ensure mandatory arguments have been provided
-if [[ (-z "${MODE}") ||
+if [[ (-z "${DEPLOYMENT_MODE}") ||
        (-z "${SLICE_LIST}") ||
        (-z "${TYPE}") ]]; then
     echo -e "\nInsufficient arguments"

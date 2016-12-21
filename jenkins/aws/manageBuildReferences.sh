@@ -13,7 +13,6 @@ function usage() {
     echo -e "\nManage build references for one or more slices"
     echo -e "\nUsage: $(basename $0) -s SLICE_LIST -g SEGMENT_APPSETTINGS_DIR"
     echo -e "\t\t-c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST -p CODE_PROVIDER_LIST"
-    echo -e "\t\t-i IMAGE_PROVIDER -m VERIFICATION_IMAGE_PROVIDER"
     echo -e "\t\t-a ACCEPTANCE_TAG -v VERIFICATION_TAG -f -l -u"
     echo -e "\nwhere\n"
     echo -e "(o) -a ACCEPTANCE_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_ACCEPT}) to tag all builds as accepted"
@@ -21,9 +20,7 @@ function usage() {
     echo -e "(o) -f (REFERENCE_OPERATION=${REFERENCE_OPERATION_LISTFULL}) to detail full build info"
     echo -e "(o) -g SEGMENT_APPSETTINGS_DIR is the segment appsettings to be managed"
     echo -e "    -h shows this text"
-    echo -e "(o) -i IMAGE_PROVIDER is the local provider to use when verifying images"
     echo -e "(o) -l (REFERENCE_OPERATION=${REFERENCE_OPERATION_LIST}) to detail SLICE_LIST build info "
-    echo -e "(o) -m VERIFICATION_IMAGE_PROVIDER is the remote provider to use when verifying images"
     echo -e "(o) -p CODE_PROVIDER_LIST is the repo provider for each slice"
     echo -e "(o) -r CODE_REPO_LIST is the repo for each slice"
     echo -e "(m) -s SLICE_LIST is the list of slices to process"
@@ -46,18 +43,28 @@ function usage() {
 # $1 = slice
 # $2 = build commit (? = no commit)
 # $3 = build tag (? = no tag)
+# $4 = image format (? = not provided)
 function updateDetail() {
-    if [[ ("${2}" != "?") || ("${3}" != "?") ]]; then
-        DETAIL_MESSAGE="${DETAIL_MESSAGE}, ${1}="
-        if [[ "${3}" != "?" ]]; then
+    UD_SLICE="${1,,}"
+    UD_COMMIT="${2,,:-?}"
+    UD_TAG="${3:-?}"
+    UD_FORMAT="${4,,:-?}"
+
+    if [[ ("${UD_COMMIT}" != "?") || ("${UD_TAG}" != "?") ]]; then
+        DETAIL_MESSAGE="${DETAIL_MESSAGE}, ${UD_SLICE}="
+        if [[ "${UD_FORMAT}" != "?" ]]; then
+            DETAIL_MESSAGE="${DETAIL_MESSAGE}${UD_FORMAT}:"
+        else
+        fi
+        if [[ "${UD_TAG}" != "?" ]]; then
             # Format is tag then commit if provided
-            DETAIL_MESSAGE="${DETAIL_MESSAGE}${3}"
-            if [[ "${2}" != "?" ]]; then
-                DETAIL_MESSAGE="${DETAIL_MESSAGE} (${2:0:7})"
+            DETAIL_MESSAGE="${DETAIL_MESSAGE}${UD_TAG}"
+            if [[ "${UD_COMMIT}" != "?" ]]; then
+                DETAIL_MESSAGE="${DETAIL_MESSAGE} (${UD_COMMIT:0:7})"
             fi
         else
             # Format is just the commit
-            DETAIL_MESSAGE="${DETAIL_MESSAGE}${2:0:7}"
+            DETAIL_MESSAGE="${DETAIL_MESSAGE}${UD_COMMIT:0:7}"
         fi
     fi
 }
@@ -67,29 +74,39 @@ function updateDetail() {
 # The current format uses JSON with parts as attributes
 # $1 = build reference
 function getBuildReferenceParts() {
-    if [[ "${1}" =~ ^{ ]]; then
+    GBRP_REFERENCE="${1}"
+    
+    if [[ "${GBRP_REFERENCE}" =~ ^{ ]]; then
         # Newer JSON based format
-        for BUILD_REFERENCE_PART in commit tag format; do 
-            BUILD_REFERENCE_PART_VALUE=$(echo "${1}" | jq -r ".${BUILD_REFERENCE_PART} | select(.!=null)")
-            declare "BUILD_REFERENCE_${BUILD_REFERENCE_PART^^}"="${BUILD_REFERENCE_PART_VALUE:-?}"
+        for ATTRIBUTE in commit tag format; do 
+            ATTRIBUTE_VALUE=$(echo "${GBRP_REFERENCE}" | jq -r ".${ATTRIBUTE} | select(.!=null)")
+            declare "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done
     else
-        BUILD_REFERENCE_ARRAY=(${1})
+        BUILD_REFERENCE_ARRAY=(${GBRP_REFERENCE})
         BUILD_REFERENCE_COMMIT="${BUILD_REFERENCE_ARRAY[0]:-?}"
         BUILD_REFERENCE_TAG="${BUILD_REFERENCE_ARRAY[1]:-?}"
+        BUILD_REFERENCE_FORMAT="?"
     fi
 }
 
 # Format a JSON based build reference
 # $1 = build commit
 # $2 = build tag (? = no tag)
+# $3 = format (default is docker)
 function formatBuildReference() {
-    BUILD_REFERENCE="{\"commit\": \"${1}\""
-    if [[ "${2}" != "?" ]]; then 
-        BUILD_REFERENCE="${BUILD_REFERENCE}, \"tag\": \"${2}\""
+    FBR_COMMIT="${1,,}"
+    FBR_TAG="${2:-?}"
+    FBR_FORMAT="${3,,:-?}"
+
+    BUILD_REFERENCE="{\"commit\": \"${FBR_COMMIT}\""
+    if [[ "${FBR_TAG}" != "?" ]]; then 
+        BUILD_REFERENCE="${BUILD_REFERENCE}, \"tag\": \"${FBR_TAG}\""
     fi
-    # format attribute is in readiness for supporting multiple image types e.g. docker, lambda
-    BUILD_REFERENCE="${BUILD_REFERENCE}, \"format\": \"docker\"}"
+    if [[ "${FBR_FORMAT}" == "?" ]]; then
+        FBR_FORMAT="docker"
+    fi
+    BUILD_REFERENCE="${BUILD_REFERENCE}, \"format\": \"${FBR_FORMAT}\"}"
 }
 
 # Define git provider attributes
@@ -107,7 +124,7 @@ function defineGitProviderAttributes() {
 }
 
 # Parse options
-while getopts ":a:c:fg:hi:lm:p:r:s:t:uv:" opt; do
+while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
     case $opt in
         a)
             REFERENCE_OPERATION="${REFERENCE_OPERATION_ACCEPT}"
@@ -125,14 +142,8 @@ while getopts ":a:c:fg:hi:lm:p:r:s:t:uv:" opt; do
         h)
             usage
             ;;
-        i)
-            IMAGE_PROVIDER="${OPTARG}"
-            ;;
         l)
             REFERENCE_OPERATION="${REFERENCE_OPERATION_LIST}"
-            ;;
-        m)
-            VERIFICATION_IMAGE_PROVIDER="${OPTARG}"
             ;;
         p)
             CODE_PROVIDER_LIST="${OPTARG}"
@@ -173,8 +184,7 @@ case ${REFERENCE_OPERATION} in
         # Add the acceptance tag on provided slice list
         # Normally this would be called after list full
         if [[ (-z "${SLICE_LIST}") ||
-                (-z "${ACCEPTANCE_TAG}") ||
-                (-z "${IMAGE_PROVIDER}") ]]; then
+                (-z "${ACCEPTANCE_TAG}") ]]; then
             echo -e "\nInsufficient arguments"
             usage
         fi
@@ -190,7 +200,7 @@ case ${REFERENCE_OPERATION} in
 
     ${REFERENCE_OPERATION_LISTFULL})
         # Populate SLICE_LIST based on current appsettings
-        if [[ (-z "${SEGMENT_APPSETTINGS_DIR}") ]]; then
+        if [[ -z "${SEGMENT_APPSETTINGS_DIR}" ]]; then
             echo -e "\nInsufficient arguments"
             usage
         fi
@@ -208,9 +218,7 @@ case ${REFERENCE_OPERATION} in
     ${REFERENCE_OPERATION_VERIFY})
         # Verify builds based on provided slice list
         if [[ (-z "${SLICE_LIST}") ||
-                (-z "${VERIFICATION_TAG}") ||
-                (-z "${VERIFICATION_IMAGE_PROVIDER}") ||
-                (-z "${IMAGE_PROVIDER}") ]]; then
+                (-z "${VERIFICATION_TAG}") ]]; then
             echo -e "\nInsufficient arguments"
             usage
         fi
@@ -229,6 +237,7 @@ CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
 CODE_TAG_ARRAY=(${CODE_TAG_LIST})
 CODE_REPO_ARRAY=(${CODE_REPO_LIST})
 CODE_PROVIDER_ARRAY=(${CODE_PROVIDER_LIST})
+IMAGE_FORMAT_ARRAY=(${IMAGE_FORMAT_LIST})
 
 if [[ -d "${SEGMENT_APPSETTINGS_DIR}" ]]; then
     # Most operations require access to the segment build settings
@@ -253,6 +262,15 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
     CODE_TAG="${CODE_TAG_ARRAY[${INDEX}]:-?}"
     CODE_REPO="${CODE_REPO_ARRAY[${INDEX}]:-?}"
     CODE_PROVIDER="${CODE_PROVIDER_ARRAY[${INDEX}]:-?}"
+    IMAGE_FORMAT="${IMAGE_FORMAT_ARRAY[${INDEX}]:-?}"
+
+    # Image providers - assume one per format per segment
+    CURRENT_FORMAT="${IMAGE_FORMAT}"
+    if [[ "${CURRENT_FORMAT}" == "?" ]]; then CURRENT_FORMAT="docker"; fi
+    IMAGE_PROVIDER_VAR="PRODUCT_${CURRENT_FORMAT^^}_PROVIDER"
+    FROM_IMAGE_PROVIDER_VAR="FROM_PRODUCT_${CURRENT_FORMAT^^}_PROVIDER"
+    IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
+    FROM_IMAGE_PROVIDER="${!FROM_IMAGE_PROVIDER_VAR}"
 
     # Look for the slice and build reference files
     mkdir -p ${CURRENT_SLICE}
@@ -272,27 +290,30 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
     case ${REFERENCE_OPERATION} in
         ${REFERENCE_OPERATION_ACCEPT})
             # Tag builds with an acceptance tag
-            ${AUTOMATION_DIR}/manageDocker.sh -k -a "${IMAGE_PROVIDER}" -s "${SLICE_ARRAY[$INDEX]}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
-            RESULT=$?
-            if [[ "${RESULT}" -ne 0 ]]; then exit; fi
-           ;;
+            case ${IMAGE_FORMAT} in
+                docker)
+                    ${AUTOMATION_DIR}/manageDocker.sh -k -a "${IMAGE_PROVIDER}" \
+                        -s "${CURRENT_SLICE}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                    RESULT=$?
+                    if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+                    ;;
+            esac
+            ;;
 
         ${REFERENCE_OPERATION_LIST})
             # Add build info to DETAIL_MESSAGE
-            updateDetail "${CURRENT_SLICE}" "${CODE_COMMIT}" "${CODE_TAG}"
+            updateDetail "${CURRENT_SLICE}" "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMAT}"
             ;;
     
         ${REFERENCE_OPERATION_LISTFULL})
             if [[ -f ${BUILD_FILE} ]]; then
                 getBuildReferenceParts "$(cat ${BUILD_FILE})"
                 if [[ "${BUILD_REFERENCE_COMMIT}" != "?" ]]; then
-                    # Add build info to DETAIL_MESSAGE
-                    updateDetail "${CURRENT_SLICE}" "${BUILD_REFERENCE_COMMIT}" "${BUILD_REFERENCE_TAG}"
-
                     # Update arrays
                     if [[ "${EFFECTIVE_SLICE}" == "${CURRENT_SLICE}" ]]; then
                         CODE_COMMIT_ARRAY["${INDEX}"]="${BUILD_REFERENCE_COMMIT}"
                         CODE_TAG_ARRAY["${INDEX}"]="${BUILD_REFERENCE_TAG}"
+                        IMAGE_FORMAT_ARRAY["${INDEX}"]="${BUILD_REFERENCE_FORMAT}"
                     fi
                 fi
             fi            
@@ -306,8 +327,15 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                 continue
             fi
         
+            # Preserve the format if none provided
+            if [[ ("${IMAGE_FORMAT}" == "?" &&
+                    (-f ${NEW_BUILD_FILE}) ]]; then
+                getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
+                IMAGE_FORMAT="${BUILD_REFERENCE_FORMAT}"
+            fi
+            
             # Construct the build reference
-            formatBuildReference "${CODE_COMMIT}" "${CODE_TAG}"        
+            formatBuildReference "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMAT}"
         
             # Update the build reference
             # Use newer naming and clean up legacy named build reference files
@@ -365,25 +393,29 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                 # TODO: Confirm commit is in remote repo - for now we'll assume its there if an image exists
             fi
             
-            # TODO: Add support for multiple image formats
+            # TODO: Add support for other image formats
 
-            # Confirm the commit built successfully into a docker image
-            ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_SLICE}" -g "${CODE_COMMIT}"
-            RESULT=$?
-            if [[ "${RESULT}" -ne 0 ]]; then
-                if [[ -n "${VERIFICATION_IMAGE_PROVIDER}" ]]; then
-                    # Attempt to pull image in from remote docker provider
-                    ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_SLICE}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${VERIFICATION_IMAGE_PROVIDER}"
+            # Confirm the commit built successfully into an image
+            case ${IMAGE_FORMAT} in
+                docker)
+                    ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_SLICE}" -g "${CODE_COMMIT}"
                     RESULT=$?
                     if [[ "${RESULT}" -ne 0 ]]; then
-                        echo -e "\nUnable to pull docker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} from docker provider ${VERIFICATION_IMAGE_PROVIDER}. Was the build successful?"
-                        exit
+                        if [[ -n "${FROM_IMAGE_PROVIDER}" ]]; then
+                            # Attempt to pull image in from remote docker provider
+                            ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_SLICE}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                            RESULT=$?
+                            if [[ "${RESULT}" -ne 0 ]]; then
+                                echo -e "\nUnable to pull docker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} from docker provider ${FROM_IMAGE_PROVIDER}. Was the build successful?"
+                                exit
+                            fi
+                        else
+                            echo -e "\nDocker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} not found. Was the build successful?"
+                            exit
+                        fi
                     fi
-                else
-                    echo -e "\nDocker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} not found. Was the build successful?"
-                    exit
-                fi
-            fi
+                   ;;
+            esac
 
             # Save details of this slice
             CODE_COMMIT_ARRAY[${INDEX}]="${CODE_COMMIT}"
@@ -402,6 +434,7 @@ case ${REFERENCE_OPERATION} in
         echo "SLICE_LIST=${SLICE_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
         echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
         echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        echo "IMAGE_FORMAT_LIST=${IMAGE_FORMAT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
         echo "DETAIL_MESSAGE=${DETAIL_MESSAGE}" >> ${AUTOMATION_DATA_DIR}/context.properties
         ;;
 

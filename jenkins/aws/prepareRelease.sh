@@ -4,7 +4,8 @@ if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Update build references
-${AUTOMATION_DIR}/manageBuildReferences.sh -u
+${AUTOMATION_DIR}/manageBuildReferences.sh -u \
+    -g ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/appsettings/${SEGMENT}
 RESULT=$?
 if [[ ${RESULT} -ne 0 ]]; then exit; fi
 

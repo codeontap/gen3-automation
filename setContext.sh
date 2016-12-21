@@ -7,12 +7,11 @@ AUTOMATION_BASE_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd )
 DEPLOYMENT_MODE_UPDATE="update"
 DEPLOYMENT_MODE_STOPSTART="stopstart"
 DEPLOYMENT_MODE_STOP="stop"
-DEPLOYMENT_MODE_DEFAULT="${DEPLOYMENT_MODE_UPDATE}"
-RELEASE_MODE_DYNAMIC="dynamic"
+RELEASE_MODE_CONTINUOUS="continuous"
 RELEASE_MODE_SELECTIVE="selective"
 RELEASE_MODE_PROMOTION="promotion"
 RELEASE_MODE_HOTFIX="hotfix"
-RELEASE_MODE_DEFAULT="${RELEASE_MODE_DYNAMIC}"
+RELEASE_MODE_DEFAULT="${RELEASE_MODE_CONTINUOUS}"
 function usage() {
     echo -e "\nDetermine key settings for an tenant/account/product/segment" 
     echo -e "\nUsage: $(basename $0) -i INTEGRATOR -t TENANT -a ACCOUNT -p PRODUCT -e ENVIRONMENT -s SEGMENT -r RELEASE_MODE -d DEPLOYMENT_MODE"
@@ -23,16 +22,15 @@ function usage() {
     echo -e "    -h shows this text"
     echo -e "(o) -i INTEGRATOR is the integrator name"
     echo -e "(o) -p PRODUCT is the product name e.g. \"eticket\""
-    echo -e "(o) -r RELEASE_MODE is the mode to be used for release preparation"
+    echo -e "(o) -r RELEASE_MODE is the mode to be used for release activity"
     echo -e "(o) -s SEGMENT is the SEGMENT name e.g. \"production\""
     echo -e "(o) -t TENANT is the tenant name e.g. \"env\""
     echo -e "\nDEFAULTS:\n"
-    echo -e "DEPLOYMENT_MODE = ${DEPLOYMENT_MODE_DEFAULT}"
     echo -e "RELEASE_MODE = ${RELEASE_MODE_DEFAULT}"
     echo -e "\nNOTES:\n"
     echo -e "1. The setting values are saved in context.properties in the current directory"
     echo -e "2. DEPLOYMENT_MODE is one of \"${DEPLOYMENT_MODE_UPDATE}\", \"${DEPLOYMENT_MODE_STOPSTART}\" and \"${DEPLOYMENT_MODE_STOP}\""
-    echo -e "3. RELEASE_MODE is one of \"${RELEASE_MODE_DYNAMIC}\", \"${RELEASE_MODE_SELECTIVE}\", \"${RELEASE_MODE_PROMOTION}\" and \"${RELEASE_MODE_HOTFIX}\""
+    echo -e "3. RELEASE_MODE is one of \"${RELEASE_MODE_CONTINUOUS}\", \"${RELEASE_MODE_SELECTIVE}\", \"${RELEASE_MODE_PROMOTION}\" and \"${RELEASE_MODE_HOTFIX}\""
     echo -e ""
     exit
 }
@@ -428,11 +426,11 @@ findAndDefineSetting "CODEONTAP_GIT_ORG" "" "" "" "value" "codeontap"
 findAndDefineSetting "GIT_USER"  "" "" "" "value" "${GIT_USER_DEFAULT:-alm}"
 findAndDefineSetting "GIT_EMAIL" "" "" "" "value" "${GIT_EMAIL_DEFAULT}"
 
-# Separator when specifying a git reference for a slice 
-findAndDefineSetting "TAG_SEPARATOR" "" "${PRODUCT}" "${SEGMENT}" "value" "!"
+# Separator when specifying a git reference/format for a slice
+findAndDefineSetting "SLICE_PART_SEPARATOR" "" "${PRODUCT}" "${SEGMENT}" "value" "!"
 
 # Modes
-findAndDefineSetting "DEPLOYMENT_MODE" "" "" "" "value" "${MODE:-${DEPLOYMENT_MODE_DEFAULT}}"
+findAndDefineSetting "DEPLOYMENT_MODE" "" "" "" "value" "${MODE}"
 findAndDefineSetting "RELEASE_MODE" "" "" "" "value" "${RELEASE_MODE_DEFAULT}"
 
 ### Account details ###
@@ -490,40 +488,37 @@ defineRepoSettings "GENERATION" "STARTUP"  "${PRODUCT}" "${SEGMENT}" "gen3-start
 
 ### Application slice details ###
 
-# Determine the slice list and optional corresponding code tags/commits and repos
+# Determine the slice list and optional corresponding metadata
 SLICE_ARRAY=()
 CODE_COMMIT_ARRAY=()
 CODE_TAG_ARRAY=()
 CODE_REPO_ARRAY=()
 CODE_PROVIDER_ARRAY=()
+IMAGE_FORMAT_ARRAY=()
 for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
-    SLICE_PART="${CURRENT_SLICE%%${TAG_SEPARATOR}*}"
-    # Note that if there is no tag, then TAG_PART = SLICE_PART
-    TAG_PART="${CURRENT_SLICE##*${TAG_SEPARATOR}}"
+    IFS="${SLICE_PART_SEPARATOR}"; SLICE_PARTS=(${CURRENT_SLICE})
+    SLICE_PART="${SLICE_PARTS[0]}"
+    TAG_PART="${SLICE_PARTS[1]:-?}"
+    FORMAT_PART="${SLICE_PARTS[2]:-?}"
     COMMIT_PART="?"
     if [[ "${#SLICE_ARRAY[@]}" -eq 0 ]]; then
         # Processing the first slice
         if [[ -n "${CODE_TAG}" ]]; then
-            # Permit separate commit/tag value - easier if only one repo involved
+            # Permit separate variable for commit/tag value - easier if only one repo involved
             TAG_PART="${CODE_TAG}"
-            CURRENT_SLICE="${SLICE_PART}${TAG_SEPARATOR}${TAG_PART}"
         fi
     fi
         
-    SLICE_ARRAY+=("${SLICE_PART,,}")
-
-    if [[ (-n "${TAG_PART}") && ( "${CURRENT_SLICE}" =~ .+${TAG_SEPARATOR}.+ ) ]]; then
-        if [[ "${#TAG_PART}" -eq 40 ]]; then
-            # Assume its a full commit ids - at this stage we don't accept short commit ids
-            COMMIT_PART="${TAG_PART}"
-            TAG_PART="?"
-        fi
-    else
+    if [[ "${#TAG_PART}" -eq 40 ]]; then
+        # Assume its a full commit ids - at this stage we don't accept short commit ids
+        COMMIT_PART="${TAG_PART}"
         TAG_PART="?"
     fi
 
+    SLICE_ARRAY+=("${SLICE_PART,,}")
     CODE_COMMIT_ARRAY+=("${COMMIT_PART,,}")
-    CODE_TAG_ARRAY+=("${TAG_PART,,}")
+    CODE_TAG_ARRAY+=("${TAG_PART}")
+    IMAGE_FORMAT_ARRAY+=("${FORMAT_PART}")
 
     # Determine code repo for the slice - there may be none
     CODE_SLICE=$(echo "${SLICE_PART^^}" | tr "-" "_")
@@ -544,17 +539,20 @@ case ${AUTOMATION_PROVIDER} in
         ;;
 esac
 
-# Regenerate the slice list in case the first code commit/tag was overriden
+# Regenerate the slice list in case the first code commit/tag or format was overriden
 UPDATED_SLICES=
 SLICE_SEPARATOR=""
 for INDEX in $( seq 0 $((${#SLICE_ARRAY[@]}-1)) ); do
     UPDATED_SLICES="${UPDATED_SLICES}${SLICE_SEPARATOR}${SLICE_ARRAY[$INDEX]}"
     if [[ "${CODE_TAG_ARRAY[$INDEX]}" != "?" ]]; then
-        UPDATED_SLICES="${UPDATED_SLICES}!${CODE_TAG_ARRAY[$INDEX]}"
+        UPDATED_SLICES="${UPDATED_SLICES}${SLICE_PART_SEPARATOR}${CODE_TAG_ARRAY[$INDEX]}"
     else
         if [[ "${CODE_COMMIT_ARRAY[$INDEX]}" != "?" ]]; then
-            UPDATED_SLICES="${UPDATED_SLICES}!${CODE_COMMIT_ARRAY[$INDEX]}"
+            UPDATED_SLICES="${UPDATED_SLICES}${SLICE_PART_SEPARATOR}${CODE_COMMIT_ARRAY[$INDEX]}"
         fi
+    fi
+    if [[ "${IMAGE_FORMAT_ARRAY[$INDEX]}" != "?" ]]; then
+        UPDATED_SLICES="${UPDATED_SLICES}${SLICE_PART_SEPARATOR}${IMAGE_FORMAT_ARRAY[$INDEX]}"
     fi
     SLICE_SEPARATOR=" "
 done
@@ -565,28 +563,41 @@ echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/contex
 echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_REPO_LIST=${CODE_REPO_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_PROVIDER_LIST=${CODE_PROVIDER_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "IMAGE_FORMAT_LIST=${IMAGE_FORMAT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 if [[ -n "${UPDATED_SLICES}" ]]; then echo "SLICES=${UPDATED_SLICES}" >> ${AUTOMATION_DATA_DIR}/context.properties; fi
 
 
 ### Release management ###
  
 if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
+
     # Release tag
     RELEASE_TAG_BODY="${RELEASE_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
     defineSetting "RELEASE_TAG" "r${RELEASE_TAG_BODY}-${SEGMENT}"
     
     case "${RELEASE_MODE}" in
         # Promotion details
-        ${RELEASE_MODE_PROMOTION}|${RELEASE_MODE_SELECTIVE})
-            findAndDefineSetting "PROMOTION_FROM_SEGMENT" "PROMOTION_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
-            findAndDefineSetting "PROMOTION_FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "value"
-            if [[ (-n "${PROMOTION_FROM_SEGMENT}") && 
-                    (-n "${PROMOTION_FROM_ACCOUNT}")]]; then
-                defineGitProviderSettings    "PROMOTION_FROM_ACCOUNT" "" "${PROMOTION_FROM_ACCOUNT}" "" "github"
-                defineGitProviderSettings    "PROMOTION_FROM" "" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "${PROMOTION_FROM_ACCOUNT_GIT_PROVIDER}"
-                defineRepoSettings           "PROMOTION_FROM" "CONFIG" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "${PRODUCT}-config"
-                defineDockerProviderSettings "PROMOTION_FROM" "" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "${PROMOTION_FROM_ACCOUNT}"
-                defineSetting "PROMOTION_TAG" "p${RELEASE_TAG_BODY}-${SEGMENT}"
+        ${RELEASE_MODE_SELECTIVE}|${RELEASE_MODE_PROMOTION})
+            findAndDefineSetting "FROM_SEGMENT" "PROMOTION_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
+            # Hard code some defaults for now
+            if [[ -z "${FROM_SEGMENT}" ]]; then
+                case "${SEGMENT}" in
+                    staging|preproduction)
+                        FROM_SEGMENT="integration"
+                        ;;
+                    production)
+                        FROM_SEGMENT="preproduction"
+                        ;;
+                esac
+            fi
+
+            findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "value"
+            if [[ (-n "${FROM_SEGMENT}") &&
+                    (-n "${FROM_ACCOUNT}")]]; then
+                defineGitProviderSettings    "FROM_ACCOUNT" "" "${FROM_ACCOUNT}" "" "github"
+                defineGitProviderSettings    "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT_GIT_PROVIDER}"
+                defineRepoSettings           "FROM_PRODUCT" "CONFIG" "${PRODUCT}" "${FROM_SEGMENT}" "${PRODUCT}-config"
+                defineDockerProviderSettings "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
             else
                 echo -e "\nPROMOTION segment/account not defined"
                 exit
@@ -595,30 +606,50 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
 
         #  Hotfix details
         ${RELEASE_MODE_HOTFIX})
-            findAndDefineSetting "HOTFIX_FROM_SEGMENT" "HOTFIX_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
-            findAndDefineSetting "HOTFIX_FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"
-            if [[ (-n "${HOTFIX_FROM_SEGMENT}") && 
-                    (-n "${HOTFIX_FROM_ACCOUNT}")]]; then
-                defineDockerProviderSettings "HOTFIX_FROM" "" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "${HOTFIX_FROM_ACCOUNT}"
-                defineSetting "HOTFIX_TAG" "h${RELEASE_TAG_BODY}-${SEGMENT}"
+            findAndDefineSetting "FROM_SEGMENT" "HOTFIX_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
+            # Hard code some defaults for now
+            if [[ -z "${FROM_SEGMENT}" ]]; then
+                case "${SEGMENT}" in
+                    *)
+                        FROM_SEGMENT="integration"
+                        ;;
+                esac
+            fi
+
+            findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"
+            if [[ (-n "${FROM_SEGMENT}") &&
+                    (-n "${FROM_ACCOUNT}")]]; then
+                defineDockerProviderSettings "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
             else
                 echo -e "\HOTFIX segment/account not defined"
                 exit
             fi
             ;;
     esac
-
-    # Acceptance tag
-    case "${RELEASE_MODE}" in
-        ${RELEASE_MODE_PROMOTION}|)
-            defineSetting "ACCEPTANCE_TAG" "r${RELEASE_TAG_BODY}-${PROMOTION_FROM_SEGMENT}"
-            ;;
-
-        ${RELEASE_MODE_DYNAMIC}|${RELEASE_MODE_SELECTIVE}|${RELEASE_MODE_HOTFIX})
-            defineSetting "ACCEPTANCE_TAG" "latest"
-            ;;
-    esac
 fi
+
+
+### Tags ###
+case "${RELEASE_MODE}" in
+    ${RELEASE_MODE_CONTINUOUS})
+        # For continuous deployment, the repo isn't tagged with a release
+        defineSetting "ACCEPTANCE_TAG" "latest"
+        ;;
+
+    ${RELEASE_MODE_SELECTIVE})
+        defineSetting "ACCEPTANCE_TAG" "latest"
+        ;;
+
+    ${RELEASE_MODE_PROMOTION})
+        defineSetting "RELEASE_MODE_TAG" "p${RELEASE_TAG_BODY}-${SEGMENT}"
+        defineSetting "ACCEPTANCE_TAG" "r${RELEASE_TAG_BODY}-${PROMOTION_FROM_SEGMENT}"
+        ;;
+
+    ${RELEASE_MODE_HOTFIX})
+        defineSetting "RELEASE_MODE_TAG" "h${RELEASE_TAG_BODY}-${SEGMENT}"
+        defineSetting "ACCEPTANCE_TAG" "latest"
+        ;;
+esac
 
 
 ### Capture details for logging etc ###
@@ -633,7 +664,7 @@ if [[ "${#SLICE_ARRAY[@]}" -ne 0 ]];        then DETAIL_MESSAGE="${DETAIL_MESSAG
 if [[ -n "${TASK}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, task=${TASK}"; fi
 if [[ -n "${TASKS}" ]];                     then DETAIL_MESSAGE="${DETAIL_MESSAGE}, tasks=${TASKS}"; fi
 if [[ -n "${GIT_USER}" ]];                  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, user=${GIT_USER}"; fi
-if [[ -n "${MODE}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, mode=${MODE}"; fi
+if [[ -n "${DEPLOYMENT_MODE}" ]];           then DETAIL_MESSAGE="${DETAIL_MESSAGE}, mode=${DEPLOYMENT_MODE}"; fi
 
 echo "DETAIL_MESSAGE=${DETAIL_MESSAGE}" >> ${AUTOMATION_DATA_DIR}/context.properties
 

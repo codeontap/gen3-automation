@@ -14,6 +14,12 @@ if [[ ( -z "${SLICE_LIST}" ) ]]; then
     exit
 fi
 
+# Ensure at least one slice has been provided
+if [[ ( -z "${IMAGE_FORMAT}" ) ]]; then
+	echo -e "\nJob requires the image format used to package the build"
+    exit
+fi
+
 # All good
 RESULT=0
 

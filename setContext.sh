@@ -507,6 +507,10 @@ for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
             # Permit separate variable for commit/tag value - easier if only one repo involved
             TAG_PART="${CODE_TAG}"
         fi
+        if [[ -n "${IMAGE_FORMAT}" ]]; then
+            # Permit separate variable for commit/tag value - easier if only one repo involved
+            FORMAT_PART="${IMAGE_FORMAT}"
+        fi
     fi
         
     if [[ "${#TAG_PART}" -eq 40 ]]; then

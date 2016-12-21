@@ -574,10 +574,6 @@ if [[ -n "${UPDATED_SLICES}" ]]; then echo "SLICES=${UPDATED_SLICES}" >> ${AUTOM
 ### Release management ###
  
 if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
-
-    # Release tag
-    RELEASE_TAG_BODY="${RELEASE_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
-    defineSetting "RELEASE_TAG" "r${RELEASE_TAG_BODY}-${SEGMENT}"
     
     case "${RELEASE_MODE}" in
         # Promotion details
@@ -634,6 +630,15 @@ fi
 
 
 ### Tags ###
+
+    RELEASE_TAG_BODY="${RELEASE_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
+    if [[ "${RELEASE_TAG_BODY}" =~ [0-9]+ ]]; then
+        # If its just a number then add an "r" in front otherwise assume
+        # the user is deciding the naming scheme
+        RELEASE_TAG_BODY="r${RELEASE_TAG_BODY}"
+    fi
+    defineSetting "RELEASE_TAG" "${RELEASE_TAG_BODY}-${SEGMENT}"
+
 case "${RELEASE_MODE}" in
     ${RELEASE_MODE_CONTINUOUS})
         # For continuous deployment, the repo isn't tagged with a release
@@ -646,7 +651,7 @@ case "${RELEASE_MODE}" in
 
     ${RELEASE_MODE_PROMOTION})
         defineSetting "RELEASE_MODE_TAG" "p${RELEASE_TAG_BODY}-${SEGMENT}"
-        defineSetting "ACCEPTANCE_TAG" "r${RELEASE_TAG_BODY}-${PROMOTION_FROM_SEGMENT}"
+        defineSetting "ACCEPTANCE_TAG" "${RELEASE_TAG_BODY}-${PROMOTION_FROM_SEGMENT}"
         ;;
 
     ${RELEASE_MODE_HOTFIX})

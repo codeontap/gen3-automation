@@ -54,7 +54,6 @@ function updateDetail() {
         DETAIL_MESSAGE="${DETAIL_MESSAGE}, ${UD_SLICE}="
         if [[ "${UD_FORMAT}" != "?" ]]; then
             DETAIL_MESSAGE="${DETAIL_MESSAGE}${UD_FORMAT}:"
-        else
         fi
         if [[ "${UD_TAG}" != "?" ]]; then
             # Format is tag then commit if provided
@@ -328,7 +327,7 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
             fi
         
             # Preserve the format if none provided
-            if [[ ("${IMAGE_FORMAT}" == "?" &&
+            if [[ ("${IMAGE_FORMAT}" == "?") &&
                     (-f ${NEW_BUILD_FILE}) ]]; then
                 getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
                 IMAGE_FORMAT="${BUILD_REFERENCE_FORMAT}"

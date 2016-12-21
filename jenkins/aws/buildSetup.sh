@@ -26,7 +26,7 @@ if [[ -z "${SLICE_LIST}" ]]; then
 fi
 
 # Already set image format overrides that in the repo
-export IMAGE_FORMAT="${IMAGE_FORMAT:-${FORMAT:-docker}}}"
+export IMAGE_FORMAT="${IMAGE_FORMAT:-${FORMAT:-docker}}"
 echo "IMAGE_FORMAT_LIST=${IMAGE_FORMAT}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
 SLICE_ARRAY=(${SLICE_LIST})

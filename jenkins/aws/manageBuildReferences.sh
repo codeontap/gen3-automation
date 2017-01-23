@@ -371,9 +371,9 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                 # Determine the details of the provider hosting the code repo
                 defineGitProviderAttributes "${CODE_PROVIDER}" "CODE"
                 # Get the commit corresponding to the tag
-                TAG_COMMIT=$(git ls-remote -t https://${!CODE_GIT_CREDENTIALS_VAR}@${CODE_GIT_DNS}/${CODE_GIT_ORG}/${CODE_REPO} \
+                TAG_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
                                 "${CODE_TAG}" | cut -f 1)
-                CODE_COMMIT=$(git ls-remote -t https://${!CODE_GIT_CREDENTIALS_VAR}@${CODE_GIT_DNS}/${CODE_GIT_ORG}/${CODE_REPO} \
+                CODE_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
                                 "${CODE_TAG}^{}" | cut -f 1)
                 if [[ -z "${CODE_COMMIT}" ]]; then
                     echo -e "\nTag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?"
@@ -383,7 +383,7 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                 # Fetch other info about the tag
                 # We are using a github api here to avoid having to pull in the whole repo - 
                 # git currently doesn't have a command to query the message of a remote tag
-                CODE_TAG_MESSAGE=$(curl -s https://${!CODE_GIT_CREDENTIALS_VAR}@${CODE_GIT_API_DNS}/repos/${CODE_GIT_ORG}/${CODE_REPO}/git/tags/${TAG_COMMIT} | jq .message | tr -d '"')
+                CODE_TAG_MESSAGE=$(curl -s https://${!CODE_CREDENTIALS_VAR}@${CODE_API_DNS}/repos/${CODE_ORG}/${CODE_REPO}/git/tags/${TAG_COMMIT} | jq .message | tr -d '"')
                 if [[ (-z "${CODE_TAG_MESSAGE}") || ("${CODE_TAG_MESSAGE}" == "Not Found") ]]; then
                     echo -e "\nMessage for tag ${CODE_TAG} not found in the ${CODE_REPO} repo"
                     exit

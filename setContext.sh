@@ -495,6 +495,7 @@ CODE_TAG_ARRAY=()
 CODE_REPO_ARRAY=()
 CODE_PROVIDER_ARRAY=()
 IMAGE_FORMAT_ARRAY=()
+CURRENT_IFS=$IFS
 for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
     IFS="${SLICE_PART_SEPARATOR}"; SLICE_PARTS=(${CURRENT_SLICE})
     SLICE_PART="${SLICE_PARTS[0]}"
@@ -533,6 +534,7 @@ for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
     # Remaining code works off this array so easy to change in the future
     CODE_PROVIDER_ARRAY+=("${PRODUCT_CODE_GIT_PROVIDER}")
 done
+IFS=${CURRENT_IFS}
 
 # Capture any provided git commit
 case ${AUTOMATION_PROVIDER} in

@@ -13,7 +13,7 @@ if [[ -n "${SNAPSHOT_AGE}" ]]; then
 fi
 
 # Snapshot the database
-cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/solutions/${PRODUCT}/${SEGMENT}
+cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
 
 ${GENERATION_DIR}/snapshotRDSDatabase.sh -i ${COMPONENT} -s b${BUILD_NUMBER} ${SNAPSHOT_OPTS}
 RESULT=$?

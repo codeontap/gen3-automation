@@ -15,7 +15,7 @@ fi
 # Snapshot the database
 cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
 
-${GENERATION_DIR}/snapshotRDSDatabase.sh -i ${COMPONENT} -s b${BUILD_NUMBER} ${SNAPSHOT_OPTS}
+${GENERATION_DIR}/snapshotRDSDatabase.sh -i ${COMPONENT} -s b${AUTOMATION_JOB_IDENTIFIER} ${SNAPSHOT_OPTS}
 RESULT=$?
 
 if [[ ${RESULT} -ne 0 ]]; then

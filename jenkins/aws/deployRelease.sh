@@ -9,7 +9,7 @@ RESULT=$?
 if [[ ${RESULT} -ne 0 ]]; then exit; fi
 
 # Add release and deployment tags to details
-DETAIL_MESSAGE="deployment=d${BUILD_NUMBER}-${SEGMENT}, release=${RELEASE_TAG}, ${DETAIL_MESSAGE}"
+DETAIL_MESSAGE="deployment=d${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}, release=${RELEASE_TAG}, ${DETAIL_MESSAGE}"
 echo "DETAIL_MESSAGE=${DETAIL_MESSAGE}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
 # All good

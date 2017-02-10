@@ -75,7 +75,7 @@ function updateDetail() {
 function getBuildReferenceParts() {
     GBRP_REFERENCE="${1}"
     
-    if [[ "${GBRP_REFERENCE}" =~ ^{ ]]; then
+    if [[ "${GBRP_REFERENCE}" =~ ^\{ ]]; then
         # Newer JSON based format
         for ATTRIBUTE in commit tag format; do 
             ATTRIBUTE_VALUE=$(echo "${GBRP_REFERENCE}" | jq -r ".${ATTRIBUTE} | select(.!=null)")

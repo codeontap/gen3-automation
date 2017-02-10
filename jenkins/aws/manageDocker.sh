@@ -368,7 +368,7 @@ case ${DOCKER_OPERATION} in
                 echo -e "\nCouldn't tag image ${FULL_REMOTE_DOCKER_IMAGE} with ${FULL_DOCKER_IMAGE}"
             else
                 # Push to registry
-                createRepository ${REMOTE_DOCKER_PROVIDER_DNS} ${DOCKER_REPO}
+                createRepository ${DOCKER_PROVIDER_DNS} ${DOCKER_REPO}
                 RESULT=$?
                 if [ $RESULT -ne 0 ]; then
                     echo -e "\nUnable to create repository ${DOCKER_REPO} in the local registry"

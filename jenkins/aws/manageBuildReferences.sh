@@ -78,8 +78,18 @@ function getBuildReferenceParts() {
     if [[ "${GBRP_REFERENCE}" =~ ^\{ ]]; then
         # Newer JSON based format
         for ATTRIBUTE in commit tag format; do 
-            ATTRIBUTE_VALUE=$(echo "${GBRP_REFERENCE}" | jq -r ".${ATTRIBUTE} | select(.!=null)")
-            declare "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
+		    ATTRIBUTE_VALUE=$(echo "${GBRP_REFERENCE}" | jq -r ".${ATTRIBUTE} | select(.!=null)")
+			case ${ATTRIBUTE} in
+				commit)
+					BUILD_REFERENCE_COMMIT="${ATTRIBUTE_VALUE:-?}"
+					;;
+				tag)
+					BUILD_REFERENCE_TAG="${ATTRIBUTE_VALUE:-?}"
+					;;
+				format)
+					BUILD_REFERENCE_FORMAT="${ATTRIBUTE_VALUE:-?}"
+					;;
+			esac
         done
     else
         BUILD_REFERENCE_ARRAY=(${GBRP_REFERENCE})

@@ -653,7 +653,7 @@ case "${RELEASE_MODE}" in
 
     ${RELEASE_MODE_PROMOTION})
         defineSetting "RELEASE_MODE_TAG" "p${RELEASE_TAG_BODY}-${SEGMENT}"
-        defineSetting "ACCEPTANCE_TAG" "${RELEASE_TAG_BODY}-${PROMOTION_FROM_SEGMENT}"
+        defineSetting "ACCEPTANCE_TAG" "${RELEASE_TAG_BODY}-${FROM_SEGMENT}"
         ;;
 
     ${RELEASE_MODE_HOTFIX})

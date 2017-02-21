@@ -3,6 +3,8 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
+RELEASE_MODE_PROMOTION="promotion"
+
 # Ensure mandatory arguments have been provided
 if [[ (-z "${RELEASE_MODE}") ||
         (-z "${ACCEPTANCE_TAG}") ]]; then

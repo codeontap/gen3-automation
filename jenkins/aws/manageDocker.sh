@@ -352,6 +352,7 @@ case ${DOCKER_OPERATION} in
                 ;;
                 
             *)
+			    # Docker utility defaults to dockerhub if no registry provided to a pull command
                 FULL_REMOTE_DOCKER_IMAGE="${REMOTE_DOCKER_IMAGE}"
                 ;;
         esac

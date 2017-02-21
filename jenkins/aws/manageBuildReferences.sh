@@ -345,19 +345,41 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
             ;;
     
         ${REFERENCE_OPERATION_VERIFY})
-            # Ensure code repo defined if tag provided
-            if [[ "${CODE_TAG}" != "?" ]]; then
-                if [[ "${EFFECTIVE_SLICE}" != "${CURRENT_SLICE}" ]]; then
-                    echo -e "\nIgnoring the \"${CURRENT_SLICE}\" slice - it contains a reference to the \"${EFFECTIVE_SLICE}\" slice"
-                    continue
-                fi
-                if [[ ("${CODE_REPO}" == "?") ||
-                        ("${CODE_PROVIDER}" == "?") ]]; then
-                    echo -e "\nIgnoring tag for the \"${CURRENT_SLICE}\" slice - no code repo and/or provider defined"
-                    continue
-                fi
-            else
-                if [[ "${CODE_COMMIT}" == "?" ]]; then
+            # Ensure code repo defined if tag provided only if commit not provided
+            if [[ "${CODE_COMMIT}" == "?" ]]; then
+                if [[ "${CODE_TAG}" != "?" ]]; then
+                    if [[ "${EFFECTIVE_SLICE}" != "${CURRENT_SLICE}" ]]; then
+                        echo -e "\nIgnoring the \"${CURRENT_SLICE}\" slice - it contains a reference to the \"${EFFECTIVE_SLICE}\" slice"
+                        continue
+                    fi
+                    if [[ ("${CODE_REPO}" == "?") ||
+                            ("${CODE_PROVIDER}" == "?") ]]; then
+                        echo -e "\nIgnoring tag for the \"${CURRENT_SLICE}\" slice - no code repo and/or provider defined"
+                        continue
+                    fi
+                    # Determine the details of the provider hosting the code repo
+                    defineGitProviderAttributes "${CODE_PROVIDER}" "CODE"
+                    # Get the commit corresponding to the tag
+                    TAG_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
+                                    "${CODE_TAG}" | cut -f 1)
+                    CODE_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
+                                    "${CODE_TAG}^{}" | cut -f 1)
+                    if [[ -z "${CODE_COMMIT}" ]]; then
+                        echo -e "\nTag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?"
+                        exit
+                    fi
+                    
+                    # Fetch other info about the tag
+                    # We are using a github api here to avoid having to pull in the whole repo - 
+                    # git currently doesn't have a command to query the message of a remote tag
+                    CODE_TAG_MESSAGE=$(curl -s https://${!CODE_CREDENTIALS_VAR}@${CODE_API_DNS}/repos/${CODE_ORG}/${CODE_REPO}/git/tags/${TAG_COMMIT} | jq .message | tr -d '"')
+                    if [[ (-z "${CODE_TAG_MESSAGE}") || ("${CODE_TAG_MESSAGE}" == "Not Found") ]]; then
+                        echo -e "\nMessage for tag ${CODE_TAG} not found in the ${CODE_REPO} repo"
+                        exit
+                    fi
+                    # else
+                    # TODO: Confirm commit is in remote repo - for now we'll assume its there if an image exists
+                else
                     # Nothing to do for this slice
                     # Note that it is permissible to not have a tag for a slice
                     # that is associated with a code repo. This situation arises
@@ -367,30 +389,6 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                 fi
             fi
             
-            if [[ "${CODE_TAG}" != "?" ]]; then
-                # Determine the details of the provider hosting the code repo
-                defineGitProviderAttributes "${CODE_PROVIDER}" "CODE"
-                # Get the commit corresponding to the tag
-                TAG_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
-                                "${CODE_TAG}" | cut -f 1)
-                CODE_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
-                                "${CODE_TAG}^{}" | cut -f 1)
-                if [[ -z "${CODE_COMMIT}" ]]; then
-                    echo -e "\nTag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?"
-                    exit
-                fi
-                
-                # Fetch other info about the tag
-                # We are using a github api here to avoid having to pull in the whole repo - 
-                # git currently doesn't have a command to query the message of a remote tag
-                CODE_TAG_MESSAGE=$(curl -s https://${!CODE_CREDENTIALS_VAR}@${CODE_API_DNS}/repos/${CODE_ORG}/${CODE_REPO}/git/tags/${TAG_COMMIT} | jq .message | tr -d '"')
-                if [[ (-z "${CODE_TAG_MESSAGE}") || ("${CODE_TAG_MESSAGE}" == "Not Found") ]]; then
-                    echo -e "\nMessage for tag ${CODE_TAG} not found in the ${CODE_REPO} repo"
-                    exit
-                fi
-                # else
-                # TODO: Confirm commit is in remote repo - for now we'll assume its there if an image exists
-            fi
             
             # TODO: Add support for other image formats
 

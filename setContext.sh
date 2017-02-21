@@ -591,6 +591,7 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
                         FROM_SEGMENT="preproduction"
                         ;;
                 esac
+                defineSetting "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
             fi
 
             findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "value"
@@ -616,6 +617,7 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
                         FROM_SEGMENT="integration"
                         ;;
                 esac
+                defineSetting "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
             fi
 
             findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"

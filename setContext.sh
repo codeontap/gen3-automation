@@ -36,7 +36,7 @@ function usage() {
 }
 
 # Parse options
-while getopts ":a:e:hi:p:s:t:" OPT; do
+while getopts ":a:d:e:hi:p:r:s:t:" OPT; do
     case "${OPT}" in
         a)
             ACCOUNT="${OPTARG}"

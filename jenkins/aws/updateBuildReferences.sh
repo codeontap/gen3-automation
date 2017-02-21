@@ -9,15 +9,16 @@ ${AUTOMATION_DIR}/manageBuildReferences.sh -u \
 RESULT=$?
 if [[ ${RESULT} -ne 0 ]]; then exit; fi
 
+TAG_SWITCH=()
 if [[ -n "${RELEASE_MODE_TAG}" ]]; then
-    TAG_SWITCH="-t ${RELEASE_MODE_TAG}"
+    TAG_SWITCH=("-t" "${RELEASE_MODE_TAG}")
 fi
 
 ${AUTOMATION_DIR}/manageRepo.sh -p \
     -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT} \
     -l "config" \
     -m "${DETAIL_MESSAGE}" \
-    "${TAG_SWITCH}" \
+    "${TAG_SWITCH[@]}" \
     -b ${PRODUCT_CONFIG_REFERENCE}
 RESULT=$?
 if [[ ${RESULT} -ne 0 ]]; then exit; fi

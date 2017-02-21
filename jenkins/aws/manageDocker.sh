@@ -4,7 +4,8 @@ if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 DOCKER_TAG_DEFAULT="latest"
-DOCKER_IMAGE_SOURCE_DEFAULT="remote"
+DOCKER_IMAGE_SOURCE_REMOTE="remote"
+DOCKER_IMAGE_SOURCE_DEFAULT="${DOCKER_IMAGE_SOURCE_REMOTE}"
 DOCKER_OPERATION_BUILD="build"
 DOCKER_OPERATION_VERIFY="verify"
 DOCKER_OPERATION_TAG="tag"
@@ -226,7 +227,7 @@ defineDockerProviderAttributes "${DOCKER_PROVIDER}" "DOCKER_PROVIDER"
 
 # Ensure the local repository has been determined
 if [[ -z "${DOCKER_REPO}" ]]; then
-	echo -e "\nJob requires the local repository name, or the product/slice/commit"
+    echo -e "\nJob requires the local repository name, or the product/slice/commit"
     usage
 fi
 
@@ -259,7 +260,7 @@ fi
 
 # Perform the required action
 case ${DOCKER_OPERATION} in
-    build)
+    ${DOCKER_OPERATION_BUILD})
         docker build -t "${FULL_DOCKER_IMAGE}" .
         RESULT=$?
         if [ $RESULT -ne 0 ]; then
@@ -278,7 +279,7 @@ case ${DOCKER_OPERATION} in
         fi
         ;;
 
-    verify)
+    ${DOCKER_OPERATION_VERIFY})
         # Check whether the image is already in the local registry
         # Use the docker API to avoid having to download the image to verify its existence
         isAWSRegistry ${DOCKER_PROVIDER_DNS}
@@ -300,7 +301,7 @@ case ${DOCKER_OPERATION} in
         fi
         ;;
 
-    tag)
+    ${DOCKER_OPERATION_TAG})
         # Formulate the tag details
         REMOTE_DOCKER_IMAGE="${REMOTE_DOCKER_REPO}:${REMOTE_DOCKER_TAG}"
         FULL_REMOTE_DOCKER_IMAGE="${DOCKER_PROVIDER_DNS}/${REMOTE_DOCKER_IMAGE}"
@@ -333,12 +334,12 @@ case ${DOCKER_OPERATION} in
         fi
         ;;        
 
-    pull)
+    ${DOCKER_OPERATION_PULL})
         # Formulate the remote registry details
         REMOTE_DOCKER_IMAGE="${REMOTE_DOCKER_REPO}:${REMOTE_DOCKER_TAG}"
 
         case ${DOCKER_IMAGE_SOURCE} in
-            remote)
+            ${DOCKER_IMAGE_SOURCE_REMOTE})
                 FULL_REMOTE_DOCKER_IMAGE="${REMOTE_DOCKER_PROVIDER_DNS}/${REMOTE_DOCKER_IMAGE}"
 
                 # Confirm access to the remote registry
@@ -351,10 +352,11 @@ case ${DOCKER_OPERATION} in
                 ;;
                 
             *)
+                # Docker utility defaults to dockerhub if no registry provided to a pull command
                 FULL_REMOTE_DOCKER_IMAGE="${REMOTE_DOCKER_IMAGE}"
                 ;;
         esac
-
+    
         # Pull in the remote image
         docker pull ${FULL_REMOTE_DOCKER_IMAGE}
         RESULT=$?

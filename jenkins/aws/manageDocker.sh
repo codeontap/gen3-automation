@@ -227,7 +227,7 @@ defineDockerProviderAttributes "${DOCKER_PROVIDER}" "DOCKER_PROVIDER"
 
 # Ensure the local repository has been determined
 if [[ -z "${DOCKER_REPO}" ]]; then
-	echo -e "\nJob requires the local repository name, or the product/slice/commit"
+    echo -e "\nJob requires the local repository name, or the product/slice/commit"
     usage
 fi
 
@@ -352,11 +352,11 @@ case ${DOCKER_OPERATION} in
                 ;;
                 
             *)
-			    # Docker utility defaults to dockerhub if no registry provided to a pull command
+                # Docker utility defaults to dockerhub if no registry provided to a pull command
                 FULL_REMOTE_DOCKER_IMAGE="${REMOTE_DOCKER_IMAGE}"
                 ;;
         esac
-
+    
         # Pull in the remote image
         docker pull ${FULL_REMOTE_DOCKER_IMAGE}
         RESULT=$?

@@ -3,39 +3,52 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
+# Defaults
 REFERENCE_OPERATION_ACCEPT="accept"
 REFERENCE_OPERATION_LIST="list"
 REFERENCE_OPERATION_LISTFULL="listfull"
 REFERENCE_OPERATION_UPDATE="update"
 REFERENCE_OPERATION_VERIFY="verify"
 REFERENCE_OPERATION_DEFAULT="${REFERENCE_OPERATION_LIST}"
+
 function usage() {
-    echo -e "\nManage build references for one or more slices"
-    echo -e "\nUsage: $(basename $0) -s SLICE_LIST -g SEGMENT_APPSETTINGS_DIR"
-    echo -e "\t\t-c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST -p CODE_PROVIDER_LIST"
-    echo -e "\t\t-a ACCEPTANCE_TAG -v VERIFICATION_TAG -f -l -u"
-    echo -e "\nwhere\n"
-    echo -e "(o) -a ACCEPTANCE_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_ACCEPT}) to tag all builds as accepted"
-    echo -e "(o) -c CODE_COMMIT_LIST is the commit for each slice"
-    echo -e "(o) -f (REFERENCE_OPERATION=${REFERENCE_OPERATION_LISTFULL}) to detail full build info"
-    echo -e "(o) -g SEGMENT_APPSETTINGS_DIR is the segment appsettings to be managed"
-    echo -e "    -h shows this text"
-    echo -e "(o) -l (REFERENCE_OPERATION=${REFERENCE_OPERATION_LIST}) to detail SLICE_LIST build info "
-    echo -e "(o) -p CODE_PROVIDER_LIST is the repo provider for each slice"
-    echo -e "(o) -r CODE_REPO_LIST is the repo for each slice"
-    echo -e "(m) -s SLICE_LIST is the list of slices to process"
-    echo -e "(o) -t CODE_TAG_LIST is the tag for each slice"
-    echo -e "(o) -u (REFERENCE_OPERATION=${REFERENCE_OPERATION_UPDATE}) to update build references"
-    echo -e "(o) -v VERIFICATION_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_VERIFY}) to verify build references"
-    echo -e "\nDEFAULTS:\n"
-    echo -e "REFERENCE_OPERATION = ${REFERENCE_OPERATION_DEFAULT}"
-    echo -e "\nNOTES:\n"
-    echo -e "1. Appsettings directory must include segment directory"
-    echo -e "2. If there is no commit for a slice, CODE_COMMIT_LIST must contain a \"?\""
-    echo -e "3. If there is no repo for a slice, CODE_REPO_LIST must contain a \"?\""
-    echo -e "4. If there is no tag for a slice, CODE_TAG_LIST must contain a \"?\""
-    echo -e "5. Lists can be shorter than the SLICE_LIST. If shorter, they "
-    echo -e "   are padded with \"?\" to match the length of SLICE_LIST"
+    cat <<EOF
+
+Manage build references for one or more slices
+
+Usage: $(basename $0)   -s SLICE_LIST -g SEGMENT_APPSETTINGS_DIR
+                        -c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST -p CODE_PROVIDER_LIST
+                        -a ACCEPTANCE_TAG -v VERIFICATION_TAG -f -l -u
+where
+(o) -a ACCEPTANCE_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_ACCEPT}) to tag all builds as accepted
+(o) -c CODE_COMMIT_LIST             is the commit for each slice
+(o) -f (REFERENCE_OPERATION=${REFERENCE_OPERATION_LISTFULL}) to detail full build info
+(o) -g SEGMENT_APPSETTINGS_DIR      is the segment appsettings to be managed
+    -h                              shows this text
+(o) -l (REFERENCE_OPERATION=${REFERENCE_OPERATION_LIST}) to detail SLICE_LIST build info
+(o) -p CODE_PROVIDER_LIST           is the repo provider for each slice
+(o) -r CODE_REPO_LIST               is the repo for each slice
+(m) -s SLICE_LIST                   is the list of slices to process
+(o) -t CODE_TAG_LIST                is the tag for each slice
+(o) -u (REFERENCE_OPERATION=${REFERENCE_OPERATION_UPDATE}) to update build references
+(o) -v VERIFICATION_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_VERIFY}) to verify build references
+
+(m) mandatory, (o) optional, (d) deprecated
+
+DEFAULTS:
+
+REFERENCE_OPERATION = ${REFERENCE_OPERATION_DEFAULT}
+
+NOTES:
+
+1. Appsettings directory must include segment directory
+2. If there is no commit for a slice, CODE_COMMIT_LIST must contain a "?"
+3. If there is no repo for a slice, CODE_REPO_LIST must contain a "?"
+4. If there is no tag for a slice, CODE_TAG_LIST must contain a "?"
+5. Lists can be shorter than the SLICE_LIST. If shorter, they
+   are padded with "?" to match the length of SLICE_LIST
+
+EOF
     exit
 }
 
@@ -78,7 +91,7 @@ function getBuildReferenceParts() {
     if [[ "${GBRP_REFERENCE}" =~ ^\{ ]]; then
         # Newer JSON based format
         for ATTRIBUTE in commit tag format; do 
-            ATTRIBUTE_VALUE=$(echo "${GBRP_REFERENCE}" | jq -r ".${ATTRIBUTE} | select(.!=null)")
+            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null)" <<< "${GBRP_REFERENCE}")
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done
     else
@@ -164,12 +177,12 @@ while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
             VERIFICATION_TAG="${OPTARG}"            
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}"
-            usage
+            echo -e "\nInvalid option: -${OPTARG}" >&2
+            exit
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument"
-            usage
+            echo -e "\nOption -${OPTARG} requires an argument" >&2
+            exit
             ;;
      esac
 done
@@ -184,24 +197,24 @@ case ${REFERENCE_OPERATION} in
         # Normally this would be called after list full
         if [[ (-z "${SLICE_LIST}") ||
                 (-z "${ACCEPTANCE_TAG}") ]]; then
-            echo -e "\nInsufficient arguments"
-            usage
+            echo -e "\nInsufficient arguments" >&2
+            exit
         fi
         ;;
 
     ${REFERENCE_OPERATION_LIST})
         # Format the build details based on provided slice list
         if [[ (-z "${SLICE_LIST}") ]]; then
-            echo -e "\nInsufficient arguments"
-            usage
+            echo -e "\nInsufficient arguments" >&2
+            exit
         fi
         ;;
 
     ${REFERENCE_OPERATION_LISTFULL})
         # Populate SLICE_LIST based on current appsettings
         if [[ -z "${SEGMENT_APPSETTINGS_DIR}" ]]; then
-            echo -e "\nInsufficient arguments"
-            usage
+            echo -e "\nInsufficient arguments" >&2
+            exit
         fi
         ;;
 
@@ -209,8 +222,8 @@ case ${REFERENCE_OPERATION} in
         # Update builds based on provided slice list
         if [[ (-z "${SLICE_LIST}") ||
                 (-z "${SEGMENT_APPSETTINGS_DIR}") ]]; then
-            echo -e "\nInsufficient arguments"
-            usage
+            echo -e "\nInsufficient arguments" >&2
+            exit
         fi
         ;;
 
@@ -218,14 +231,14 @@ case ${REFERENCE_OPERATION} in
         # Verify builds based on provided slice list
         if [[ (-z "${SLICE_LIST}") ||
                 (-z "${VERIFICATION_TAG}") ]]; then
-            echo -e "\nInsufficient arguments"
-            usage
+            echo -e "\nInsufficient arguments" >&2
+            exit
         fi
         ;;
 
     *)
-        echo -e "\nInvalid REFERENCE_OPERATION \"${REFERENCE_OPERATION}\""
-        usage
+        echo -e "\nInvalid REFERENCE_OPERATION \"${REFERENCE_OPERATION}\"" >&2
+        exit
         ;;
 esac
 
@@ -365,7 +378,7 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                     CODE_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
                                     "${CODE_TAG}^{}" | cut -f 1)
                     if [[ -z "${CODE_COMMIT}" ]]; then
-                        echo -e "\nTag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?"
+                        echo -e "\nTag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?" >&2
                         exit
                     fi
                     
@@ -374,7 +387,7 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                     # git currently doesn't have a command to query the message of a remote tag
                     CODE_TAG_MESSAGE=$(curl -s https://${!CODE_CREDENTIALS_VAR}@${CODE_API_DNS}/repos/${CODE_ORG}/${CODE_REPO}/git/tags/${TAG_COMMIT} | jq .message | tr -d '"')
                     if [[ (-z "${CODE_TAG_MESSAGE}") || ("${CODE_TAG_MESSAGE}" == "Not Found") ]]; then
-                        echo -e "\nMessage for tag ${CODE_TAG} not found in the ${CODE_REPO} repo"
+                        echo -e "\nMessage for tag ${CODE_TAG} not found in the ${CODE_REPO} repo" >&2
                         exit
                     fi
                     # else
@@ -403,11 +416,11 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                             ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_SLICE}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                             RESULT=$?
                             if [[ "${RESULT}" -ne 0 ]]; then
-                                echo -e "\nUnable to pull docker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} from docker provider ${FROM_IMAGE_PROVIDER}. Was the build successful?"
+                                echo -e "\nUnable to pull docker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} from docker provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" >&2
                                 exit
                             fi
                         else
-                            echo -e "\nDocker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} not found. Was the build successful?"
+                            echo -e "\nDocker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} not found. Was the build successful?" >&2
                             exit
                         fi
                     fi

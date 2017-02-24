@@ -6,8 +6,8 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 # Ensure mandatory arguments have been provided
 if [[ (-z "${RELEASE_MODE}") ||
         (-z "${ACCEPTANCE_TAG}") ]]; then
-    echo -e "\nInsufficient arguments"
-    usage
+    echo -e "\nInsufficient arguments" >&2
+    exit
 fi
 
 # Verify the reference updates

@@ -5,7 +5,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Ensure RELEASE_IDENTIFIER have been provided
 if [[ -z "${RELEASE_IDENTIFIER}" ]]; then
-	echo -e "\nJob requires the identifier of the release to be accepted"
+	echo -e "\nJob requires the identifier of the release to be accepted" >&2
     exit
 fi
 

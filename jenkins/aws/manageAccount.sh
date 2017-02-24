@@ -9,7 +9,7 @@ if [[ "${CREATE_ACCOUNT_BUCKETS}" == "true" ]]; then
     ${GENERATION_DIR}/createAccountTemplate.sh -a ${ACCOUNT}
     RESULT=$?
     if [[ "${RESULT}" -ne 0 ]]; then
-        echo "Generation of the account level template for the ${ACCOUNT} account failed"
+        echo "Generation of the account level template for the ${ACCOUNT} account failed" >&2
         exit
     fi
 
@@ -17,7 +17,7 @@ if [[ "${CREATE_ACCOUNT_BUCKETS}" == "true" ]]; then
     ${GENERATION_DIR}/createStack.sh -t account
 	RESULT=$?
     if [[ "${RESULT}" -ne 0 ]]; then
-        echo "Creation of the account level stack for the ${ACCOUNT} account failed"
+        echo "Creation of the account level stack for the ${ACCOUNT} account failed" >&2
         exit
     fi
         
@@ -34,7 +34,7 @@ if [[ "${CREATE_ACCOUNT_BUCKETS}" == "true" ]]; then
     git push origin master
 	RESULT=$?
     if [[ "${RESULT}" -ne 0 ]]; then
-        echo "Unable to save the changes resulting from creating the ${ACCOUNT} account stack"
+        echo "Unable to save the changes resulting from creating the ${ACCOUNT} account stack" >&2
         exit
     fi
 fi

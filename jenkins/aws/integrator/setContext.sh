@@ -3,20 +3,34 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
+# Defaults
 INTEGRATOR_DEFAULT="integrator"
+
 function usage() {
-    echo -e "\nDetermine key settings for an integrator/tenant/account" 
-    echo -e "\nUsage: $(basename $0) -c INTEGRATOR -t TENANT -a ACCOUNT"
-    echo -e "\nwhere\n"
-    echo -e "(o) -a ACCOUNT is the tenant account name e.g. \"env01\""
-    echo -e "    -h shows this text"
-    echo -e "(o) -i INTEGRATOR is the integrator cyber account name"
-    echo -e "(o) -t TENANT is the tenant name e.g. \"env\""
-    echo -e "\nDEFAULTS:\n"
-    echo -e "INTEGRATOR=${INTEGRATOR_DEFAULT}"
-    echo -e "\nNOTES:\n"
-    echo -e "1. The setting values are saved in context.properties in the current directory"
-    echo -e ""
+    cat <<EOF
+
+Determine key settings for an integrator/tenant/account
+
+Usage: $(basename $0) -c INTEGRATOR -t TENANT -a ACCOUNT
+
+where
+
+(o) -a ACCOUNT      is the tenant account name e.g. "env01"
+    -h              shows this text
+(o) -i INTEGRATOR   is the integrator cyber account name
+(o) -t TENANT       is the tenant name e.g. "env"
+
+(m) mandatory, (o) optional, (d) deprecated
+
+DEFAULTS:
+
+INTEGRATOR=${INTEGRATOR_DEFAULT}
+
+NOTES:
+
+1. The setting values are saved in context.properties in the current directory
+
+EOF
     exit
 }
 
@@ -36,19 +50,19 @@ while getopts ":a:hi:t:" opt; do
             TENANT="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}"
-            usage
+            echo -e "\nInvalid option: -${OPTARG}" >&2
+            exit
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument"
-            usage
+            echo -e "\nOption -${OPTARG} requires an argument" >&2
+            exit
             ;;
      esac
 done
 
 # Determine the integrator/tenant/account from the job name
 # if not already defined or provided on the command line
-JOB_PATH=($(echo "${JOB_NAME}" | tr "/" " "))
+JOB_PATH=($(tr "/" " " <<< "${JOB_NAME}"))
 PARTS=()
 COT_PREFIX="cot-"
 for PART in ${JOB_PATH[@]}; do

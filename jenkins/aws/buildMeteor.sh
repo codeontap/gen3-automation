@@ -10,7 +10,7 @@ cd app
 npm install --production
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-   echo -e "\nnpm install failed"
+   echo -e "\nnpm install failed" >&2
    exit
 fi
 
@@ -18,7 +18,7 @@ fi
 meteor build ../dist --directory
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-   echo -e "\nmeteor build failed"
+   echo -e "\nmeteor build failed" >&2
    exit
 fi
 cd ..
@@ -27,7 +27,7 @@ cd ..
 (cd dist/bundle/programs/server && npm install --production)
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-   echo -e "\nInstallation of app node modules failed"
+   echo -e "\nInstallation of app node modules failed" >&2
    exit
 fi
 
@@ -35,7 +35,7 @@ fi
 MAX_METEOR_BUILD_SIZE=${MAX_METEOR_BUILD_SIZE:-100}
 if [[ $(du -s -m ./dist | cut -f 1) -gt ${MAX_METEOR_BUILD_SIZE} ]]; then
     RESULT=1
-    echo -e "\nBuild size exceeds ${MAX_METEOR_BUILD_SIZE}M"
+    echo -e "\nBuild size exceeds ${MAX_METEOR_BUILD_SIZE}M" >&2
     exit
 fi
 

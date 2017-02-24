@@ -8,16 +8,16 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 if [[ -z "${SLICE_LIST}" ]]; then
     if [[ -f slices.json ]]; then
         for ATTRIBUTE in slices format; do 
-            ATTRIBUTE_VALUE=$(echo "slices.json" | jq -r ".${ATTRIBUTE} | select(.!=null)")
+            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null)" < slices.json)
             declare "${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE}"
         done
         export SLICE_LIST="${SLICES}"
     else
         if [[ -f slices.ref ]]; then
-            export SLICE_LIST=`cat slices.ref`
+            export SLICE_LIST=$(cat slices.ref)
         else
             if [[ -f slice.ref ]]; then
-                export SLICE_LIST=`cat slice.ref`
+                export SLICE_LIST=$(cat slice.ref)
             fi
         fi
     fi
@@ -54,14 +54,14 @@ case ${IMAGE_FORMAT} in
                 exit
             fi
         else
-            echo -e "\nDockerfile missing"
+            echo -e "\nDockerfile missing" >&2
             exit
         fi
         ;;
 
     # TODO: Perform checks for AWS Lambda packaging - not sure yet what to check for as a marker
     *)
-        echo -e "\nUnsupported image format \"${IMAGE_FORMAT}\""
+        echo -e "\nUnsupported image format \"${IMAGE_FORMAT}\"" >&2
         exit
         ;;
 esac

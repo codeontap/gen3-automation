@@ -22,7 +22,7 @@ ${GENERATION_DIR}/snapshotRDSDatabase.sh -s b${AUTOMATION_JOB_IDENTIFIER} ${SNAP
 RESULT=$?
 
 if [[ ${RESULT} -ne 0 ]]; then
-	echo -e "\nSnapshot of ${SEGMENT} failed"
+	echo -e "\nSnapshot of ${SEGMENT} failed" >&2
 	exit
 fi
 

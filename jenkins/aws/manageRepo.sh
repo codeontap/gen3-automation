@@ -3,44 +3,61 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
-REPO_OPERATION_DEFAULT="push"
+REPO_OPERATION_CLONE="clone"
+REPO_OPERATION_INIT="init"
+REPO_OPERATION_PUSH="push"
+
+# Defaults
+REPO_OPERATION_DEFAULT="${REPO_OPERATION_PUSH}"
 REPO_REMOTE_DEFAULT="origin"
 REPO_BRANCH_DEFAULT="master"
+
 function usage() {
-    echo -e "\nManage git repos"
-    echo -e "\nUsage: $(basename $0) -l REPO_LOG_NAME -m REPO_MESSAGE -d REPO_DIR"
-    echo -e "\t\t -u REPO_URL -n REPO_NAME -v REPO_PROVIDER"
-    echo -e "\t\t -t REPO_TAG -r REPO_REMOTE -b REPO_BRANCH"
-    echo -e "\t\t -s GIT_USER -e GIT_EMAIL -i -c -p"
-    echo -e "\nwhere\n"
-    echo -e "(o) -c clone repo"
-    echo -e "(m) -d REPO_DIR is the directory containing the repo"
-    echo -e "(o) -e GIT_EMAIL is the repo user email"
-    echo -e "    -h shows this text"
-    echo -e "(o) -i initialise repo"
-    echo -e "(o) -l REPO_NAME is the repo name for the git provider"
-    echo -e "(o) -m REPO_MESSAGE is used as the commit/tag message"
-    echo -e "(m) -n REPO_LOG_NAME to use in log messages"
-    echo -e "(o) -p commit local repo and push to origin"
-    echo -e "(o) -r REPO_REMOTE is the remote name for pushing"
-    echo -e "(o) -s GIT_USER is the repo user"
-    echo -e "(o) -t REPO_TAG is the tag to add after any commit"
-    echo -e "(o) -u REPO_URL is the repo URL"
-    echo -e "(o) -v REPO_PROVIDER is the repo git provider"
-    echo -e "\nDEFAULTS:\n"
-    echo -e "REPO_OPERATION=${REPO_OPERATION_DEFAULT}"
-    echo -e "REPO_REMOTE=${REPO_REMOTE_DEFAULT}"
-    echo -e "REPO_BRANCH=${REPO_BRANCH_DEFAULT}"
-    echo -e "\nNOTES:\n"
-    echo -e "1. Initialise requires REPO_LOG_NAME and REPO_URL"
-    echo -e "2. Initialise does nothing if existing repo detected"
-    echo -e "3. Current branch is assumed when pushing"
-    echo -e "4. REPO_NAME and REPO_PROVIDER can be supplied as"
-    echo -e "   an alternative to REPO_URL"
-    echo -e ""
+    cat <<EOF
+
+Manage git repos
+
+Usage: $(basename $0) -l REPO_LOG_NAME -m REPO_MESSAGE -d REPO_DIR
+        -u REPO_URL -n REPO_NAME -v REPO_PROVIDER
+        -t REPO_TAG -r REPO_REMOTE -b REPO_BRANCH
+        -s GIT_USER -e GIT_EMAIL -i -c -p
+
+where
+
+(o) -c (REPO_OPERATION=${REPO_OPERATION_CLONE}) clone repo
+(m) -d REPO_DIR         is the directory containing the repo
+(o) -e GIT_EMAIL        is the repo user email
+    -h                  shows this text
+(o) -i (REPO_OPERATION=${REPO_OPERATION_INIT}) initialise repo
+(o) -l REPO_NAME        is the repo name for the git provider
+(o) -m REPO_MESSAGE     is used as the commit/tag message
+(m) -n REPO_LOG_NAME    to use in log messages
+(o) -p (REPO_OPERATION=${REPO_OPERATION_PUSH}) commit local repo and push to origin
+(o) -r REPO_REMOTE      is the remote name for pushing
+(o) -s GIT_USER         is the repo user
+(o) -t REPO_TAG         is the tag to add after any commit
+(o) -u REPO_URL         is the repo URL
+(o) -v REPO_PROVIDER    is the repo git provider
+
+(m) mandatory, (o) optional, (d) deprecated
+
+DEFAULTS:
+
+REPO_OPERATION=${REPO_OPERATION_DEFAULT}
+REPO_REMOTE=${REPO_REMOTE_DEFAULT}
+REPO_BRANCH=${REPO_BRANCH_DEFAULT}
+
+NOTES:
+
+1. Initialise requires REPO_LOG_NAME and REPO_URL
+2. Initialise does nothing if existing repo detected
+3. Current branch is assumed when pushing
+4. REPO_NAME and REPO_PROVIDER can be supplied as
+   an alternative to REPO_URL
+
+EOF
     exit
 }
-
 
 function init() {
     echo -e "Initialising the ${REPO_LOG_NAME} repo..."
@@ -51,19 +68,19 @@ function init() {
     fi
 
     if [[ (-z "${REPO_REMOTE}") ]]; then
-        echo -e "\nInsufficient arguments"
-        usage
+        echo -e "\nInsufficient arguments" >&2
+        exit
     fi
     git remote show "${REPO_REMOTE}" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         if [[ (-z "${REPO_URL}") ]]; then
-            echo -e "\nInsufficient arguments"
-            usage
+            echo -e "\nInsufficient arguments" >&2
+            exit
         fi
         git remote add "${REPO_REMOTE}" "${REPO_URL}"
         RESULT=$?
         if [[ ${RESULT} -ne 0 ]]; then
-            echo -e "\nCan't add remote ${REPO_REMOTE} to ${REPO_LOG_NAME} repo"
+            echo -e "\nCan't add remote ${REPO_REMOTE} to ${REPO_LOG_NAME} repo" >&2
             exit
         fi
     fi
@@ -84,14 +101,14 @@ function clone() {
     echo -e "Cloning the ${REPO_LOG_NAME} repo and checking out the ${REPO_BRANCH} branch ..."
     if [[ (-z "${REPO_URL}") ||
             (-z "${REPO_BRANCH}") ]]; then
-        echo -e "\nInsufficient arguments"
-        usage
+        echo -e "\nInsufficient arguments" >&2
+        exit
     fi
 
     git clone -b "${REPO_BRANCH}" "${REPO_URL}" .
     RESULT=$?
     if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nCan't clone ${REPO_LOG_NAME} repo"
+        echo -e "\nCan't clone ${REPO_LOG_NAME} repo" >&2
         exit
     fi
 }
@@ -101,14 +118,14 @@ function push() {
             (-z "${GIT_EMAIL}") ||
             (-z "${REPO_MESSAGE}") ||
             (-z "${REPO_REMOTE}") ]]; then
-        echo -e "\nInsufficient arguments"
-        usage
+        echo -e "\nInsufficient arguments" >&2
+        exit
     fi
 
     git remote show "${REPO_REMOTE}" >/dev/null 2>&1
     RESULT=$?
     if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nRemote ${REPO_REMOTE} is not initialised"
+        echo -e "\nRemote ${REPO_REMOTE} is not initialised" >&2
         exit
     fi
 
@@ -125,7 +142,7 @@ function push() {
         git commit -m "${REPO_MESSAGE}"
         RESULT=$?
         if [[ ${RESULT} -ne 0 ]]; then
-            echo -e "\nCan't commit to the ${REPO_LOG_NAME} repo"
+            echo -e "\nCan't commit to the ${REPO_LOG_NAME} repo" >&2
             exit
         fi
         REPO_PUSH_REQUIRED="true"
@@ -137,7 +154,7 @@ function push() {
         git tag -a "${REPO_TAG}" -m "${REPO_MESSAGE}"
         RESULT=$?
         if [[ ${RESULT} -ne 0 ]]; then
-            echo -e "\nCan't tag the ${REPO_LOG_NAME} repo"
+            echo -e "\nCan't tag the ${REPO_LOG_NAME} repo" >&2
             exit
         fi
         REPO_PUSH_REQUIRED="true"
@@ -149,7 +166,7 @@ function push() {
         git push --tags ${REPO_REMOTE} ${REPO_BRANCH}
         RESULT=$?
         if [[ ${RESULT} -ne 0 ]]; then
-            echo -e "\nCan't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}"
+            echo -e "\nCan't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}" >&2
             exit
         fi
     fi
@@ -176,7 +193,7 @@ while getopts ":b:cd:e:hil:m:n:pr:s:t:u:v:" opt; do
             REPO_BRANCH="${OPTARG}"
             ;;
         c)
-            REPO_OPERATION="clone"
+            REPO_OPERATION="${REPO_OPERATION_CLONE}"
             ;;
         d)
             REPO_DIR="${OPTARG}"
@@ -188,7 +205,7 @@ while getopts ":b:cd:e:hil:m:n:pr:s:t:u:v:" opt; do
             usage
             ;;
         i)
-            REPO_OPERATION="init"
+            REPO_OPERATION="${REPO_OPERATION_INIT}"
             ;;
         l)
             REPO_LOG_NAME="${OPTARG}"
@@ -200,7 +217,7 @@ while getopts ":b:cd:e:hil:m:n:pr:s:t:u:v:" opt; do
             REPO_NAME="${OPTARG}"
             ;;
         p)
-            REPO_OPERATION="push"
+            REPO_OPERATION="${REPO_OPERATION_PUSH}"
             ;;
         r)
             REPO_REMOTE="${OPTARG}"
@@ -218,12 +235,12 @@ while getopts ":b:cd:e:hil:m:n:pr:s:t:u:v:" opt; do
             REPO_PROVIDER="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}"
-            usage
+            echo -e "\nInvalid option: -${OPTARG}" >&2
+            exit
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument"
-            usage
+            echo -e "\nOption -${OPTARG} requires an argument" >&2
+            exit
             ;;
      esac
 done
@@ -247,8 +264,8 @@ fi
 # Ensure mandatory arguments have been provided
 if [[ (-z "${REPO_DIR}") ||
         (-z "${REPO_LOG_NAME}") ]]; then
-    echo -e "\nInsufficient arguments"
-    usage
+    echo -e "\nInsufficient arguments" >&2
+    exit
 fi
 
 # Ensure we are inside the repo directory
@@ -256,7 +273,7 @@ if [[ ! -d "${REPO_DIR}" ]]; then
     mkdir -p "${REPO_DIR}"
     RESULT=$?
     if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nCan't create repo directory ${REPO_DIR}"
+        echo -e "\nCan't create repo directory ${REPO_DIR}" >&2
         exit
     fi
 fi
@@ -264,15 +281,15 @@ cd "${REPO_DIR}"
 
 # Perform the required action
 case ${REPO_OPERATION} in
-    init)
+    ${REPO_OPERATION_INIT})
         init
         ;;
 
-    clone)
+    ${REPO_OPERATION_CLONE})
         clone
         ;;
         
-    push)
+    ${REPO_OPERATION_PUSH})
         push
         ;;
 esac

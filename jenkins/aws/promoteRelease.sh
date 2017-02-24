@@ -8,8 +8,8 @@ RELEASE_MODE_PROMOTION="promotion"
 # Ensure mandatory arguments have been provided
 if [[ (-z "${RELEASE_MODE}") ||
         (-z "${ACCEPTANCE_TAG}") ]]; then
-    echo -e "\nInsufficient arguments"
-    usage
+    echo -e "\nInsufficient arguments" >&2
+    exit
 fi
 
 # Verify the build information

@@ -5,13 +5,13 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Ensure RELEASE_IDENTIFIER have been provided
 if [[ -z "${RELEASE_IDENTIFIER}" ]]; then
-	echo -e "\nJob requires the identifier of the release to use in the deployment"
+	echo -e "\nJob requires the identifier of the release to use in the deployment" >&2
     exit
 fi
 
 # Ensure at least one slice has been provided
 if [[ ( -z "${SLICE_LIST}" ) ]]; then
-	echo -e "\nJob requires at least one slice"
+	echo -e "\nJob requires at least one slice" >&2
     exit
 fi
 

@@ -3,35 +3,50 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
-PRODUCT_CONFIG_REFERENCE_DEFAULT="master"
-PRODUCT_INFRASTRUCTURE_REFERENCE_DEFAULT="master"
-GENERATION_BIN_REFERENCE_DEFAULT="master"
-GENERATION_PATTERNS_REFERENCE_DEFAULT="master"
-GENERATION_STARTUP_REFERENCE_DEFAULT="master"
+REFERENCE_MASTER="master"
+
+# Defaults
+PRODUCT_CONFIG_REFERENCE_DEFAULT="${REFERENCE_MASTER}"
+PRODUCT_INFRASTRUCTURE_REFERENCE_DEFAULT="${REFERENCE_MASTER}"
+GENERATION_BIN_REFERENCE_DEFAULT="${REFERENCE_MASTER}"
+GENERATION_PATTERNS_REFERENCE_DEFAULT="${REFERENCE_MASTER}"
+GENERATION_STARTUP_REFERENCE_DEFAULT="${REFERENCE_MASTER}"
+
 function usage() {
-    echo -e "\nConstruct the account directory tree" 
-    echo -e "\nUsage: $(basename $0) -c CONFIG_REFERENCE -i INFRASTRUCTURE_REFERENCE -b GENERATION_BIN_REFERENCE -p GENERATION_PATTERNS_REFERENCE -s GENERATION_STARTUP_REFERENCE -a -r -n -f"
-    echo -e "\nwhere\n"
-    echo -e "(o) -a if the account directories should not be included"
-    echo -e "(o) -b GENERATION_BIN_REFERENCE is the git reference for the generation framework bin repo"
-    echo -e "(o) -c CONFIG_REFERENCE is the git reference for the config repo"
-    echo -e "(o) -f if patterns and startup repos required - only bin repo is included by default"
-    echo -e "    -h shows this text"
-    echo -e "(o) -i INFRASTRUCTURE_REFERENCE is the git reference for the config repo"
-    echo -e "(o) -n initialise repos if not already initialised"
-    echo -e "(o) -p GENERATION_PATTERNS_REFERENCE is the git reference for the generation framework patterns repo"
-    echo -e "(o) -r if the product directories should not be included"
-    echo -e "(o) -s GENERATION_STARTUP_REFERENCE is the git reference for the generation framework startup repo"
-    echo -e "\nDEFAULTS:\n"
-    echo -e "CONFIG_REFERENCE = ${PRODUCT_CONFIG_REFERENCE_DEFAULT}"
-    echo -e "INFRASTRUCTURE_REFERENCE = ${PRODUCT_INFRASTRUCTURE_REFERENCE_DEFAULT}"
-    echo -e "GENERATION_BIN_REFERENCE = ${GENERATION_BIN_REFERENCE_DEFAULT}"
-    echo -e "GENERATION_PATTERNS_REFERENCE = ${GENERATION_PATTERNS_REFERENCE_DEFAULT}"
-    echo -e "GENERATION_STARTUP_REFERENCE = ${GENERATION_STARTUP_REFERENCE_DEFAULT}"
-    echo -e "\nNOTES:\n"
-    echo -e "1. ACCOUNT/PRODUCT details are assumed to be already defined via environment variables"
-    echo -e ""
-    RESULT=1
+    cat <<EOF
+
+Construct the account directory tree
+
+Usage: $(basename $0) -c CONFIG_REFERENCE -i INFRASTRUCTURE_REFERENCE -b GENERATION_BIN_REFERENCE -p GENERATION_PATTERNS_REFERENCE -s GENERATION_STARTUP_REFERENCE -a -r -n -f
+
+where
+
+(o) -a                                  if the account directories should not be included
+(o) -b GENERATION_BIN_REFERENCE         is the git reference for the generation framework bin repo
+(o) -c CONFIG_REFERENCE                 is the git reference for the config repo
+(o) -f                                  if patterns and startup repos required - only bin repo is included by default
+    -h                                  shows this text
+(o) -i INFRASTRUCTURE_REFERENCE         is the git reference for the config repo
+(o) -n                                  initialise repos if not already initialised
+(o) -p GENERATION_PATTERNS_REFERENCE    is the git reference for the generation framework patterns repo
+(o) -r                                  if the product directories should not be included
+(o) -s GENERATION_STARTUP_REFERENCE     is the git reference for the generation framework startup repo
+
+(m) mandatory, (o) optional, (d) deprecated
+
+DEFAULTS:
+
+CONFIG_REFERENCE = ${PRODUCT_CONFIG_REFERENCE_DEFAULT}
+INFRASTRUCTURE_REFERENCE = ${PRODUCT_INFRASTRUCTURE_REFERENCE_DEFAULT}
+GENERATION_BIN_REFERENCE = ${GENERATION_BIN_REFERENCE_DEFAULT}
+GENERATION_PATTERNS_REFERENCE = ${GENERATION_PATTERNS_REFERENCE_DEFAULT}
+GENERATION_STARTUP_REFERENCE = ${GENERATION_STARTUP_REFERENCE_DEFAULT}
+
+NOTES:
+
+1. ACCOUNT/PRODUCT details are assumed to be already defined via environment variables
+
+EOF
     exit
 }
 
@@ -69,12 +84,12 @@ while getopts ":ab:c:fhi:np:rs:" opt; do
             GENERATION_STARTUP_REFERENCE="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}"
-            usage
+            echo -e "\nInvalid option: -${OPTARG}" >&2
+            exit
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument"
-            usage
+            echo -e "\nOption -${OPTARG} requires an argument" >&2
+            exit
             ;;
      esac
 done
@@ -92,8 +107,8 @@ INIT_REPOS="${INIT_REPOS:-false}"
 
 # Check for required context
 if [[ -z "${ACCOUNT}" ]]; then
-    echo "ACCOUNT not defined"
-    usage
+    echo "ACCOUNT not defined" >&2
+    exit
 fi
 
 # Save for later steps

@@ -25,13 +25,13 @@ if [[ ${RESULT} -ne 0 ]]; then exit; fi
 
 if [[ (-n "${AUTODEPLOY+x}") &&
         ("$AUTODEPLOY" != "true") ]]; then
-  echo -e "\nAUTODEPLOY is not true, triggering exit"
+  echo -e "\nAUTODEPLOY is not true, triggering exit" >&2
   RESULT=2
   exit
 fi
 
 # Record key parameters for downstream jobs
-echo "SLICES=${SLICE_LIST}" >> $AUTOMATION_DATA_DIR/chain.properties
+echo "SLICES=${SLICE_LIST}" >> ${AUTOMATION_DATA_DIR}/chain.properties
 
 # All good
 RESULT=0

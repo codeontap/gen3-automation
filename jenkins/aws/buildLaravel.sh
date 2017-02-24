@@ -8,14 +8,14 @@ cd laravel/
 /usr/local/bin/composer install --prefer-source --no-interaction
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-   echo -e "\ncomposer install fails with the exit code $RESULT"
+   echo -e "\ncomposer install fails with the exit code $RESULT" >&2
    exit
 fi
 
 /usr/local/bin/composer update
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-   echo -e "\ncomposer update fails with the exit code $RESULT"
+   echo -e "\ncomposer update fails with the exit code $RESULT" >&2
    exit
 fi
 

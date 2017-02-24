@@ -24,7 +24,7 @@ for CURRENT_TASK in $TASK_LIST; do
     ${GENERATION_DIR}/runTask.sh -t "${TASK_TIER}" -i "${TASK_COMPONENT}" -w "${CURRENT_TASK}" "${ENVS[@]}"
     RESULT=$?
     if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nRunning of task ${CURRENT_TASK} failed"
+        echo -e "\nRunning of task ${CURRENT_TASK} failed" >&2
         exit
     fi
 done

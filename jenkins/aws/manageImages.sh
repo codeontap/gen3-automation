@@ -20,14 +20,14 @@ case ${IMAGE_FORMAT_ARRAY[0]} in
                 exit
             fi
         else
-            echo -e "\nDockerfile missing"
+            echo -e "\nDockerfile missing" >&2
             exit
         fi
         ;;
 
     # TODO: Perform checks for AWS Lambda packaging - not sure yet what to check for as a marker
     *)
-        echo -e "\nUnsupported image format \"${IMAGE_FORMAT}\""
+        echo -e "\nUnsupported image format \"${IMAGE_FORMAT}\"" >&2
         exit
         ;;
 esac

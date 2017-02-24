@@ -11,27 +11,42 @@ RELEASE_MODE_CONTINUOUS="continuous"
 RELEASE_MODE_SELECTIVE="selective"
 RELEASE_MODE_PROMOTION="promotion"
 RELEASE_MODE_HOTFIX="hotfix"
+
+# Defaults
 RELEASE_MODE_DEFAULT="${RELEASE_MODE_CONTINUOUS}"
+
 function usage() {
-    echo -e "\nDetermine key settings for an tenant/account/product/segment" 
-    echo -e "\nUsage: $(basename $0) -i INTEGRATOR -t TENANT -a ACCOUNT -p PRODUCT -e ENVIRONMENT -s SEGMENT -r RELEASE_MODE -d DEPLOYMENT_MODE"
-    echo -e "\nwhere\n"
-    echo -e "(o) -a ACCOUNT is the tenant account name e.g. \"env01\""
-    echo -e "(o) -d DEPLOYMENT_MODE is the mode to be used for deployment activity"
-    echo -e "(o) -e ENVIRONMENT is the environment name"
-    echo -e "    -h shows this text"
-    echo -e "(o) -i INTEGRATOR is the integrator name"
-    echo -e "(o) -p PRODUCT is the product name e.g. \"eticket\""
-    echo -e "(o) -r RELEASE_MODE is the mode to be used for release activity"
-    echo -e "(o) -s SEGMENT is the SEGMENT name e.g. \"production\""
-    echo -e "(o) -t TENANT is the tenant name e.g. \"env\""
-    echo -e "\nDEFAULTS:\n"
-    echo -e "RELEASE_MODE = ${RELEASE_MODE_DEFAULT}"
-    echo -e "\nNOTES:\n"
-    echo -e "1. The setting values are saved in context.properties in the current directory"
-    echo -e "2. DEPLOYMENT_MODE is one of \"${DEPLOYMENT_MODE_UPDATE}\", \"${DEPLOYMENT_MODE_STOPSTART}\" and \"${DEPLOYMENT_MODE_STOP}\""
-    echo -e "3. RELEASE_MODE is one of \"${RELEASE_MODE_CONTINUOUS}\", \"${RELEASE_MODE_SELECTIVE}\", \"${RELEASE_MODE_PROMOTION}\" and \"${RELEASE_MODE_HOTFIX}\""
-    echo -e ""
+    cat <<EOF
+
+Determine key settings for an tenant/account/product/segment
+
+Usage: $(basename $0) -i INTEGRATOR -t TENANT -a ACCOUNT -p PRODUCT -e ENVIRONMENT -s SEGMENT -r RELEASE_MODE -d DEPLOYMENT_MODE
+
+where
+
+(o) -a ACCOUNT          is the tenant account name e.g. "env01"
+(o) -d DEPLOYMENT_MODE  is the mode to be used for deployment activity
+(o) -e ENVIRONMENT      is the environment name
+    -h                  shows this text
+(o) -i INTEGRATOR       is the integrator name
+(o) -p PRODUCT          is the product name e.g. "eticket"
+(o) -r RELEASE_MODE     is the mode to be used for release activity
+(o) -s SEGMENT          is the SEGMENT name e.g. "production"
+(o) -t TENANT           is the tenant name e.g. "env"
+
+(m) mandatory, (o) optional, (d) deprecated
+
+DEFAULTS:
+
+RELEASE_MODE = ${RELEASE_MODE_DEFAULT}
+
+NOTES:
+
+1. The setting values are saved in context.properties in the current directory
+2. DEPLOYMENT_MODE is one of "${DEPLOYMENT_MODE_UPDATE}", "${DEPLOYMENT_MODE_STOPSTART}" and "${DEPLOYMENT_MODE_STOP}"
+3. RELEASE_MODE is one of "${RELEASE_MODE_CONTINUOUS}", "${RELEASE_MODE_SELECTIVE}", "${RELEASE_MODE_PROMOTION}" and "${RELEASE_MODE_HOTFIX}"
+
+EOF
     exit
 }
 
@@ -66,12 +81,12 @@ while getopts ":a:d:e:hi:p:r:s:t:" OPT; do
             TENANT="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}"
-            usage
+            echo -e "\nInvalid option: -${OPTARG}" >&2
+            exit
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument"
-            usage
+            echo -e "\nOption -${OPTARG} requires an argument" >&2
+            exit
             ;;
      esac
 done
@@ -319,7 +334,7 @@ case "${AUTOMATION_PROVIDER}" in
         # Only parts of the jobname starting with "cot-" or "int-" are
         # considered and this prefix is removed to give the actual name.
         # "int-" denotes an integrator setup, while "cot-" denotes a tenant setup 
-        JOB_PATH=($(echo "${JOB_NAME}" | tr "/" " "))
+        JOB_PATH=($(tr "/" " " <<< "${JOB_NAME}"))
         INTEGRATOR_PARTS_ARRAY=()
         TENANT_PARTS_ARRAY=()
         INTEGRATOR_PREFIX="int-"
@@ -384,7 +399,7 @@ case "${AUTOMATION_PROVIDER}" in
                 PRODUCT=${PRODUCT:-${TENANT_PARTS_ARRAY[${TENANT_PARTS_COUNT}-1]}}
             else
                 # Default before use of folder plugin was for product to be first token in job name
-                PRODUCT=${PRODUCT:-$(echo ${JOB_NAME} | cut -d '-' -f 1)}
+                PRODUCT=${PRODUCT:-$(cut -d '-' -f 1 <<< "${JOB_NAME}")}
             fi
         fi
 
@@ -495,7 +510,7 @@ CODE_TAG_ARRAY=()
 CODE_REPO_ARRAY=()
 CODE_PROVIDER_ARRAY=()
 IMAGE_FORMAT_ARRAY=()
-CURRENT_IFS=$IFS
+CURRENT_IFS=${IFS}
 for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
     IFS="${SLICE_PART_SEPARATOR}"; SLICE_PARTS=(${CURRENT_SLICE})
     SLICE_PART="${SLICE_PARTS[0]}"
@@ -526,7 +541,7 @@ for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
     IMAGE_FORMAT_ARRAY+=("${FORMAT_PART}")
 
     # Determine code repo for the slice - there may be none
-    CODE_SLICE=$(echo "${SLICE_PART^^}" | tr "-" "_")
+    CODE_SLICE=$(tr "-" "_" <<< "${SLICE_PART^^}")
     defineRepoSettings "PRODUCT" "${CODE_SLICE}" "${PRODUCT}" "${CODE_SLICE}" "?" "CODE"
     CODE_REPO_ARRAY+=("${NAME_VALUE}")
     
@@ -602,7 +617,7 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
                 defineRepoSettings           "FROM_PRODUCT" "CONFIG" "${PRODUCT}" "${FROM_SEGMENT}" "${PRODUCT}-config"
                 defineDockerProviderSettings "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
             else
-                echo -e "\nPROMOTION segment/account not defined"
+                echo -e "\nPROMOTION segment/account not defined" >&2
                 exit
             fi
             ;;
@@ -625,7 +640,7 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
                     (-n "${FROM_ACCOUNT}")]]; then
                 defineDockerProviderSettings "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
             else
-                echo -e "\HOTFIX segment/account not defined"
+                echo -e "\HOTFIX segment/account not defined" >&2
                 exit
             fi
             ;;

@@ -17,7 +17,7 @@ for LEVEL in segment solution; do
    	            ${GENERATION_DIR}/create${LEVEL^}Template.sh -s ${SLICE}
                 RESULT=$?
                 if [[ "${RESULT}" -ne 0 ]]; then
-            	    echo "Generation of the ${LEVEL} level template for the ${SLICE} slice of the ${SEGMENT} segment failed"
+            	    echo "Generation of the ${LEVEL} level template for the ${SLICE} slice of the ${SEGMENT} segment failed" >&2
                     exit
                 fi
 		    ;;
@@ -27,7 +27,7 @@ for LEVEL in segment solution; do
         ${GENERATION_DIR}/${MODE}Stack.sh -t ${LEVEL} -s ${SLICE}
 	    RESULT=$?
         if [[ "${RESULT}" -ne 0 ]]; then
-            echo "Applying ${MODE} mode to the ${LEVEL} level stack for the ${SLICE} slice of the ${SEGMENT} segment failed"
+            echo "Applying ${MODE} mode to the ${LEVEL} level stack for the ${SLICE} slice of the ${SEGMENT} segment failed" >&2
             exit
         fi
         
@@ -39,7 +39,7 @@ for LEVEL in segment solution; do
             
 	    RESULT=$?
         if [[ "${RESULT}" -ne 0 ]]; then
-            echo "Unable to save the changes resulting from applying ${MODE} mode to the ${LEVEL} level stack for the ${SLICE} slice of the ${SEGMENT} segment"
+            echo "Unable to save the changes resulting from applying ${MODE} mode to the ${LEVEL} level stack for the ${SLICE} slice of the ${SEGMENT} segment" >&2
             exit
         fi
     done
@@ -67,7 +67,7 @@ if [[ "${CHECK_CREDENTIALS}" == "true" ]]; then
     git push origin master
 	RESULT=$?
     if [[ "${RESULT}" -ne 0 ]]; then
-        echo "Unable to save the credential updates for the ${SEGMENT} segment"
+        echo "Unable to save the credential updates for the ${SEGMENT} segment" >&2
         exit
     fi
 fi

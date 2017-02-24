@@ -6,7 +6,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 npm install --unsafe-perm
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-   echo -e "\nnpm install failed"
+   echo -e "\nnpm install failed" >&2
    exit
 fi
 
@@ -15,7 +15,7 @@ if [[ -f bower.json ]]; then
     bower install --allow-root
     RESULT=$?
     if [ $RESULT -ne 0 ]; then
-       echo -e "\nbower install failed"
+       echo -e "\nbower install failed" >&2
        exit
     fi
 fi
@@ -25,7 +25,7 @@ if [[ -f gruntfile.js ]]; then
     grunt build
     RESULT=$?
     if [ $RESULT -ne 0 ]; then
-       echo -e "\ngrunt build failed"
+       echo -e "\ngrunt build failed" >&2
        exit
     fi
 fi
@@ -35,7 +35,7 @@ if [[ -f gulpfile.js ]]; then
     gulp build
     RESULT=$?
     if [ $RESULT -ne 0 ]; then
-       echo -e "\ngulp build failed"
+       echo -e "\ngulp build failed" >&2
        exit
     fi
 fi
@@ -44,7 +44,7 @@ fi
 npm prune --production
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-   echo -e "\nnpm prune failed"
+   echo -e "\nnpm prune failed" >&2
    exit
 fi
 

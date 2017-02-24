@@ -48,11 +48,11 @@ else
             aws sts assume-role \
                 --role-arn arn:aws:iam::${!AWS_CRED_AWS_ACCOUNT_ID_VAR}:role/${AWS_CRED_AUTOMATION_ROLE} \
                 --role-session-name "$(echo $GIT_USER | tr -d ' ' )" \
-                --output json > $TEMP_CREDENTIAL_FILE
-            AWS_CRED_TEMP_AWS_ACCESS_KEY_ID=$(cat $TEMP_CREDENTIAL_FILE | jq -r '.Credentials.AccessKeyId')
-            AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY=$(cat $TEMP_CREDENTIAL_FILE | jq -r '.Credentials.SecretAccessKey')
-            AWS_CRED_TEMP_AWS_SESSION_TOKEN=$(cat $TEMP_CREDENTIAL_FILE | jq -r '.Credentials.SessionToken')
-            rm $TEMP_CREDENTIAL_FILE
+                --output json > ${TEMP_CREDENTIAL_FILE}
+            AWS_CRED_TEMP_AWS_ACCESS_KEY_ID=$(jq -r '.Credentials.AccessKeyId' < ${TEMP_CREDENTIAL_FILE})
+            AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY=$(jq -r '.Credentials.SecretAccessKey' < ${TEMP_CREDENTIAL_FILE})
+            AWS_CRED_TEMP_AWS_SESSION_TOKEN=$(jq -r '.Credentials.SessionToken' < ${TEMP_CREDENTIAL_FILE})
+            rm ${TEMP_CREDENTIAL_FILE}
         fi
     fi
 fi

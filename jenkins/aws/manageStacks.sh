@@ -14,16 +14,17 @@ TYPE_DEFAULT="application"
 function usage() {
     cat <<EOF
 
-Manage stacks for one or more slices
+Manage stacks for one or more deployment units
 
-Usage: $(basename $0) -s SLICE_LIST -t TYPE -m DEPLOYMENT_MODE
+Usage: $(basename $0) -s DEPLOYMENT_UNIT_LIST -t TYPE -m DEPLOYMENT_MODE
 
 where
 
-    -h                  shows this text
-(m) -m DEPLOYMENT_MODE  is the deployment mode
-(m) -s SLICE_LIST       is the list of slices to process
-(m) -t TYPE             is the template type
+    -h                      shows this text
+(m) -m DEPLOYMENT_MODE      is the deployment mode
+(d) -s DEPLOYMENT_UNIT_LIST same as -u
+(m) -t TYPE                 is the template type
+(m) -u DEPLOYMENT_UNIT_LIST is the list of deployment units to process
 
 (m) mandatory, (o) optional, (d) deprecated
 
@@ -35,13 +36,13 @@ TYPE = "${TYPE_DEFAULT}"
 NOTES:
 
 1. ACCOUNT, PRODUCT and SEGMENT must already be defined
-2. All of the slices in SLICE_LIST must be the same type
+2. All of the deployment units in DEPLOYMENT_UNIT_LIST must be the same type
 
 EOF
 }
 
 # Parse options
-while getopts ":hm:s:t:" opt; do
+while getopts ":hm:s:t:u:" opt; do
     case $opt in
         h)
             usage
@@ -50,10 +51,13 @@ while getopts ":hm:s:t:" opt; do
             DEPLOYMENT_MODE="${OPTARG}"
             ;;
         s)
-            SLICE_LIST="${OPTARG}"
+            DEPLOYMENT_UNIT_LIST="${OPTARG}"
             ;;
         t)
             TYPE="${OPTARG}"
+            ;;
+        u)
+            DEPLOYMENT_UNIT_LIST="${OPTARG}"
             ;;
         \?)
             echo -e "\nInvalid option: -${OPTARG}" >&2
@@ -72,7 +76,7 @@ export TYPE="${TYPE:-${TYPE_DEFAULT}}"
 
 # Ensure mandatory arguments have been provided
 if [[ (-z "${DEPLOYMENT_MODE}") ||
-       (-z "${SLICE_LIST}") ||
+       (-z "${DEPLOYMENT_UNIT_LIST}") ||
        (-z "${TYPE}") ]]; then
     echo -e "\nInsufficient arguments" >&2
     exit
@@ -80,13 +84,13 @@ fi
 
 cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
 
-for CURRENT_SLICE in ${SLICE_LIST}; do
+for CURRENT_DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST}; do
 
-    if [[ "${MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then ${GENERATION_DIR}/manageStack.sh -s ${CURRENT_SLICE} -d; fi
-    if [[ "${MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then ${GENERATION_DIR}/manageStack.sh -s ${CURRENT_SLICE}; fi
+    if [[ "${MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT} -d; fi
+    if [[ "${MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT}; fi
     RESULT=$?
     if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nStack operation for ${CURRENT_SLICE} slice failed" >&2
+        echo -e "\nStack operation for ${CURRENT_DEPLOYMENT_UNIT} deployment unit failed" >&2
         exit
     fi
 done

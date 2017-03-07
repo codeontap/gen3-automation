@@ -18,7 +18,7 @@ function usage() {
 
 Manage docker images
 
-Usage: $(basename $0) -b -v -p -k -a DOCKER_PROVIDER -l DOCKER_REPO -t DOCKER_TAG -z REMOTE_DOCKER_PROVIDER -i REMOTE_DOCKER_REPO -r REMOTE_DOCKER_TAG -u DOCKER_IMAGE_SOURCE  -d DOCKER_PRODUCT -s DOCKER_SLICE -g DOCKER_CODE_COMMIT
+Usage: $(basename $0) -b -v -p -k -a DOCKER_PROVIDER -l DOCKER_REPO -t DOCKER_TAG -z REMOTE_DOCKER_PROVIDER -i REMOTE_DOCKER_REPO -r REMOTE_DOCKER_TAG -u DOCKER_IMAGE_SOURCE  -d DOCKER_PRODUCT -s DOCKER_DEPLOYMENT_UNIT -g DOCKER_CODE_COMMIT
 
 where
 
@@ -32,7 +32,7 @@ where
 (o) -l DOCKER_REPO              is the local repository
 (o) -p                          pull image from a remote to a local registry
 (o) -r REMOTE_DOCKER_TAG        is the tag to pull
-(o) -s DOCKER_SLICE             is the slice to use when defaulting DOCKER_REPO
+(o) -s DOCKER_DEPLOYMENT_UNIT   is the deployment unit to use when defaulting DOCKER_REPO
 (o) -t DOCKER_TAG               is the local tag
 (o) -u DOCKER_IMAGE_SOURCE      is the registry to pull from
 (o) -v                          verify image is present in local registry
@@ -43,8 +43,8 @@ where
 DEFAULTS:
 
 DOCKER_PROVIDER=${PRODUCT_DOCKER_PROVIDER}
-DOCKER_REPO="DOCKER_PRODUCT/DOCKER_SLICE-DOCKER_CODE_COMMIT" or 
-            "DOCKER_PRODUCT/DOCKER_CODE_COMMIT" if no DOCKER_SLICE defined
+DOCKER_REPO="DOCKER_PRODUCT/DOCKER_DEPLOYMENT_UNIT-DOCKER_CODE_COMMIT" or 
+            "DOCKER_PRODUCT/DOCKER_CODE_COMMIT" if no DOCKER_DEPLOYMENT_UNIT defined
 DOCKER_TAG=${DOCKER_TAG_DEFAULT}
 REMOTE_DOCKER_PROVIDER=${PRODUCT_REMOTE_DOCKER_PROVIDER}
 REMOTE_DOCKER_REPO=DOCKER_REPO
@@ -95,7 +95,7 @@ while getopts ":a:bd:g:hki:l:pr:s:t:u:vz:" opt; do
             REMOTE_DOCKER_TAG="${OPTARG}"
             ;;
         s)
-            DOCKER_SLICE="${OPTARG}"
+            DOCKER_DEPLOYMENT_UNIT="${OPTARG}"
             ;;
         t)
             DOCKER_TAG="${OPTARG}"
@@ -229,8 +229,8 @@ DOCKER_PRODUCT="${DOCKER_PRODUCT:-${PRODUCT}}"
 # Default local repository is based on standard image naming conventions
 if [[ (-n "${DOCKER_PRODUCT}") && 
         (-n "${DOCKER_CODE_COMMIT}") ]]; then
-    if [[ (-n "${DOCKER_SLICE}" ) ]]; then
-        DOCKER_REPO="${DOCKER_REPO:-${DOCKER_PRODUCT}/${DOCKER_SLICE}-${DOCKER_CODE_COMMIT}}"
+    if [[ (-n "${DOCKER_DEPLOYMENT_UNIT}" ) ]]; then
+        DOCKER_REPO="${DOCKER_REPO:-${DOCKER_PRODUCT}/${DOCKER_DEPLOYMENT_UNIT}-${DOCKER_CODE_COMMIT}}"
     else
         DOCKER_REPO="${DOCKER_REPO:-${DOCKER_PRODUCT}/${DOCKER_CODE_COMMIT}}"
     fi
@@ -241,7 +241,7 @@ defineDockerProviderAttributes "${DOCKER_PROVIDER}" "DOCKER_PROVIDER"
 
 # Ensure the local repository has been determined
 if [[ -z "${DOCKER_REPO}" ]]; then
-    echo -e "\nJob requires the local repository name, or the product/slice/commit" >&2
+    echo -e "\nJob requires the local repository name, or the product/deployment unit/commit" >&2
     exit
 fi
 

@@ -9,9 +9,9 @@ if [[ -z "${RELEASE_IDENTIFIER}" ]]; then
     exit
 fi
 
-# Ensure at least one slice has been provided
-if [[ ( -z "${SLICE_LIST}" ) ]]; then
-	echo -e "\nJob requires at least one slice" >&2
+# Ensure at least one deployment unit has been provided
+if [[ ( -z "${DEPLOYMENT_UNIT_LIST}" ) ]]; then
+	echo -e "\nJob requires at least one deployment unit" >&2
     exit
 fi
 

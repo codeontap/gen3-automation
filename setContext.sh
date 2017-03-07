@@ -441,8 +441,8 @@ findAndDefineSetting "CODEONTAP_GIT_ORG" "" "" "" "value" "codeontap"
 findAndDefineSetting "GIT_USER"  "" "" "" "value" "${GIT_USER_DEFAULT:-alm}"
 findAndDefineSetting "GIT_EMAIL" "" "" "" "value" "${GIT_EMAIL_DEFAULT}"
 
-# Separator when specifying a git reference/format for a slice
-findAndDefineSetting "SLICE_PART_SEPARATOR" "" "${PRODUCT}" "${SEGMENT}" "value" "!"
+# Separator when specifying a build reference for a deployment unit
+findAndDefineSetting "BUILD_REFERENCE_PART_SEPARATOR" "" "${PRODUCT}" "${SEGMENT}" "value" "!"
 
 # Modes
 findAndDefineSetting "DEPLOYMENT_MODE" "" "" "" "value" "${MODE}"
@@ -481,7 +481,7 @@ defineGitProviderSettings "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT_GIT_
 
 # - cmdb repos
 defineRepoSettings "PRODUCT" "CONFIG"         "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-config"
-defineRepoSettings "PRODUCT" "INFRASTRUCTURE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-infrastructure"
+defineRepoSettings "PRODUCT" "INFRASTRUCTURE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-infrastructure"                                               
 
 # - code git provider
 defineGitProviderSettings "PRODUCT" "CODE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT_GIT_PROVIDER}"
@@ -501,24 +501,25 @@ defineRepoSettings "GENERATION" "PATTERNS" "${PRODUCT}" "${SEGMENT}" "gen3-patte
 defineRepoSettings "GENERATION" "STARTUP"  "${PRODUCT}" "${SEGMENT}" "gen3-startup.git"
 
 
-### Application slice details ###
+### Application deployment unit details ###
 
-# Determine the slice list and optional corresponding metadata
-SLICE_ARRAY=()
+# Determine the deployment unit list and optional corresponding metadata
+DEPLOYMENT_UNIT_ARRAY=()
 CODE_COMMIT_ARRAY=()
 CODE_TAG_ARRAY=()
 CODE_REPO_ARRAY=()
 CODE_PROVIDER_ARRAY=()
 IMAGE_FORMAT_ARRAY=()
 CURRENT_IFS=${IFS}
-for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
-    IFS="${SLICE_PART_SEPARATOR}"; SLICE_PARTS=(${CURRENT_SLICE})
-    SLICE_PART="${SLICE_PARTS[0]}"
-    TAG_PART="${SLICE_PARTS[1]:-?}"
-    FORMAT_PART="${SLICE_PARTS[2]:-?}"
+UNITS="${DEPLOYMENT_UNITS:-${DEPLOYMENT_UNIT:-${SLICES:-${SLICE}}}}"
+for CURRENT_DEPLOYMENT_UNIT in ${UNITS}; do
+    IFS="${BUILD_REFERENCE_PART_SEPARATOR}"; BUILD_REFERENCE_PARTS=(${CURRENT_DEPLOYMENT_UNIT})
+    DEPLOYMENT_UNIT_PART="${BUILD_REFERENCE_PARTS[0]}"
+    TAG_PART="${BUILD_REFERENCE_PARTS[1]:-?}"
+    FORMAT_PART="${BUILD_REFERENCE_PARTS[2]:-?}"
     COMMIT_PART="?"
-    if [[ "${#SLICE_ARRAY[@]}" -eq 0 ]]; then
-        # Processing the first slice
+    if [[ "${#DEPLOYMENT_UNIT_ARRAY[@]}" -eq 0 ]]; then
+        # Processing the first deployment unit
         if [[ -n "${CODE_TAG}" ]]; then
             # Permit separate variable for commit/tag value - easier if only one repo involved
             TAG_PART="${CODE_TAG}"
@@ -535,14 +536,14 @@ for CURRENT_SLICE in ${SLICES:-${SLICE}}; do
         TAG_PART="?"
     fi
 
-    SLICE_ARRAY+=("${SLICE_PART,,}")
+    DEPLOYMENT_UNIT_ARRAY+=("${DEPLOYMENT_UNIT_PART,,}")
     CODE_COMMIT_ARRAY+=("${COMMIT_PART,,}")
     CODE_TAG_ARRAY+=("${TAG_PART}")
     IMAGE_FORMAT_ARRAY+=("${FORMAT_PART}")
 
-    # Determine code repo for the slice - there may be none
-    CODE_SLICE=$(tr "-" "_" <<< "${SLICE_PART^^}")
-    defineRepoSettings "PRODUCT" "${CODE_SLICE}" "${PRODUCT}" "${CODE_SLICE}" "?" "CODE"
+    # Determine code repo for the deployment unit - there may be none
+    CODE_DEPLOYMENT_UNIT=$(tr "-" "_" <<< "${DEPLOYMENT_UNIT_PART^^}")
+    defineRepoSettings "PRODUCT" "${CODE_DEPLOYMENT_UNIT}" "${PRODUCT}" "${CODE_DEPLOYMENT_UNIT}" "?" "CODE"
     CODE_REPO_ARRAY+=("${NAME_VALUE}")
     
     # Assume all code covered by one provider for now
@@ -560,32 +561,32 @@ case ${AUTOMATION_PROVIDER} in
         ;;
 esac
 
-# Regenerate the slice list in case the first code commit/tag or format was overriden
-UPDATED_SLICES=
-SLICE_SEPARATOR=""
-for INDEX in $( seq 0 $((${#SLICE_ARRAY[@]}-1)) ); do
-    UPDATED_SLICES="${UPDATED_SLICES}${SLICE_SEPARATOR}${SLICE_ARRAY[$INDEX]}"
+# Regenerate the deployment unit list in case the first code commit/tag or format was overriden
+UPDATED_UNITS=
+DEPLOYMENT_UNIT_SEPARATOR=""
+for INDEX in $( seq 0 $((${#DEPLOYMENT_UNIT_ARRAY[@]}-1)) ); do
+    UPDATED_UNITS="${UPDATED_UNITS}${DEPLOYMENT_UNIT_SEPARATOR}${DEPLOYMENT_UNIT_ARRAY[$INDEX]}"
     if [[ "${CODE_TAG_ARRAY[$INDEX]}" != "?" ]]; then
-        UPDATED_SLICES="${UPDATED_SLICES}${SLICE_PART_SEPARATOR}${CODE_TAG_ARRAY[$INDEX]}"
+        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATOR}${CODE_TAG_ARRAY[$INDEX]}"
     else
         if [[ "${CODE_COMMIT_ARRAY[$INDEX]}" != "?" ]]; then
-            UPDATED_SLICES="${UPDATED_SLICES}${SLICE_PART_SEPARATOR}${CODE_COMMIT_ARRAY[$INDEX]}"
+            UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATOR}${CODE_COMMIT_ARRAY[$INDEX]}"
         fi
     fi
     if [[ "${IMAGE_FORMAT_ARRAY[$INDEX]}" != "?" ]]; then
-        UPDATED_SLICES="${UPDATED_SLICES}${SLICE_PART_SEPARATOR}${IMAGE_FORMAT_ARRAY[$INDEX]}"
+        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATOR}${IMAGE_FORMAT_ARRAY[$INDEX]}"
     fi
-    SLICE_SEPARATOR=" "
+    DEPLOYMENT_UNIT_SEPARATOR=" "
 done
 
 # Save for subsequent processing
-echo "SLICE_LIST=${SLICE_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "DEPLOYMENT_LIST=${DEPLOYMENT_UNIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_REPO_LIST=${CODE_REPO_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_PROVIDER_LIST=${CODE_PROVIDER_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "IMAGE_FORMAT_LIST=${IMAGE_FORMAT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-if [[ -n "${UPDATED_SLICES}" ]]; then echo "SLICES=${UPDATED_SLICES}" >> ${AUTOMATION_DATA_DIR}/context.properties; fi
+if [[ -n "${UPDATED_UNITS}" ]]; then echo "DEPLOYMENT_UNITS=${UPDATED_UNITS}" >> ${AUTOMATION_DATA_DIR}/context.properties; fi
 
 
 ### Release management ###
@@ -688,7 +689,7 @@ if [[ -n "${ENVIRONMENT}" ]];               then DETAIL_MESSAGE="${DETAIL_MESSAG
 if [[ "${SEGMENT}" != "${ENVIRONMENT}" ]];  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, segment=${SEGMENT}"; fi
 if [[ -n "${TIER}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, tier=${TIER}"; fi
 if [[ -n "${COMPONENT}" ]];                 then DETAIL_MESSAGE="${DETAIL_MESSAGE}, component=${COMPONENT}"; fi
-if [[ "${#SLICE_ARRAY[@]}" -ne 0 ]];        then DETAIL_MESSAGE="${DETAIL_MESSAGE}, slices=${UPDATED_SLICES}"; fi
+if [[ "${#DEPLOYMENT_UNIT_ARRAY[@]}" -ne 0 ]];        then DETAIL_MESSAGE="${DETAIL_MESSAGE}, units=${UPDATED_UNITS}"; fi
 if [[ -n "${TASK}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, task=${TASK}"; fi
 if [[ -n "${TASKS}" ]];                     then DETAIL_MESSAGE="${DETAIL_MESSAGE}, tasks=${TASKS}"; fi
 if [[ -n "${GIT_USER}" ]];                  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, user=${GIT_USER}"; fi

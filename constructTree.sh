@@ -107,7 +107,7 @@ INIT_REPOS="${INIT_REPOS:-false}"
 
 # Check for required context
 if [[ -z "${ACCOUNT}" ]]; then
-    echo "ACCOUNT not defined" >&2
+    echo -e "\nACCOUNT not defined" >&2
     exit
 fi
 

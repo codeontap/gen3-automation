@@ -31,7 +31,7 @@ if [[ (-n "${AUTODEPLOY+x}") &&
 fi
 
 # Record key parameters for downstream jobs
-echo "SLICES=${SLICE_LIST}" >> ${AUTOMATION_DATA_DIR}/chain.properties
+echo "DEPLOYMENT_UNITS=${DEPLOYMENT_UNIT_LIST}" >> ${AUTOMATION_DATA_DIR}/chain.properties
 
 # All good
 RESULT=0

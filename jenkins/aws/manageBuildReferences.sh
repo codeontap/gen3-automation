@@ -14,22 +14,22 @@ REFERENCE_OPERATION_DEFAULT="${REFERENCE_OPERATION_LIST}"
 function usage() {
     cat <<EOF
 
-Manage build references for one or more slices
+Manage build references for one or more deployment units
 
-Usage: $(basename $0)   -s SLICE_LIST -g SEGMENT_APPSETTINGS_DIR
+Usage: $(basename $0)   -s DEPLOYMENT_UNIT_LIST -g SEGMENT_APPSETTINGS_DIR
                         -c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST -p CODE_PROVIDER_LIST
                         -a ACCEPTANCE_TAG -v VERIFICATION_TAG -f -l -u
 where
 (o) -a ACCEPTANCE_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_ACCEPT}) to tag all builds as accepted
-(o) -c CODE_COMMIT_LIST             is the commit for each slice
+(o) -c CODE_COMMIT_LIST             is the commit for each deployment unit
 (o) -f (REFERENCE_OPERATION=${REFERENCE_OPERATION_LISTFULL}) to detail full build info
 (o) -g SEGMENT_APPSETTINGS_DIR      is the segment appsettings to be managed
     -h                              shows this text
-(o) -l (REFERENCE_OPERATION=${REFERENCE_OPERATION_LIST}) to detail SLICE_LIST build info
-(o) -p CODE_PROVIDER_LIST           is the repo provider for each slice
-(o) -r CODE_REPO_LIST               is the repo for each slice
-(m) -s SLICE_LIST                   is the list of slices to process
-(o) -t CODE_TAG_LIST                is the tag for each slice
+(o) -l (REFERENCE_OPERATION=${REFERENCE_OPERATION_LIST}) to detail DEPLOYMENT_UNIT_LIST build info
+(o) -p CODE_PROVIDER_LIST           is the repo provider for each deployment unit
+(o) -r CODE_REPO_LIST               is the repo for each deployment unit
+(m) -s DEPLOYMENT_UNIT_LIST         is the list of deployment units to process
+(o) -t CODE_TAG_LIST                is the tag for each deployment unit                                          
 (o) -u (REFERENCE_OPERATION=${REFERENCE_OPERATION_UPDATE}) to update build references
 (o) -v VERIFICATION_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_VERIFY}) to verify build references
 
@@ -42,29 +42,29 @@ REFERENCE_OPERATION = ${REFERENCE_OPERATION_DEFAULT}
 NOTES:
 
 1. Appsettings directory must include segment directory
-2. If there is no commit for a slice, CODE_COMMIT_LIST must contain a "?"
-3. If there is no repo for a slice, CODE_REPO_LIST must contain a "?"
-4. If there is no tag for a slice, CODE_TAG_LIST must contain a "?"
-5. Lists can be shorter than the SLICE_LIST. If shorter, they
-   are padded with "?" to match the length of SLICE_LIST
+2. If there is no commit for a deployment unit, CODE_COMMIT_LIST must contain a "?"
+3. If there is no repo for a deployment unit, CODE_REPO_LIST must contain a "?"
+4. If there is no tag for a deployment unit, CODE_TAG_LIST must contain a "?"
+5. Lists can be shorter than the DEPLOYMENT_UNIT_LIST. If shorter, they
+   are padded with "?" to match the length of DEPLOYMENT_UNIT_LIST
 
 EOF
     exit
 }
 
 # Update DETAIL_MESSAGE with build information
-# $1 = slice
+# $1 = deployment unit
 # $2 = build commit (? = no commit)
 # $3 = build tag (? = no tag)
 # $4 = image format (? = not provided)
 function updateDetail() {
-    UD_SLICE="${1,,}"
+    UD_DEPLOYMENT_UNIT="${1,,}"
     UD_COMMIT="${2,,:-?}"
     UD_TAG="${3:-?}"
     UD_FORMAT="${4,,:-?}"
 
     if [[ ("${UD_COMMIT}" != "?") || ("${UD_TAG}" != "?") ]]; then
-        DETAIL_MESSAGE="${DETAIL_MESSAGE}, ${UD_SLICE}="
+        DETAIL_MESSAGE="${DETAIL_MESSAGE}, ${UD_DEPLOYMENT_UNIT}="
         if [[ "${UD_FORMAT}" != "?" ]]; then
             DETAIL_MESSAGE="${DETAIL_MESSAGE}${UD_FORMAT}:"
         fi
@@ -164,7 +164,7 @@ while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
             CODE_REPO_LIST="${OPTARG}"
             ;;
         s)
-            SLICE_LIST="${OPTARG}"
+            DEPLOYMENT_UNIT_LIST="${OPTARG}"
             ;;
         t)
             CODE_TAG_LIST="${OPTARG}"
@@ -193,9 +193,9 @@ REFERENCE_OPERATION="${REFERENCE_OPERATION:-${REFERENCE_OPERATION_DEFAULT}}"
 # Ensure mandatory arguments have been provided
 case ${REFERENCE_OPERATION} in
     ${REFERENCE_OPERATION_ACCEPT})
-        # Add the acceptance tag on provided slice list
+        # Add the acceptance tag on provided deployment unit list
         # Normally this would be called after list full
-        if [[ (-z "${SLICE_LIST}") ||
+        if [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
                 (-z "${ACCEPTANCE_TAG}") ]]; then
             echo -e "\nInsufficient arguments" >&2
             exit
@@ -203,15 +203,15 @@ case ${REFERENCE_OPERATION} in
         ;;
 
     ${REFERENCE_OPERATION_LIST})
-        # Format the build details based on provided slice list
-        if [[ (-z "${SLICE_LIST}") ]]; then
+        # Format the build details based on provided deployment unit list
+        if [[ (-z "${DEPLOYMENT_UNIT_LIST}") ]]; then
             echo -e "\nInsufficient arguments" >&2
             exit
         fi
         ;;
 
     ${REFERENCE_OPERATION_LISTFULL})
-        # Populate SLICE_LIST based on current appsettings
+        # Populate DEPLOYMENT_UNIT_LIST based on current appsettings
         if [[ -z "${SEGMENT_APPSETTINGS_DIR}" ]]; then
             echo -e "\nInsufficient arguments" >&2
             exit
@@ -219,8 +219,8 @@ case ${REFERENCE_OPERATION} in
         ;;
 
     ${REFERENCE_OPERATION_UPDATE})
-        # Update builds based on provided slice list
-        if [[ (-z "${SLICE_LIST}") ||
+        # Update builds based on provided deployment unit list
+        if [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
                 (-z "${SEGMENT_APPSETTINGS_DIR}") ]]; then
             echo -e "\nInsufficient arguments" >&2
             exit
@@ -228,8 +228,8 @@ case ${REFERENCE_OPERATION} in
         ;;
 
     ${REFERENCE_OPERATION_VERIFY})
-        # Verify builds based on provided slice list
-        if [[ (-z "${SLICE_LIST}") ||
+        # Verify builds based on provided deployment unit list
+        if [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
                 (-z "${VERIFICATION_TAG}") ]]; then
             echo -e "\nInsufficient arguments" >&2
             exit
@@ -244,7 +244,7 @@ esac
 
 
 # Access existing build info
-SLICE_ARRAY=(${SLICE_LIST})
+DEPLOYMENT_UNIT_ARRAY=(${DEPLOYMENT_UNIT_LIST})
 CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
 CODE_TAG_ARRAY=(${CODE_TAG_LIST})
 CODE_REPO_ARRAY=(${CODE_REPO_LIST})
@@ -257,19 +257,19 @@ if [[ -d "${SEGMENT_APPSETTINGS_DIR}" ]]; then
 fi
 
 if [[ ("${REFERENCE_OPERATION}" == "${REFERENCE_OPERATION_LISTFULL}") ]]; then
-    # Update the slice list with all slices
-    SLICE_ARRAY=()
+    # Update the deployment unit list with all deployment units
+    DEPLOYMENT_UNIT_ARRAY=()
     for BUILD_FILE in $(find . -name "build.*"); do
-        SLICE_ARRAY+=("$(basename $(dirname ${BUILD_FILE}))")
+        DEPLOYMENT_UNIT_ARRAY+=("$(basename $(dirname ${BUILD_FILE}))")
     done
 fi
 
-# Process each slice
-SLICE_LAST_INDEX=$((${#SLICE_ARRAY[@]}-1))
-for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
+# Process each deployment unit
+DEPLOYMENT_UNIT_LAST_INDEX=$((${#DEPLOYMENT_UNIT_ARRAY[@]}-1))
+for INDEX in $(seq 0 ${DEPLOYMENT_UNIT_LAST_INDEX}); do
 
-    # Next slice to process
-    CURRENT_SLICE="${SLICE_ARRAY[${INDEX}]}"
+    # Next deployment unit to process
+    CURRENT_DEPLOYMENT_UNIT="${DEPLOYMENT_UNIT_ARRAY[${INDEX}]}"
     CODE_COMMIT="${CODE_COMMIT_ARRAY[${INDEX}]:-?}"
     CODE_TAG="${CODE_TAG_ARRAY[${INDEX}]:-?}"
     CODE_REPO="${CODE_REPO_ARRAY[${INDEX}]:-?}"
@@ -284,18 +284,21 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
     IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
     FROM_IMAGE_PROVIDER="${!FROM_IMAGE_PROVIDER_VAR}"
 
-    # Look for the slice and build reference files
-    mkdir -p ${CURRENT_SLICE}
-    SLICE_FILE="${CURRENT_SLICE}/slice.ref"
-    EFFECTIVE_SLICE="${CURRENT_SLICE}"
-    if [[ -f "${SLICE_FILE}" ]]; then
-        EFFECTIVE_SLICE=$(cat "${SLICE_FILE}")
-    fi
-    NEW_BUILD_FILE="${EFFECTIVE_SLICE}/build.json"
+    # Look for the deployment unit and build reference files
+    mkdir -p ${CURRENT_DEPLOYMENT_UNIT}
+    EFFECTIVE_DEPLOYMENT_UNIT="${CURRENT_DEPLOYMENT_UNIT}"
+    for REF_FILE in deployment_unit.ref slice.ref; do
+        DEPLOYMENT_UNIT_FILE="${CURRENT_DEPLOYMENT_UNIT}/${REF_FILE}"
+        if [[ -f "${DEPLOYMENT_UNIT_FILE}" ]]; then
+            EFFECTIVE_DEPLOYMENT_UNIT=$(cat "${DEPLOYMENT_UNIT_FILE}")
+            break
+        fi
+    done
+    NEW_BUILD_FILE="${EFFECTIVE_DEPLOYMENT_UNIT}/build.json"
     BUILD_FILE="${NEW_BUILD_FILE}"
     if [[ ! -f "${BUILD_FILE}" ]]; then
         # Legacy file naming
-        LEGACY_BUILD_FILE="${EFFECTIVE_SLICE}/build.ref"
+        LEGACY_BUILD_FILE="${EFFECTIVE_DEPLOYMENT_UNIT}/build.ref"
         BUILD_FILE="${LEGACY_BUILD_FILE}"
     fi
         
@@ -305,7 +308,7 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
             case ${IMAGE_FORMAT} in
                 docker)
                     ${AUTOMATION_DIR}/manageDocker.sh -k -a "${IMAGE_PROVIDER}" \
-                        -s "${CURRENT_SLICE}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                        -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                     RESULT=$?
                     if [[ "${RESULT}" -ne 0 ]]; then exit; fi
                     ;;
@@ -314,7 +317,7 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
 
         ${REFERENCE_OPERATION_LIST})
             # Add build info to DETAIL_MESSAGE
-            updateDetail "${CURRENT_SLICE}" "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMAT}"
+            updateDetail "${CURRENT_DEPLOYMENT_UNIT}" "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMAT}"
             ;;
     
         ${REFERENCE_OPERATION_LISTFULL})
@@ -322,7 +325,7 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                 getBuildReferenceParts "$(cat ${BUILD_FILE})"
                 if [[ "${BUILD_REFERENCE_COMMIT}" != "?" ]]; then
                     # Update arrays
-                    if [[ "${EFFECTIVE_SLICE}" == "${CURRENT_SLICE}" ]]; then
+                    if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" == "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
                         CODE_COMMIT_ARRAY["${INDEX}"]="${BUILD_REFERENCE_COMMIT}"
                         CODE_TAG_ARRAY["${INDEX}"]="${BUILD_REFERENCE_TAG}"
                         IMAGE_FORMAT_ARRAY["${INDEX}"]="${BUILD_REFERENCE_FORMAT}"
@@ -332,10 +335,10 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
             ;;
 
         ${REFERENCE_OPERATION_UPDATE})
-            # Ensure something to do for the current slice
+            # Ensure something to do for the current deployment unit
             if [[ "${CODE_COMMIT}" == "?" ]]; then continue; fi
-            if [[ "${EFFECTIVE_SLICE}" != "${CURRENT_SLICE}" ]]; then
-                echo -e "\nIgnoring the \"${CURRENT_SLICE}\" slice - it contains a reference to the \"${EFFECTIVE_SLICE}\" slice"
+            if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" != "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
+                echo -e "\nIgnoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
                 continue
             fi
         
@@ -361,13 +364,13 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
             # Ensure code repo defined if tag provided only if commit not provided
             if [[ "${CODE_COMMIT}" == "?" ]]; then
                 if [[ "${CODE_TAG}" != "?" ]]; then
-                    if [[ "${EFFECTIVE_SLICE}" != "${CURRENT_SLICE}" ]]; then
-                        echo -e "\nIgnoring the \"${CURRENT_SLICE}\" slice - it contains a reference to the \"${EFFECTIVE_SLICE}\" slice"
+                    if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" != "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
+                        echo -e "\nIgnoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
                         continue
                     fi
                     if [[ ("${CODE_REPO}" == "?") ||
                             ("${CODE_PROVIDER}" == "?") ]]; then
-                        echo -e "\nIgnoring tag for the \"${CURRENT_SLICE}\" slice - no code repo and/or provider defined"
+                        echo -e "\nIgnoring tag for the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - no code repo and/or provider defined"
                         continue
                     fi
                     # Determine the details of the provider hosting the code repo
@@ -393,8 +396,8 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
                     # else
                     # TODO: Confirm commit is in remote repo - for now we'll assume its there if an image exists
                 else
-                    # Nothing to do for this slice
-                    # Note that it is permissible to not have a tag for a slice
+                    # Nothing to do for this deployment unit
+                    # Note that it is permissible to not have a tag for a deployment unit
                     # that is associated with a code repo. This situation arises
                     # if application settings are changed and a new release is 
                     # thus required.
@@ -408,26 +411,26 @@ for INDEX in $(seq 0 ${SLICE_LAST_INDEX}); do
             # Confirm the commit built successfully into an image
             case ${IMAGE_FORMAT} in
                 docker)
-                    ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_SLICE}" -g "${CODE_COMMIT}"
+                    ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                     RESULT=$?
                     if [[ "${RESULT}" -ne 0 ]]; then
                         if [[ -n "${FROM_IMAGE_PROVIDER}" ]]; then
                             # Attempt to pull image in from remote docker provider
-                            ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_SLICE}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                            ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                             RESULT=$?
                             if [[ "${RESULT}" -ne 0 ]]; then
-                                echo -e "\nUnable to pull docker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} from docker provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" >&2
+                                echo -e "\nUnable to pull docker image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from docker provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" >&2
                                 exit
                             fi
                         else
-                            echo -e "\nDocker image for slice ${CURRENT_SLICE} and commit ${CODE_COMMIT} not found. Was the build successful?" >&2
+                            echo -e "\nDocker image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?" >&2
                             exit
                         fi
                     fi
                    ;;
             esac
 
-            # Save details of this slice
+            # Save details of this deployment unit
             CODE_COMMIT_ARRAY[${INDEX}]="${CODE_COMMIT}"
             ;;
 
@@ -441,7 +444,7 @@ case ${REFERENCE_OPERATION} in
         ;;
 
     ${REFERENCE_OPERATION_LISTFULL})
-        echo "SLICE_LIST=${SLICE_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        echo "DEPLOYMENT_UNIT_LIST=${DEPLOYMENT_UNIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
         echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
         echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
         echo "IMAGE_FORMAT_LIST=${IMAGE_FORMAT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties

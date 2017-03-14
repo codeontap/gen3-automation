@@ -17,7 +17,8 @@ function usage() {
 Manage build references for one or more deployment units
 
 Usage: $(basename $0)   -s DEPLOYMENT_UNIT_LIST -g SEGMENT_APPSETTINGS_DIR
-                        -c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST -p CODE_PROVIDER_LIST
+                        -c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST 
+                        -p CODE_PROVIDER_LIST -i IMAGE_FORMATS_LIST
                         -a ACCEPTANCE_TAG -v VERIFICATION_TAG -f -l -u
 where
 (o) -a ACCEPTANCE_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_ACCEPT}) to tag all builds as accepted
@@ -25,6 +26,7 @@ where
 (o) -f (REFERENCE_OPERATION=${REFERENCE_OPERATION_LISTFULL}) to detail full build info
 (o) -g SEGMENT_APPSETTINGS_DIR      is the segment appsettings to be managed
     -h                              shows this text
+(o) -i IMAGE_FORMATS_LIST           is the list of image formats for each deployment unit
 (o) -l (REFERENCE_OPERATION=${REFERENCE_OPERATION_LIST}) to detail DEPLOYMENT_UNIT_LIST build info
 (o) -p CODE_PROVIDER_LIST           is the repo provider for each deployment unit
 (o) -r CODE_REPO_LIST               is the repo for each deployment unit
@@ -56,17 +58,17 @@ EOF
 # $1 = deployment unit
 # $2 = build commit (? = no commit)
 # $3 = build tag (? = no tag)
-# $4 = image format (? = not provided)
+# $4 = image formats (? = not provided)
 function updateDetail() {
     UD_DEPLOYMENT_UNIT="${1,,}"
     UD_COMMIT="${2,,:-?}"
     UD_TAG="${3:-?}"
-    UD_FORMAT="${4,,:-?}"
+    UD_FORMATS="${4,,:-?}"
 
     if [[ ("${UD_COMMIT}" != "?") || ("${UD_TAG}" != "?") ]]; then
         DETAIL_MESSAGE="${DETAIL_MESSAGE}, ${UD_DEPLOYMENT_UNIT}="
-        if [[ "${UD_FORMAT}" != "?" ]]; then
-            DETAIL_MESSAGE="${DETAIL_MESSAGE}${UD_FORMAT}:"
+        if [[ "${UD_FORMATS}" != "?" ]]; then
+            DETAIL_MESSAGE="${DETAIL_MESSAGE}${UD_FORMATS}:"
         fi
         if [[ "${UD_TAG}" != "?" ]]; then
             # Format is tag then commit if provided
@@ -92,33 +94,51 @@ function getBuildReferenceParts() {
         # Newer JSON based format
         for ATTRIBUTE in commit tag format; do 
             ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null)" <<< "${GBRP_REFERENCE}")
+            if [[ -z "${ATTRIBUTE_VALUE}" ]]; then
+                ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null)" <<< "${GBRP_REFERENCE}")
+            fi
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done
+        for ATTRIBUTE in formats; do 
+            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE}[] | select(.!=null)" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" ",")
+            if [[ -z "${ATTRIBUTE_VALUE}" ]]; then
+                ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^}[] | select(.!=null)" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" ",")
+            fi
+            declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
+        done
+        if [[ "${BUILD_REFERENCE_FORMATS}" == "?" ]]; then
+            BUILD_REFERENCE_FORMATS ="${BUILD_REFERENCE_FORMAT}"
+        fi
     else
         BUILD_REFERENCE_ARRAY=(${GBRP_REFERENCE})
         BUILD_REFERENCE_COMMIT="${BUILD_REFERENCE_ARRAY[0]:-?}"
         BUILD_REFERENCE_TAG="${BUILD_REFERENCE_ARRAY[1]:-?}"
-        BUILD_REFERENCE_FORMAT="?"
+        BUILD_REFERENCE_FORMATS="?"
     fi
 }
 
 # Format a JSON based build reference
 # $1 = build commit
 # $2 = build tag (? = no tag)
-# $3 = format (default is docker)
+# $3 = formats (default is docker)
 function formatBuildReference() {
     FBR_COMMIT="${1,,}"
     FBR_TAG="${2:-?}"
-    FBR_FORMAT="${3,,:-?}"
+    FBR_FORMATS="${3,,:-?}"
 
-    BUILD_REFERENCE="{\"commit\": \"${FBR_COMMIT}\""
+    BUILD_REFERENCE="{\"Commit\": \"${FBR_COMMIT}\""
     if [[ "${FBR_TAG}" != "?" ]]; then 
-        BUILD_REFERENCE="${BUILD_REFERENCE}, \"tag\": \"${FBR_TAG}\""
+        BUILD_REFERENCE="${BUILD_REFERENCE}, \"Tag\": \"${FBR_TAG}\""
     fi
-    if [[ "${FBR_FORMAT}" == "?" ]]; then
-        FBR_FORMAT="docker"
+    if [[ "${FBR_FORMATS}" == "?" ]]; then
+        FBR_FORMATS="docker"
     fi
-    BUILD_REFERENCE="${BUILD_REFERENCE}, \"format\": \"${FBR_FORMAT}\"}"
+    IFS="," read -ra FBR_FORMATS_ARRAY <<< "${FBR_FORMATS}"
+    BUILD_REFERENCE="${BUILD_REFERENCE}, \"Formats\": [\"${FBR_FORMATS_ARRAY[0]}\""
+    for ((INDEX=1; INDEX<${#FBR_FORMATS_ARRAY[@]}; INDEX++)); do
+        BUILD_REFERENCE="${BUILD_REFERENCE},\"${FBR_FORMATS_ARRAY[$INDEX]}\""
+    done
+    BUILD_REFERENCE="${BUILD_REFERENCE} ]}"
 }
 
 # Define git provider attributes
@@ -153,6 +173,9 @@ while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
             ;;
         h)
             usage
+            ;;
+        i)
+            IMAGE_FORMATS_LIST="${OPTARG}"
             ;;
         l)
             REFERENCE_OPERATION="${REFERENCE_OPERATION_LIST}"
@@ -249,7 +272,7 @@ CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
 CODE_TAG_ARRAY=(${CODE_TAG_LIST})
 CODE_REPO_ARRAY=(${CODE_REPO_LIST})
 CODE_PROVIDER_ARRAY=(${CODE_PROVIDER_LIST})
-IMAGE_FORMAT_ARRAY=(${IMAGE_FORMAT_LIST})
+IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS_LIST})
 
 if [[ -d "${SEGMENT_APPSETTINGS_DIR}" ]]; then
     # Most operations require access to the segment build settings
@@ -265,8 +288,7 @@ if [[ ("${REFERENCE_OPERATION}" == "${REFERENCE_OPERATION_LISTFULL}") ]]; then
 fi
 
 # Process each deployment unit
-DEPLOYMENT_UNIT_LAST_INDEX=$((${#DEPLOYMENT_UNIT_ARRAY[@]}-1))
-for INDEX in $(seq 0 ${DEPLOYMENT_UNIT_LAST_INDEX}); do
+for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
 
     # Next deployment unit to process
     CURRENT_DEPLOYMENT_UNIT="${DEPLOYMENT_UNIT_ARRAY[${INDEX}]}"
@@ -274,7 +296,8 @@ for INDEX in $(seq 0 ${DEPLOYMENT_UNIT_LAST_INDEX}); do
     CODE_TAG="${CODE_TAG_ARRAY[${INDEX}]:-?}"
     CODE_REPO="${CODE_REPO_ARRAY[${INDEX}]:-?}"
     CODE_PROVIDER="${CODE_PROVIDER_ARRAY[${INDEX}]:-?}"
-    IMAGE_FORMAT="${IMAGE_FORMAT_ARRAY[${INDEX}]:-?}"
+    IMAGE_FORMATS="${IMAGE_FORMATS_ARRAY[${INDEX}]:-?}"
+    IFS="," read -ra IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
 
     # Image providers - assume one per format per segment
     CURRENT_FORMAT="${IMAGE_FORMAT}"
@@ -305,19 +328,36 @@ for INDEX in $(seq 0 ${DEPLOYMENT_UNIT_LAST_INDEX}); do
     case ${REFERENCE_OPERATION} in
         ${REFERENCE_OPERATION_ACCEPT})
             # Tag builds with an acceptance tag
-            case ${IMAGE_FORMAT} in
-                docker)
-                    ${AUTOMATION_DIR}/manageDocker.sh -k -a "${IMAGE_PROVIDER}" \
-                        -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
-                    RESULT=$?
-                    if [[ "${RESULT}" -ne 0 ]]; then exit; fi
-                    ;;
-            esac
+            if [[ "${IMAGE_FORMATS}" != "?" ]]; then
+                for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
+                    IMAGE_PROVIDER_VAR="PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
+                    IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
+                    case ${IMAGE_FORMAT,,} in
+                        docker)
+                            ${AUTOMATION_DIR}/manageDocker.sh -k -a "${IMAGE_PROVIDER}" \
+                                -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                            RESULT=$?
+                            if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+                            ;;
+    
+                        lambda)
+                            ${AUTOMATION_DIR}/manageLambda.sh -k -a "${IMAGE_PROVIDER}" \
+                                -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                            RESULT=$?
+                            if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+                            ;;
+                        *)
+                            echo -e "\nUnknown image format \"${IMAGE_FORMAT}\"" >&2
+                            exit
+                            ;;
+                    esac
+                done
+            fi
             ;;
 
         ${REFERENCE_OPERATION_LIST})
             # Add build info to DETAIL_MESSAGE
-            updateDetail "${CURRENT_DEPLOYMENT_UNIT}" "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMAT}"
+            updateDetail "${CURRENT_DEPLOYMENT_UNIT}" "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMATS}"
             ;;
     
         ${REFERENCE_OPERATION_LISTFULL})
@@ -328,7 +368,7 @@ for INDEX in $(seq 0 ${DEPLOYMENT_UNIT_LAST_INDEX}); do
                     if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" == "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
                         CODE_COMMIT_ARRAY["${INDEX}"]="${BUILD_REFERENCE_COMMIT}"
                         CODE_TAG_ARRAY["${INDEX}"]="${BUILD_REFERENCE_TAG}"
-                        IMAGE_FORMAT_ARRAY["${INDEX}"]="${BUILD_REFERENCE_FORMAT}"
+                        IMAGE_FORMATS_ARRAY["${INDEX}"]="${BUILD_REFERENCE_FORMATS}"
                     fi
                 fi
             fi            
@@ -343,14 +383,14 @@ for INDEX in $(seq 0 ${DEPLOYMENT_UNIT_LAST_INDEX}); do
             fi
         
             # Preserve the format if none provided
-            if [[ ("${IMAGE_FORMAT}" == "?") &&
+            if [[ ("${IMAGE_FORMATS}" == "?") &&
                     (-f ${NEW_BUILD_FILE}) ]]; then
                 getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
-                IMAGE_FORMAT="${BUILD_REFERENCE_FORMAT}"
+                IMAGE_FORMATS="${BUILD_REFERENCE_FORMATS}"
             fi
             
             # Construct the build reference
-            formatBuildReference "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMAT}"
+            formatBuildReference "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMATS}"
         
             # Update the build reference
             # Use newer naming and clean up legacy named build reference files
@@ -404,31 +444,57 @@ for INDEX in $(seq 0 ${DEPLOYMENT_UNIT_LAST_INDEX}); do
                     continue
                 fi
             fi
-            
-            
-            # TODO: Add support for other image formats
 
             # Confirm the commit built successfully into an image
-            case ${IMAGE_FORMAT} in
-                docker)
-                    ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                    RESULT=$?
+            if [[ "${IMAGE_FORMATS}" != "?" ]]; then
+                for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
+                    IMAGE_PROVIDER_VAR="PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
+                    IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
+                    FROM_IMAGE_PROVIDER_VAR="FROM_PRODUCT_${CURRENT_FORMAT^^}_PROVIDER"
+                    FROM_IMAGE_PROVIDER="${!FROM_IMAGE_PROVIDER_VAR}"
+                    case ${IMAGE_FORMAT,,} in
+                        docker)
+                            ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                            RESULT=$?
+                            ;;
+                        lambda)
+                            ${AUTOMATION_DIR}/manageLambda.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                            RESULT=$?
+                            ;;                            
+                        *)
+                            echo -e "\nUnknown image format \"${IMAGE_FORMAT}\"" >&2
+                            exit
+                            ;;
+                    esac
                     if [[ "${RESULT}" -ne 0 ]]; then
                         if [[ -n "${FROM_IMAGE_PROVIDER}" ]]; then
-                            # Attempt to pull image in from remote docker provider
-                            ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                            # Attempt to pull image in from remote provider
+                            case ${IMAGE_FORMAT,,} in
+                                docker)
+                                    ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                    RESULT=$?
+                                    ;;
+                                lambda)
+                                    ${AUTOMATION_DIR}/manageLambda.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                    RESULT=$?
+                                    ;;                            
+                                *)
+                                    echo -e "\nUnknown image format \"${IMAGE_FORMAT}\"" >&2
+                                    exit
+                                    ;;
+                            esac
                             RESULT=$?
                             if [[ "${RESULT}" -ne 0 ]]; then
-                                echo -e "\nUnable to pull docker image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from docker provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" >&2
+                                echo -e "\nUnable to pull ${IMAGE_FORMAT,,} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" >&2
                                 exit
                             fi
                         else
-                            echo -e "\nDocker image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?" >&2
+                            echo -e "\n${IMAGE_FORMAT^} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?" >&2
                             exit
                         fi
                     fi
-                   ;;
-            esac
+                done
+            fi
 
             # Save details of this deployment unit
             CODE_COMMIT_ARRAY[${INDEX}]="${CODE_COMMIT}"
@@ -447,7 +513,7 @@ case ${REFERENCE_OPERATION} in
         echo "DEPLOYMENT_UNIT_LIST=${DEPLOYMENT_UNIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
         echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
         echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "IMAGE_FORMAT_LIST=${IMAGE_FORMAT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
         echo "DETAIL_MESSAGE=${DETAIL_MESSAGE}" >> ${AUTOMATION_DATA_DIR}/context.properties
         ;;
 

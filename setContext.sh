@@ -509,13 +509,13 @@ CODE_COMMIT_ARRAY=()
 CODE_TAG_ARRAY=()
 CODE_REPO_ARRAY=()
 CODE_PROVIDER_ARRAY=()
-IMAGE_FORMAT_ARRAY=()
+IMAGE_FORMATS_ARRAY=()
 UNITS="${DEPLOYMENT_UNITS:-${DEPLOYMENT_UNIT:-${SLICES:-${SLICE}}}}"
 for CURRENT_DEPLOYMENT_UNIT in ${UNITS}; do
     IFS="${BUILD_REFERENCE_PART_SEPARATOR}" read -ra BUILD_REFERENCE_PARTS <<< "${CURRENT_DEPLOYMENT_UNIT}"
     DEPLOYMENT_UNIT_PART="${BUILD_REFERENCE_PARTS[0]}"
     TAG_PART="${BUILD_REFERENCE_PARTS[1]:-?}"
-    FORMAT_PART="${BUILD_REFERENCE_PARTS[2]:-?}"
+    FORMATS_PART="${BUILD_REFERENCE_PARTS[2]:-?}"
     COMMIT_PART="?"
     if [[ "${#DEPLOYMENT_UNIT_ARRAY[@]}" -eq 0 ]]; then
         # Processing the first deployment unit
@@ -523,9 +523,9 @@ for CURRENT_DEPLOYMENT_UNIT in ${UNITS}; do
             # Permit separate variable for commit/tag value - easier if only one repo involved
             TAG_PART="${CODE_TAG}"
         fi
-        if [[ -n "${IMAGE_FORMAT}" ]]; then
+        if [[ (-n "${IMAGE_FORMATS}") || (-n "${IMAGE_FORMAT}") ]]; then
             # Permit separate variable for commit/tag value - easier if only one repo involved
-            FORMAT_PART="${IMAGE_FORMAT}"
+            FORMATS_PART=$(tr -s " " "," <<< "${IMAGE_FORMATS:-${IMAGE_FORMAT}}")
         fi
     fi
         
@@ -538,7 +538,7 @@ for CURRENT_DEPLOYMENT_UNIT in ${UNITS}; do
     DEPLOYMENT_UNIT_ARRAY+=("${DEPLOYMENT_UNIT_PART,,}")
     CODE_COMMIT_ARRAY+=("${COMMIT_PART,,}")
     CODE_TAG_ARRAY+=("${TAG_PART}")
-    IMAGE_FORMAT_ARRAY+=("${FORMAT_PART}")
+    IMAGE_FORMATS_ARRAY+=("${FORMATS_PART}")
 
     # Determine code repo for the deployment unit - there may be none
     CODE_DEPLOYMENT_UNIT=$(tr "-" "_" <<< "${DEPLOYMENT_UNIT_PART^^}")
@@ -571,8 +571,8 @@ for INDEX in $( seq 0 $((${#DEPLOYMENT_UNIT_ARRAY[@]}-1)) ); do
             UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATOR}${CODE_COMMIT_ARRAY[$INDEX]}"
         fi
     fi
-    if [[ "${IMAGE_FORMAT_ARRAY[$INDEX]}" != "?" ]]; then
-        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATOR}${IMAGE_FORMAT_ARRAY[$INDEX]}"
+    if [[ "${IMAGE_FORMATS_ARRAY[$INDEX]}" != "?" ]]; then
+        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATOR}${IMAGE_FORMATS_ARRAY[$INDEX]}"
     fi
     DEPLOYMENT_UNIT_SEPARATOR=" "
 done
@@ -583,7 +583,7 @@ echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/contex
 echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_REPO_LIST=${CODE_REPO_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_PROVIDER_LIST=${CODE_PROVIDER_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "IMAGE_FORMAT_LIST=${IMAGE_FORMAT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 if [[ -n "${UPDATED_UNITS}" ]]; then echo "DEPLOYMENT_UNITS=${UPDATED_UNITS}" >> ${AUTOMATION_DATA_DIR}/context.properties; fi
 
 

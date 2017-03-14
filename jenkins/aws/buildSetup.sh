@@ -10,8 +10,11 @@ if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
         if [[ -f ${DU_FILE} ]]; then
             case ${DU_FILE##*.} in
                 json)
-                    for ATTRIBUTE in units slices format; do 
-                        ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null)" < ${DU_FILE})
+                    for ATTRIBUTE in units slices formats; do 
+                        ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE}[] | select(.!=null)" < ${DU_FILE} | tr -s "\r\n" " ")
+                        if [[ -z "${}" ]]; then
+                            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^}[] | select(.!=null)" < ${DU_FILE} | tr -s "\r\n" " ")
+                        fi
                         declare "${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE}"
                     done
                     export DEPLOYMENT_UNIT_LIST="${UNITS:-${SLICES}}"
@@ -30,9 +33,10 @@ if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
 fi
 
 # Already set image format overrides that in the repo
-IMAGE_FORMAT="${IMAGE_FORMAT:-${FORMAT:-docker}}"
-export IMAGE_FORMAT_LIST="${IMAGE_FORMAT}"
-echo "IMAGE_FORMAT_LIST=${IMAGE_FORMAT_LIST}" >> ${AUTOMATION_DATA_DIR}/context.properties
+IMAGE_FORMATS="${IMAGE_FORMATS:-${IMAGE_FORMAT}}"
+IMAGE_FORMATS="${IMAGE_FORMATS:-${FORMATS:-docker}}"
+export IMAGE_FORMATS_LIST="${IMAGE_FORMATS}"
+echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_LIST}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
 DEPLOYMENT_UNIT_ARRAY=(${DEPLOYMENT_UNIT_LIST})
 CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
@@ -40,35 +44,45 @@ CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
 # Record key parameters for downstream jobs
 echo "DEPLOYMENT_UNITS=${DEPLOYMENT_UNIT_LIST}" >> $AUTOMATION_DATA_DIR/chain.properties
 echo "GIT_COMMIT=${CODE_COMMIT_ARRAY[0]}" >> $AUTOMATION_DATA_DIR/chain.properties
-echo "IMAGE_FORMAT=${IMAGE_FORMAT}" >> $AUTOMATION_DATA_DIR/chain.properties
+echo "IMAGE_FORMATS=${IMAGE_FORMATS}" >> $AUTOMATION_DATA_DIR/chain.properties
 
 # Include the build information in the detail message
 ${AUTOMATION_DIR}/manageBuildReferences.sh -l
 RESULT=$?
 if [[ "${RESULT}" -ne 0 ]]; then exit; fi
 
-case ${IMAGE_FORMAT} in
-    docker)
-        # Perform checks for Docker packaging
-        if [[ -f Dockerfile ]]; then
-            ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+for IMAGE_FORMAT in ${IMAGE_FORMATS}; do
+    case ${IMAGE_FORMAT,,} in
+        docker)
+            # Perform checks for Docker packaging
+            if [[ -f Dockerfile ]]; then
+                ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+                RESULT=$?
+                if [[ "${RESULT}" -eq 0 ]]; then
+                    RESULT=1
+                    exit
+                fi
+            else
+                echo -e "\nDockerfile missing" >&2
+                exit
+            fi
+            ;;
+
+        lambda)
+            ${AUTOMATION_DIR}/manageLambda.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
             if [[ "${RESULT}" -eq 0 ]]; then
                 RESULT=1
                 exit
             fi
-        else
-            echo -e "\nDockerfile missing" >&2
-            exit
-        fi
-        ;;
+            ;;
 
-    # TODO: Perform checks for AWS Lambda packaging - not sure yet what to check for as a marker
-    *)
-        echo -e "\nUnsupported image format \"${IMAGE_FORMAT}\"" >&2
-        exit
-        ;;
-esac
+        *)
+            echo -e "\nUnsupported image format \"${IMAGE_FORMAT}\"" >&2
+            exit
+            ;;
+    esac
+done
 
 # All good
 RESULT=0

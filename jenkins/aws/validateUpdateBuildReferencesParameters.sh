@@ -14,9 +14,9 @@ if [[ ( -z "${DEPLOYMENT_UNIT_LIST}" ) ]]; then
     exit
 fi
 
-# Ensure at least one deployment unit has been provided
-if [[ ( -z "${IMAGE_FORMAT}" ) ]]; then
-	echo -e "\nJob requires the image format used to package the build" >&2
+# Ensure at least one format has been built
+if [[ ( -z "${IMAGE_FORMAT}" ) && ( -z "${IMAGE_FORMATS}" ) ]]; then
+	echo -e "\nJob requires the image format(s) used to package the build" >&2
     exit
 fi
 

@@ -10,24 +10,44 @@ DEPLOYMENT_UNIT_ARRAY=(${DEPLOYMENT_UNIT_LIST})
 CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
 IMAGE_FORMAT_ARRAY=(${IMAGE_FORMAT_LIST})
 
-case ${IMAGE_FORMAT_ARRAY[0]} in
-    docker)
-        # Package for docker
-        if [[ -f Dockerfile ]]; then
-            ${AUTOMATION_DIR}/manageDocker.sh -b -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
-            RESULT=$?
-            if [[ "${RESULT}" -ne 0 ]]; then
+IFS="," read -ra FORMATS <<< "${IMAGE_FORMAT_ARRAY[0]}"
+
+for FORMAT in "${FORMATS[@]}"; do
+    case ${FORMAT,,} in
+        docker)
+            # Package for docker
+            if [[ -f Dockerfile ]]; then
+                ${AUTOMATION_DIR}/manageDocker.sh -b -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+                RESULT=$?
+                if [[ "${RESULT}" -ne 0 ]]; then
+                    exit
+                fi
+            else
+                echo -e "\nDockerfile missing" >&2
                 exit
             fi
-        else
-            echo -e "\nDockerfile missing" >&2
-            exit
-        fi
-        ;;
+            ;;
 
-    # TODO: Perform checks for AWS Lambda packaging - not sure yet what to check for as a marker
-    *)
-        echo -e "\nUnsupported image format \"${IMAGE_FORMAT}\"" >&2
-        exit
-        ;;
-esac
+        lambda)
+            IMAGE_FILE="./dist/lambda.zip"
+            if [[ -f "${IMAGE_FILE}" ]]; then
+                ${AUTOMATION_DIR}/manageLambda.sh -s \
+                        -u "${DEPLOYMENT_UNIT_ARRAY[0]}" \
+                        -g "${CODE_COMMIT_ARRAY[0]}" \
+                        -f "${IMAGE_FILE}"
+                RESULT=$?
+                if [[ "${RESULT}" -ne 0 ]]; then
+                    exit
+                fi
+            else
+                echo -e "\n${IMAGE_FILE} missing" >&2
+                exit
+            fi
+            ;;
+
+        *)
+            echo -e "\nUnsupported image format \"${FORMAT}\"" >&2
+            exit
+            ;;
+    esac
+done

@@ -11,9 +11,9 @@ if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
             case ${DU_FILE##*.} in
                 json)
                     for ATTRIBUTE in units slices formats; do 
-                        ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE}[] | select(.!=null)" < ${DU_FILE} | tr -s "\r\n" " ")
-                        if [[ -z "${}" ]]; then
-                            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^}[] | select(.!=null)" < ${DU_FILE} | tr -s "\r\n" " ")
+                        ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" < ${DU_FILE} | tr -s "\r\n" " ")
+                        if [[ -z "${ATTRIBUTE_VALUE}" ]]; then
+                            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" < ${DU_FILE} | tr -s "\r\n" " ")
                         fi
                         declare "${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE}"
                     done

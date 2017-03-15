@@ -100,9 +100,9 @@ function getBuildReferenceParts() {
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done
         for ATTRIBUTE in formats; do 
-            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE}[] | select(.!=null)" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" ",")
+            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" ",")
             if [[ -z "${ATTRIBUTE_VALUE}" ]]; then
-                ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^}[] | select(.!=null)" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" ",")
+                ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" ",")
             fi
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done

@@ -307,10 +307,10 @@ case ${DOCKER_OPERATION} in
         fi
 
         if [[ -n "${DOCKER_IMAGE_PRESENT}" ]]; then
-            echo -e "\nImage ${DOCKER_IMAGE} present in the local registry"
+            echo -e "\nDocker image ${DOCKER_IMAGE} present in the local registry"
             RESULT=0
         else
-            echo -e "\nImage ${DOCKER_IMAGE} not present in the local registry" >&2
+            echo -e "\nDocker image ${DOCKER_IMAGE} not present in the local registry" >&2
             RESULT=1
         fi
         ;;

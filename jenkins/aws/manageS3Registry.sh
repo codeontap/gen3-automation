@@ -284,10 +284,10 @@ case ${REGISTRY_OPERATION} in
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FULL_TAGGED_REGISTRY_IMAGE}" >/dev/null 2>&1
         RESULT=$?
         if [[ "${RESULT}" -eq 0 ]]; then
-            echo -e "\nImage ${REGISTRY_IMAGE} present in the local registry" 
+            echo -e "\n${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} present in the local registry" 
             exit
         else
-            echo -e "\nImage ${REGISTRY_IMAGE} with tag ${REGISTRY_TAG} not present in the local registry" >&2
+            echo -e "\n${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} with tag ${REGISTRY_TAG} not present in the local registry" >&2
             exit
         fi
         ;;

@@ -8,9 +8,9 @@ if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 
 DEPLOYMENT_UNIT_ARRAY=(${DEPLOYMENT_UNIT_LIST})
 CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
-IMAGE_FORMAT_ARRAY=(${IMAGE_FORMAT_LIST})
+IMAGE_FORMATS_ARRAY=(${IMAGE_FORMAT_LIST})
 
-IFS="," read -ra FORMATS <<< "${IMAGE_FORMAT_ARRAY[0]}"
+IFS="," read -ra FORMATS <<< "${IMAGE_FORMATS_ARRAY[0]}"
 
 for FORMAT in "${FORMATS[@]}"; do
     case ${FORMAT,,} in
@@ -30,6 +30,12 @@ for FORMAT in "${FORMATS[@]}"; do
 
         lambda)
             IMAGE_FILE="./dist/lambda.zip"
+
+            # TODO remove once we've sorted out generating lambda builds in JS
+            if [[ ! -f "${IMAGE_FILE}" ]]; then
+                touch "${IMAGE_FILE}"
+            fi
+
             if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageLambda.sh -s \
                         -u "${DEPLOYMENT_UNIT_ARRAY[0]}" \

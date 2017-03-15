@@ -36,8 +36,8 @@ fi
 IMAGE_FORMATS="${IMAGE_FORMATS:-${IMAGE_FORMAT}}"
 IMAGE_FORMATS="${IMAGE_FORMATS:-${FORMATS:-docker}}"
 IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS})
-export IMAGE_FORMATS=$(IFS=','; echo "${IMAGE_FORMATS_ARRAY[*]}")
-echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS}" >> ${AUTOMATION_DATA_DIR}/context.properties
+export IMAGE_FORMATS_LIST=$(IFS=','; echo "${IMAGE_FORMATS_ARRAY[*]}")
+echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_LIST}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
 DEPLOYMENT_UNIT_ARRAY=(${DEPLOYMENT_UNIT_LIST})
 CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
@@ -45,7 +45,7 @@ CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
 # Record key parameters for downstream jobs
 echo "DEPLOYMENT_UNITS=${DEPLOYMENT_UNIT_LIST}" >> $AUTOMATION_DATA_DIR/chain.properties
 echo "GIT_COMMIT=${CODE_COMMIT_ARRAY[0]}" >> $AUTOMATION_DATA_DIR/chain.properties
-echo "IMAGE_FORMATS=${IMAGE_FORMATS}" >> $AUTOMATION_DATA_DIR/chain.properties
+echo "IMAGE_FORMATS=${IMAGE_FORMATS_LIST}" >> $AUTOMATION_DATA_DIR/chain.properties
 
 # Include the build information in the detail message
 ${AUTOMATION_DIR}/manageBuildReferences.sh -l

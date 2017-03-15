@@ -226,7 +226,7 @@ REGISTRY_TYPES=("docker" "lambda" "swagger")
 REGISTRY_PROVIDERS=()
 function defineRegistryProviderSettings() {
     # Define key values about use of a docker provider
-    DRPS_PROVIDER_TYPE="$1^^"
+    DRPS_PROVIDER_TYPE="${1^^}"
     DRPS_USE="$2"
     DRPS_SUBUSE="$3"
     DRPS_LEVEL1="$4"

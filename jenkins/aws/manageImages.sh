@@ -33,6 +33,7 @@ for FORMAT in "${FORMATS[@]}"; do
 
             # TODO remove once we've sorted out generating lambda builds in JS
             if [[ ! -f "${IMAGE_FILE}" ]]; then
+                mkdir dist
                 touch "${IMAGE_FILE}"
             fi
 

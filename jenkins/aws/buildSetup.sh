@@ -54,7 +54,7 @@ if [[ "${RESULT}" -ne 0 ]]; then exit; fi
 
 # Ensure no builds exist regardless of format
 PRESENT=0
-for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY}"; do
+for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
     case ${IMAGE_FORMAT,,} in
         docker)
             ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"

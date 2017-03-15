@@ -52,20 +52,15 @@ ${AUTOMATION_DIR}/manageBuildReferences.sh -l
 RESULT=$?
 if [[ "${RESULT}" -ne 0 ]]; then exit; fi
 
+# Ensure no builds exist regardless of format
+PRESENT=0
 for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY}"; do
     case ${IMAGE_FORMAT,,} in
         docker)
-            # Perform checks for Docker packaging
-            if [[ -f Dockerfile ]]; then
-                ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
-                RESULT=$?
-                if [[ "${RESULT}" -eq 0 ]]; then
-                    RESULT=1
-                    exit
-                fi
-            else
-                echo -e "\nDockerfile missing" >&2
-                exit
+            ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            RESULT=$?
+            if [[ "${RESULT}" -eq 0 ]]; then
+                PRESENT=1
             fi
             ;;
 
@@ -73,8 +68,7 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY}"; do
             ${AUTOMATION_DIR}/manageLambda.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
             if [[ "${RESULT}" -eq 0 ]]; then
-                RESULT=1
-                exit
+                PRESENT=1
             fi
             ;;
 
@@ -85,5 +79,5 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY}"; do
     esac
 done
 
-# All good
-RESULT=0
+# Return result of image presence checks
+RESULT=${PRESENT}

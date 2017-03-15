@@ -65,7 +65,7 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             ;;
 
         lambda)
-            ${AUTOMATION_DIR}/manageLambda.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            ${AUTOMATION_DIR}/manageLambda.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
             if [[ "${RESULT}" -eq 0 ]]; then
                 PRESENT=1

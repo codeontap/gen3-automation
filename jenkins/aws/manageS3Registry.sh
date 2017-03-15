@@ -140,14 +140,16 @@ done
 
 # Define registry provider attributes
 # $1 = provider
-# $2 = variable prefix
+# $2 = provider type
+# $3 = variable prefix
 function defineRegistryProviderAttributes() {
     local DRPA_PROVIDER="${1^^}"
-    local DRPA_PREFIX="${2^^}"
+    local DRPA_TYPE="${2^^}"
+    local DRPA_PREFIX="${3^^}"
 
     # Attribute variable names
     for DRPA_ATTRIBUTE in "DNS" "REGION"; do
-        DRPA_PROVIDER_VAR="${DRPA_PROVIDER}_REGISTRY_${DRPA_ATTRIBUTE}"
+        DRPA_PROVIDER_VAR="${DRPA_PROVIDER}_${DRPA_TYPE}_${DRPA_ATTRIBUTE}"
         declare -g ${DRPA_PREFIX}_${DRPA_ATTRIBUTE}="${!DRPA_PROVIDER_VAR}"
     done
 }
@@ -200,7 +202,7 @@ function setCredentials() {
 
 # Apply local registry defaults
 REGISTRY_TYPE="${REGISTRY_TYPE,,:-${REGISTRY_TYPE_DEFAULT}}"
-REGISTRY_PROVIDER_VAR="PRODUCT_${REGISTRY_TYPE}_PROVIDER"
+REGISTRY_PROVIDER_VAR="PRODUCT_${REGISTRY_TYPE^^}_PROVIDER"
 REGISTRY_PROVIDER="${REGISTRY_PROVIDER:-${!REGISTRY_PROVIDER_VAR}}"
 REGISTRY_FILENAME="${REGISTRY_FILENAME:-${REGISTRY_FILENAME_DEFAULT}}"
 BASE_REGISTRY_FILENAME=$(basename "${REGISTRY_FILENAME}")
@@ -224,7 +226,7 @@ touch "${TAG_FILE}"
 
 
 # Determine registry provider details
-defineRegistryProviderAttributes "${REGISTRY_PROVIDER}" "REGISTRY_PROVIDER"
+defineRegistryProviderAttributes "${REGISTRY_PROVIDER}" "${REGISTRY_TYPE}" "REGISTRY_PROVIDER"
 
 # Ensure the local repository has been determined
 if [[ -z "${REGISTRY_REPO}" ]]; then
@@ -233,13 +235,13 @@ if [[ -z "${REGISTRY_REPO}" ]]; then
 fi
 
 # Apply remote registry defaults
-REMOTE_REGISTRY_PROVIDER_VAR="PRODUCT_REMOTE_${REGISTRY_TYPE}_PROVIDER"
+REMOTE_REGISTRY_PROVIDER_VAR="PRODUCT_REMOTE_${REGISTRY_TYPE^^}_PROVIDER"
 REMOTE_REGISTRY_PROVIDER="${REMOTE_REGISTRY_PROVIDER:-${!REMOTE_REGISTRY_PROVIDER_VAR}}"
 REMOTE_REGISTRY_REPO="${REMOTE_REGISTRY_REPO:-$REGISTRY_REPO}"
 REMOTE_REGISTRY_TAG="${REMOTE_REGISTRY_TAG:-$REGISTRY_TAG}"
 
 # Determine remote registry provider details
-defineRegistryProviderAttributes "${REMOTE_REGISTRY_PROVIDER}" "REMOTE_REGISTRY_PROVIDER"
+defineRegistryProviderAttributes "${REMOTE_REGISTRY_PROVIDER}" "${REGISTRY_TYPE}" "REMOTE_REGISTRY_PROVIDER"
 
 # pull = tag if local provider = remote provider
 if [[ ("${REGISTRY_PROVIDER}" == "${REMOTE_REGISTRY_PROVIDER}") &&

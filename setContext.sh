@@ -222,69 +222,68 @@ function defineGitProviderSettings() {
         "API_DNS" "${DGPD_PROVIDER}" "${DGPD_PROVIDER_TYPE}" "value" "api.${NAME_VALUE}"
 }
 
-DOCKER_PROVIDERS=()
-function defineDockerProviderSettings() {
+REGISTRY_TYPES=("docker", "lambda", "swagger")
+REGISTRY_PROVIDERS=()
+function defineRegistryProviderSettings() {
     # Define key values about use of a docker provider
-    DDPD_USE="$1"
-    DDPD_SUBUSE="$2"
-    DDPD_LEVEL1="$3"
-    DDPD_LEVEL2="$4"
-    DDPD_DEFAULT="$5"
-    DDPD_SUBUSE_PREFIX="$6"
-    DDPD_SUBUSE_PREFIX_PROVIDED="${6+x}"
+    DRPS_PROVIDER_TYPE="$1^^"
+    DRPS_USE="$2"
+    DRPS_SUBUSE="$3"
+    DRPS_LEVEL1="$4"
+    DRPS_LEVEL2="$5"
+    DRPS_DEFAULT="$6"
+    DRPS_SUBUSE_PREFIX="$7"
+    DRPS_SUBUSE_PREFIX_PROVIDED="${7+x}"
     
-    # Provider type
-    DDPD_PROVIDER_TYPE="DOCKER"
-
     # Format subuse
-    if [[ -n "${DDPD_SUBUSE}" ]]; then
-        DDPD_SUBUSE="${DDPD_SUBUSE}_"
+    if [[ -n "${DRPS_SUBUSE}" ]]; then
+        DRPS_SUBUSE="${DRPS_SUBUSE}_"
     fi
 
     # Default subuse prefix if not explicitly provided
-    if [[ -z "${DDPD_SUBUSE_PREFIX_PROVIDED}" ]]; then
-        DDPD_SUBUSE_PREFIX="${DDPD_SUBUSE}"
+    if [[ -z "${DRPS_SUBUSE_PREFIX_PROVIDED}" ]]; then
+        DRPS_SUBUSE_PREFIX="${DRPS_SUBUSE}"
     fi
 
     # Format subuse prefix
-    if [[ -n "${DDPD_SUBUSE_PREFIX}" ]]; then
-        DDPD_SUBUSE_PREFIX="${DDPD_SUBUSE_PREFIX}_"
+    if [[ -n "${DRPS_SUBUSE_PREFIX}" ]]; then
+        DRPS_SUBUSE_PREFIX="${DRPS_SUBUSE_PREFIX}_"
     fi
 
     # Find the provider
-    findAndDefineSetting "${DDPD_USE}_${DDPD_SUBUSE}${DDPD_PROVIDER_TYPE}_PROVIDER" \
-        "${DDPD_SUBUSE_PREFIX}${DDPD_PROVIDER_TYPE}_PROVIDER" \
-        "${DDPD_LEVEL1}" "${DDPD_LEVEL2}" "value" "${DDPD_DEFAULT}"
-    DDPD_PROVIDER="${NAME_VALUE,,}"
+    findAndDefineSetting "${DRPS_USE}_${DRPS_SUBUSE}${DRPS_PROVIDER_TYPE}_PROVIDER" \
+        "${DRPS_SUBUSE_PREFIX}${DRPS_PROVIDER_TYPE}_PROVIDER" \
+        "${DRPS_LEVEL1}" "${DRPS_LEVEL2}" "value" "${DRPS_DEFAULT}"
+    DRPS_PROVIDER="${NAME_VALUE,,}"
 
     # Already seen?
     for PROVIDER in ${DOCKER_PROVIDERS[@]}; do
-        if [[ "${PROVIDER}" == "${DDPD_PROVIDER}" ]]; then
+        if [[ "${PROVIDER}" == "${DRPS_PROVIDER_TYPE},${DRPS_PROVIDER}" ]]; then
             return
         fi
     done
     
     # Seen now
-    DOCKER_PROVIDERS+=("${DDPD_PROVIDER}")
+    DOCKER_PROVIDERS+=("${DRPS_PROVIDER_TYPE},${DRPS_PROVIDER}")
 
     # Ensure all attributes defined
     
     # Dereferenced provider attributes 
     for ATTRIBUTE in USER PASSWORD; do
-        findAndDefineSetting "${DDPD_PROVIDER}_${DDPD_PROVIDER_TYPE}_${ATTRIBUTE}_VAR" \
-            "${ATTRIBUTE}" "${DDPD_PROVIDER}" "${DDPD_PROVIDER_TYPE}" "name"
+        findAndDefineSetting "${DRPS_PROVIDER}_${DRPS_PROVIDER_TYPE}_${ATTRIBUTE}_VAR" \
+            "${ATTRIBUTE}" "${DRPS_PROVIDER}" "${DRPS_PROVIDER_TYPE}" "name"
     done
 
     # Provider attributes
-    for ATTRIBUTE in DNS; do
-        findAndDefineSetting "${DDPD_PROVIDER}_${DDPD_PROVIDER_TYPE}_${ATTRIBUTE}" \
-        "${ATTRIBUTE}" "${DDPD_PROVIDER}" "${DDPD_PROVIDER_TYPE}" "value"
+    for ATTRIBUTE in REGION DNS; do
+        findAndDefineSetting "${DRPS_PROVIDER}_${DRPS_PROVIDER_TYPE}_${ATTRIBUTE}" \
+        "${ATTRIBUTE}" "${DRPS_PROVIDER}" "${DRPS_PROVIDER_TYPE}" "value"
     done
 
     # API_DNS defaults to DNS 
     # NOTE: NAME_VALUE use assumes DNS was last setting defined
-    findAndDefineSetting "${DDPD_PROVIDER}_${DDPD_PROVIDER_TYPE}_API_DNS" \
-        "API_DNS" "${DDPD_PROVIDER}" "${DDPD_PROVIDER_TYPE}" "value" "${NAME_VALUE}"
+    findAndDefineSetting "${DRPS_PROVIDER}_${DRPS_PROVIDER_TYPE}_API_DNS" \
+        "API_DNS" "${DRPS_PROVIDER}" "${DRPS_PROVIDER_TYPE}" "value" "${NAME_VALUE}"
 }
 
 function defineRepoSettings() {
@@ -486,8 +485,10 @@ defineRepoSettings "PRODUCT" "INFRASTRUCTURE" "${PRODUCT}" "${SEGMENT}" "${PRODU
 # - code git provider
 defineGitProviderSettings "PRODUCT" "CODE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT_GIT_PROVIDER}"
 
-# - local docker provider
-defineDockerProviderSettings "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT}"
+# - local registry providers
+for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
+    defineRegistryProviderSettings "${REGISTRY_TYPE}" "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT}"
+done
 
 
 ### Generation framework details ###
@@ -614,7 +615,9 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
                 defineGitProviderSettings    "FROM_ACCOUNT" "" "${FROM_ACCOUNT}" "" "github"
                 defineGitProviderSettings    "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT_GIT_PROVIDER}"
                 defineRepoSettings           "FROM_PRODUCT" "CONFIG" "${PRODUCT}" "${FROM_SEGMENT}" "${PRODUCT}-config"
-                defineDockerProviderSettings "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
+                for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
+                    defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
+                done
             else
                 echo -e "\nPROMOTION segment/account not defined" >&2
                 exit
@@ -637,7 +640,9 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
             findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"
             if [[ (-n "${FROM_SEGMENT}") &&
                     (-n "${FROM_ACCOUNT}")]]; then
-                defineDockerProviderSettings "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
+                for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
+                    defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
+                done
             else
                 echo -e "\HOTFIX segment/account not defined" >&2
                 exit

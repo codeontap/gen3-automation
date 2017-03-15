@@ -343,7 +343,7 @@ case ${REGISTRY_OPERATION} in
         fi
 
         # Now copy to local rgistry
-        setCredentials(${REGISTRY_PROVIDER})
+        setCredentials "${REGISTRY_PROVIDER}"
 
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${IMAGE_FILE}" "${FULL_REGISTRY_IMAGE}" >/dev/null
         RESULT=$?

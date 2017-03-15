@@ -36,8 +36,8 @@ fi
 IMAGE_FORMATS="${IMAGE_FORMATS:-${IMAGE_FORMAT}}"
 IMAGE_FORMATS="${IMAGE_FORMATS:-${FORMATS:-docker}}"
 IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS})
-export IMAGE_FORMATS_LIST="$(IFS=','; echo ${IMAGE_FORMATS_ARRAY[*]})"
-echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_LIST}" >> ${AUTOMATION_DATA_DIR}/context.properties
+export IMAGE_FORMATS=$(IFS=','; echo "${IMAGE_FORMATS_ARRAY[*]}")
+echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
 DEPLOYMENT_UNIT_ARRAY=(${DEPLOYMENT_UNIT_LIST})
 CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
@@ -52,7 +52,7 @@ ${AUTOMATION_DIR}/manageBuildReferences.sh -l
 RESULT=$?
 if [[ "${RESULT}" -ne 0 ]]; then exit; fi
 
-for IMAGE_FORMAT in ${IMAGE_FORMATS}; do
+for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY}"; do
     case ${IMAGE_FORMAT,,} in
         docker)
             # Perform checks for Docker packaging

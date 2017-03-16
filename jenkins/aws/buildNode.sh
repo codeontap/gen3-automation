@@ -20,14 +20,23 @@ if [[ -f bower.json ]]; then
     fi
 fi
 
-# Grunt based build
-if [[ -f gruntfile.js ]]; then
-    grunt build
-    RESULT=$?
-    if [ $RESULT -ne 0 ]; then
-       echo -e "\ngrunt build failed" >&2
-       exit
-    fi
+# Grunt based build (first letter can be upper or lower case)
+GRUNT_FILES=( ?runtfile.js )
+if (( ${#GRUNT_FILES[@]} )) ; then
+    REQUIRED_TASKS="${REQUIRED_TASKS:-build lambda}"
+    GRUNT_TASKS=( $(grunt -h --no-color | sed -n '/^Available tasks/,/^$/ {s/^  *\([^ ]\+\)  [^ ]\+.*$/\1/p}') )
+    for REQUIRED_TASK in ${REQUIRED_TASKS}; do
+        if [[ "${GRUNT_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" != "${GRUNT_TASKS[*]}" ]]; then
+            grunt ${REQUIRED_TASK}
+            RESULT=$?
+            if [ $RESULT -ne 0 ]; then
+                echo -e "\ngrunt \"${TASK}\" task failed" >&2
+                exit
+            fi
+        else
+            echo -e "\nWARNING: Task \"${REQUIRED_TASK}\" not found in Gruntfile" >&2
+        fi
+    done
 fi
 
 # Gulp based build

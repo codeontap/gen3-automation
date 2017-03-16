@@ -24,18 +24,13 @@ for FORMAT in "${FORMATS[@]}"; do
                 fi
             else
                 echo -e "\nDockerfile missing" >&2
+                RESULT=1
                 exit
             fi
             ;;
 
         lambda)
             IMAGE_FILE="./dist/lambda.zip"
-
-            # TODO remove once we've sorted out generating lambda builds in JS
-            if [[ ! -f "${IMAGE_FILE}" ]]; then
-                mkdir dist
-                touch "${IMAGE_FILE}"
-            fi
 
             if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageLambda.sh -s \
@@ -48,12 +43,14 @@ for FORMAT in "${FORMATS[@]}"; do
                 fi
             else
                 echo -e "\n${IMAGE_FILE} missing" >&2
+                RESULT=1
                 exit
             fi
             ;;
 
         *)
             echo -e "\nUnsupported image format \"${FORMAT}\"" >&2
+            RESULT=1
             exit
             ;;
     esac

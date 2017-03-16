@@ -20,34 +20,49 @@ if [[ -f bower.json ]]; then
     fi
 fi
 
-# Grunt based build (first letter can be upper or lower case)
-GRUNT_FILES=( ?runtfile.js )
-if (( ${#GRUNT_FILES[@]} )) ; then
-    REQUIRED_TASKS="${REQUIRED_TASKS:-build lambda}"
-    GRUNT_TASKS=( $(grunt -h --no-color | sed -n '/^Available tasks/,/^$/ {s/^  *\([^ ]\+\)  [^ ]\+.*$/\1/p}') )
-    for REQUIRED_TASK in ${REQUIRED_TASKS}; do
-        if [[ "${GRUNT_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" != "${GRUNT_TASKS[*]}" ]]; then
-            grunt ${REQUIRED_TASK}
+# Determine required tasks
+# Build is always first
+REQUIRED_TASKS=( "build" )
+
+# Perform format specific tasks if defined
+IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS_LIST})
+IFS="," read -ra FORMATS <<< "${IMAGE_FORMATS_ARRAY[0]}"
+REQUIRED_TASKS=( "${REQUIRED_TASKS[@]}" "${FORMTS[@]}" )
+
+# The build file existence checks below rely on nullglob
+# to return nothing if no match
+shopt -s nullglob
+BUILD_FILES=( ?runtfile.js ?ulpfile.js )
+
+# Perform build tasks in the order specified
+for REQUIRED_TASK in ${REQUIRED_TASKS}; do
+    for BUILD_FILE in "${BUILD_FILES[@]}"; do
+        BUILD_TASKS=()
+        case ${BUILD_FILE} in
+            ?runtfile.js)
+                BUILD_TASKS=( $(grunt -h --no-color | sed -n '/^Available tasks/,/^$/ {s/^  *\([^ ]\+\)  [^ ]\+.*$/\1/p}') )
+                BUILD_UTILITY="grunt"
+                ;;
+
+            ?ulpfile.js)
+                BUILD_TASKS=( $(gulp --tasks-simple) )
+                BUILD_UTILITY="gulp"
+                ;;
+        esac
+
+        if [[ "${BUILD_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" != "${BUILD_TASKS[*]}" ]]; then
+            ${BUILD_UTILITY} ${REQUIRED_TASK}
             RESULT=$?
             if [ $RESULT -ne 0 ]; then
-                echo -e "\ngrunt \"${TASK}\" task failed" >&2
+                echo -e "\n${BUILD_UTILITY} \"${TASK}\" task failed" >&2
                 exit
             fi
-        else
-            echo -e "\nWARNING: Task \"${REQUIRED_TASK}\" not found in Gruntfile" >&2
+
+            # Task complete so stop looking for build file supporting it
+            break
         fi
     done
-fi
-
-# Gulp based build
-if [[ -f gulpfile.js ]]; then
-    gulp build
-    RESULT=$?
-    if [ $RESULT -ne 0 ]; then
-       echo -e "\ngulp build failed" >&2
-       exit
-    fi
-fi
+done
 
 # Clean up
 npm prune --production

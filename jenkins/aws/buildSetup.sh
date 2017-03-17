@@ -85,7 +85,7 @@ if [[ "${RESULT}" -ne 0 ]]; then exit; fi
 # Perform prebuild actions
 if [[ -f prebuild.json ]]; then
     # Include repos
-    for ((INDEX=0; true; INDEX++)); do
+    for ((INDEX=0; ; INDEX++)); do
         ENTRY=$(jq -c ".IncludeRepos[${INDEX}] | select(.!=null)" < prebuild.json)
         if [[ -n "${ENTRY}" ]]; then
             # Extract key attributes

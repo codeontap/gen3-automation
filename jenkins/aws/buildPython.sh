@@ -13,7 +13,7 @@ fi
 # Set up the virtual build environment
 virtualenv .venv
 RESULT=$?
-if [ $RESULT -ne 0 ]; then
+if [ ${RESULT} -ne 0 ]; then
    echo -e "\nCreation of virtual build environment failed" >&2
    exit
 fi
@@ -25,7 +25,7 @@ REQUIREMENTS_FILES=( requirements*.txt )
 for REQUIREMENTS_FILE in "${REQUIREMENTS_FILES[@]}"; do
     pip install -r ${REQUIREMENTS_FILE} --upgrade
     RESULT=$?
-    if [ $RESULT -ne 0 ]; then
+    if [ ${RESULT} -ne 0 ]; then
        echo -e "\nInstallation of requirements failed" >&2
        exit
     fi
@@ -34,7 +34,7 @@ done
 if [[ -f package.json ]]; then
     npm install --unsafe-perm
     RESULT=$?
-    if [ $RESULT -ne 0 ]; then
+    if [ ${RESULT} -ne 0 ]; then
        echo -e "\nnpm install failed" >&2
        exit
     fi
@@ -44,7 +44,7 @@ fi
 if [[ -f bower.json ]]; then
     bower install --allow-root
     RESULT=$?
-    if [ $RESULT -ne 0 ]; then
+    if [ ${RESULT} -ne 0 ]; then
        echo -e "\nbower install failed" >&2
        exit
     fi
@@ -52,19 +52,21 @@ fi
 
 # Package for lambda if required
 if [[ -f zappa_settings.json ]]; then
-    BUILD=`zappa package dev 2> /dev/null | tail -1 | cut -d' ' -f3`
+    BUILD=$(zappa package default | tail -1 | cut -d' ' -f3)
     if [[ -f ${BUILD} ]]; then
         mkdir -p dist/
-        mv $BUILD dist/lambda.zip
+        mv ${BUILD} dist/lambda.zip
     fi
 fi
 
 # Clean up
-npm prune --production
-RESULT=$?
-if [ $RESULT -ne 0 ]; then
-   echo -e "\nnpm prune failed" >&2
-   exit
+if [[ -f package.json ]]; then
+    npm prune --production
+    RESULT=$?
+    if [ ${RESULT} -ne 0 ]; then
+       echo -e "\nnpm prune failed" >&2
+       exit
+    fi
 fi
 
 . ${AUTOMATION_DIR}/manageImages.sh

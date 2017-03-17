@@ -35,7 +35,7 @@ shopt -s nullglob
 BUILD_FILES=( ?runtfile.js ?ulpfile.js )
 
 # Perform build tasks in the order specified
-for REQUIRED_TASK in ${REQUIRED_TASKS}; do
+for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
     for BUILD_FILE in "${BUILD_FILES[@]}"; do
         BUILD_TASKS=()
         case ${BUILD_FILE} in

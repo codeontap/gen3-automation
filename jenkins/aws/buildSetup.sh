@@ -79,5 +79,40 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
     esac
 done
 
-# Return result of image presence checks
 RESULT=${PRESENT}
+if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+
+# Perform prebuild actions
+if [[ -f prebuild.json ]]; then
+    # Include repos
+    for ((INDEX=0; true; INDEX++)); do
+        ENTRY=$(jq -c ".IncludeRepos[${INDEX}] | select(.!=null)" < prebuild.json)
+        if [[ -n "${ENTRY}" ]]; then
+            # Extract key attributes
+            REPO_PROVIDER=$(jq -r '.provider' <<< $ENTRY)
+            REPO_NAME=$(jq -r '.name' <<< $ENTRY)
+
+            if [[ (-n "${REPO_PROVIDER}") && (-n "${REPO_NAME}") ]]; then
+                if [[ ! -e "./${REPO_NAME}" ]]; then
+                    ${AUTOMATION_DIR}/manageRepo.sh -c -l "${REPO_NAME}" \
+                        -n "${REPO_NAME}" -v "${REPO_PROVIDER^^}" \
+                        -d "./${REPO_NAME}"
+                    RESULT=$?
+                    if [[ ${RESULT} -ne 0 ]]; then
+                        exit
+                    fi
+                else
+                    echo -e "\nWARNING: \"${REPO_NAME} repo already exists - using existing local rather than fetching again" >&2
+                fi
+            else
+                echo -e "\nWARNING: Incorrectly formatted include repo information: ${ENTRY}" >&2
+            fi
+        else
+            # No more entries to process
+            break
+        fi
+    done
+fi
+
+# All good
+RESULT=0

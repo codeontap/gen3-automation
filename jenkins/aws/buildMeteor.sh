@@ -39,5 +39,5 @@ if [[ $(du -s -m ./dist | cut -f 1) -gt ${MAX_METEOR_BUILD_SIZE} ]]; then
     exit
 fi
 
-. ${AUTOMATION_DIR}/manageImages.sh
+${AUTOMATION_DIR}/manageImages.sh -g "${CODE_COMMIT_ARRAY[0]}" -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -f "${IMAGE_FORMATS_ARRAY[0]}"
 RESULT=$?

@@ -18,17 +18,17 @@ function usage() {
 
 Manage images in an S3 backed registry
 
-Usage: $(basename $0) -s -v -p -k \
-                        -y REGISTRY_TYPE \
-                        -a REGISTRY_PROVIDER \ 
-                        -l REGISTRY_REPO \
-                        -t REGISTRY_TAG \
-                        -f REGISTRY_FILENAME \
-                        -z REMOTE_REGISTRY_PROVIDER \
-                        -i REMOTE_REGISTRY_REPO \
-                        -r REMOTE_REGISTRY_TAG \
-                        -d REGISTRY_PRODUCT \
-                        -u REGISTRY_DEPLOYMENT_UNIT \ 
+Usage: $(basename $0) -s -v -p -k
+                        -y REGISTRY_TYPE
+                        -a REGISTRY_PROVIDER
+                        -l REGISTRY_REPO
+                        -t REGISTRY_TAG
+                        -f REGISTRY_FILENAME
+                        -z REMOTE_REGISTRY_PROVIDER
+                        -i REMOTE_REGISTRY_REPO
+                        -r REMOTE_REGISTRY_TAG
+                        -d REGISTRY_PRODUCT
+                        -u REGISTRY_DEPLOYMENT_UNIT
                         -g REGISTRY_CODE_COMMIT
 
 where

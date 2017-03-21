@@ -21,5 +21,5 @@ fi
 
 cd ../
 
-. ${AUTOMATION_DIR}/manageImages.sh
+${AUTOMATION_DIR}/manageImages.sh -g "${CODE_COMMIT_ARRAY[0]}" -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -f "${IMAGE_FORMATS_ARRAY[0]}"
 RESULT=$?

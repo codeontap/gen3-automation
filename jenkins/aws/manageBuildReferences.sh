@@ -299,14 +299,6 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
     IMAGE_FORMATS="${IMAGE_FORMATS_ARRAY[${INDEX}]:-?}"
     IFS="," read -ra IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
 
-    # Image providers - assume one per format per segment
-    CURRENT_FORMAT="${IMAGE_FORMAT}"
-    if [[ "${CURRENT_FORMAT}" == "?" ]]; then CURRENT_FORMAT="docker"; fi
-    IMAGE_PROVIDER_VAR="PRODUCT_${CURRENT_FORMAT^^}_PROVIDER"
-    FROM_IMAGE_PROVIDER_VAR="FROM_PRODUCT_${CURRENT_FORMAT^^}_PROVIDER"
-    IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
-    FROM_IMAGE_PROVIDER="${!FROM_IMAGE_PROVIDER_VAR}"
-
     # Look for the deployment unit and build reference files
     mkdir -p ${CURRENT_DEPLOYMENT_UNIT}
     EFFECTIVE_DEPLOYMENT_UNIT="${CURRENT_DEPLOYMENT_UNIT}"
@@ -450,7 +442,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                 for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
                     IMAGE_PROVIDER_VAR="PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
                     IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
-                    FROM_IMAGE_PROVIDER_VAR="FROM_PRODUCT_${CURRENT_FORMAT^^}_PROVIDER"
+                    FROM_IMAGE_PROVIDER_VAR="FROM_PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
                     FROM_IMAGE_PROVIDER="${!FROM_IMAGE_PROVIDER_VAR}"
                     case ${IMAGE_FORMAT,,} in
                         docker)

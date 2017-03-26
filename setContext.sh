@@ -579,7 +579,7 @@ for INDEX in $( seq 0 $((${#DEPLOYMENT_UNIT_ARRAY[@]}-1)) ); do
 done
 
 # Save for subsequent processing
-echo "DEPLOYMENT_LIST=${DEPLOYMENT_UNIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "DEPLOYMENT_UNIT_LIST=${DEPLOYMENT_UNIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_REPO_LIST=${CODE_REPO_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties

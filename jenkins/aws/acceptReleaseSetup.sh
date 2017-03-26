@@ -7,5 +7,10 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 ${AUTOMATION_DIR}/manageBuildReferences.sh -f \
     -g ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/appsettings/${SEGMENT}
 RESULT=$?
+if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+
+# Include the build information in the detail message
+${AUTOMATION_DIR}/manageBuildReferences.sh -l
+RESULT=$?
 
 

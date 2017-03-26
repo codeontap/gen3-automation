@@ -107,7 +107,7 @@ function getBuildReferenceParts() {
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done
         if [[ "${BUILD_REFERENCE_FORMATS}" == "?" ]]; then
-            BUILD_REFERENCE_FORMATS ="${BUILD_REFERENCE_FORMAT}"
+            BUILD_REFERENCE_FORMATS="${BUILD_REFERENCE_FORMAT}"
         fi
     else
         BUILD_REFERENCE_ARRAY=(${GBRP_REFERENCE})

@@ -6,8 +6,8 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 # Change to the app directory
 cd app
 
-# Install required npm packages
-npm install --production
+# Install required node modules
+yarn install --production
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
    echo -e "\nnpm install failed" >&2
@@ -24,7 +24,7 @@ fi
 cd ..
 
 # Install the required node modules
-(cd dist/bundle/programs/server && npm install --production)
+(cd dist/bundle/programs/server && yarn install --production)
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
    echo -e "\nInstallation of app node modules failed" >&2

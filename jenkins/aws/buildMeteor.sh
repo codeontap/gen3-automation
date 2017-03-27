@@ -6,8 +6,11 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 # Change to the app directory
 cd app
 
+# Select the package manage to use
+NODE_PACKAGE_MANAGER="${NODE_PACKAGE_MANAGER:-yarn}"
+
 # Install required node modules
-yarn install --production
+${NODE_PACKAGE_MANAGER} install --production
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
    echo -e "\nnpm install failed" >&2
@@ -24,7 +27,7 @@ fi
 cd ..
 
 # Install the required node modules
-(cd dist/bundle/programs/server && yarn install --production)
+(cd dist/bundle/programs/server && ${NODE_PACKAGE_MANAGER} install --production)
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
    echo -e "\nInstallation of app node modules failed" >&2

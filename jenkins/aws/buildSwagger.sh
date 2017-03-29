@@ -18,8 +18,8 @@ if [[ -f apigw.json ]]; then
         SWAGGER_SPEC_FILE="swagger.json"
     fi
     
-    if [[ ! -f "${SWAGGER_FILE}" ]]; then
-        echo -e "\nCan't find swagger file" >&2
+    if [[ ! -f "${SWAGGER_SPEC_FILE}" ]]; then
+        echo -e "\nCan't find source swagger file" >&2
         exit
     fi
     

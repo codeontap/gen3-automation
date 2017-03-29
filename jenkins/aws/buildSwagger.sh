@@ -28,7 +28,7 @@ if [[ -f apigw.json ]]; then
 
     # TODO adjust next lines when path length limitations in jq are fixed
     INTEGRATIONS_FILTER="./temp_integrations.jq"
-    cp ${GENERATION_DIR}/addAPIGatewayIntegrations.jq "${INTEGRATIONS_FILTER}"
+    cp ${AUTOMATION_DIR}/addAPIGatewayIntegrations.jq "${INTEGRATIONS_FILTER}"
 
     # Add integrations to the swagger file
     jq -f "${INTEGRATIONS_FILTER}" \

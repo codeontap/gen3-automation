@@ -22,6 +22,10 @@ where
 
 DEFAULTS:
 
+DEPLOYMENT_UNIT=First entry in DEPLOYMENT_UNIT_LIST
+CODE_COMMIT=First entry in CODE_COMMIT_LIST
+IMAGE_FORMATS=First entry in IMAGE_FORMAT_LIST
+
 NOTES:
 
 EOF
@@ -54,10 +58,18 @@ while getopts ":f:g:hu:" opt; do
      esac
 done
 
+# Apply defaults
+DEPLOYMENT_UNIT_ARRAY=(${DEPLOYMENT_UNIT_LIST})
+CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
+IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS_LIST})
+DEPLOYMENT_UNIT="${DEPLOYMENT_UNIT:-${DEPLOYMENT_UNIT_ARRAY[0]}}"
+CODE_COMMIT="${CODE_COMMIT:-${CODE_COMMIT_ARRAY[0]}}"
+IMAGE_FORMATS="${IMAGE_FORMATS:-${IMAGE_FORMATS_ARRAY[0]}}"
+
 # Ensure mandatory arguments have been provided
-if [[ (-z "${CODE_COMMIT}") ||
-        (-z "${IMAGE_FORMATS}") ||
-        (-z "${DEPLOYMENT_UNIT}") ]]; then
+if [[ (-z "${DEPLOYMENT_UNIT}") ||
+        (-z "${CODE_COMMIT}") ||
+        (-z "${IMAGE_FORMATS}") ]]; then
     echo -e "\nInsufficient arguments" >&2
     exit
 fi

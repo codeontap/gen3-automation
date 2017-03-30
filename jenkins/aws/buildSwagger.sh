@@ -6,16 +6,16 @@ if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Generate a swagger file if required
-if [[ -f apigw.json ]]; then
+if [[ -f "${AUTOMATION_BUILD_DIR}/apigw.json" ]]; then
     # Define the desired result file
-    mkdir -p dist
-    SWAGGER_RESULT_FILE="dist/swagger.json"
+    mkdir -p ${AUTOMATION_BUILD_DIR}/dist
+    SWAGGER_RESULT_FILE="${AUTOMATION_BUILD_DIR}/dist/swagger.json"
 
-    if [[ -f swagger.yaml ]]; then
-        SWAGGER_SPEC_FILE="temp_swagger.json"
-        yaml2json swagger.yaml > "${SWAGGER_SPEC_FILE}"
+    if [[ -f "${AUTOMATION_BUILD_DIR}/swagger.yaml" ]]; then
+        SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.json"
+        yaml2json "${AUTOMATION_BUILD_DIR}/swagger.yaml" > "${SWAGGER_SPEC_FILE}"
     else
-        SWAGGER_SPEC_FILE="swagger.json"
+        SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/swagger.json"
     fi
     
     if [[ ! -f "${SWAGGER_SPEC_FILE}" ]]; then
@@ -23,18 +23,12 @@ if [[ -f apigw.json ]]; then
         exit
     fi
     
-    # Generate the required integration boilerplate
-    TEMPLATE="$(jq -c '.' apigw.json)"
-
-    # TODO adjust next lines when path length limitations in jq are fixed
-    INTEGRATIONS_FILTER="./temp_integrations.jq"
-    cp ${AUTOMATION_DIR}/addAPIGatewayIntegrations.jq "${INTEGRATIONS_FILTER}"
-
-    # Add integrations to the swagger file
-    jq -f "${INTEGRATIONS_FILTER}" \
-        --argjson template "${TEMPLATE}" \
-        --arg noResponses true \
-        "${SWAGGER_SPEC_FILE}" > "${SWAGGER_RESULT_FILE}"
+    # Generate the swagger file in the context of the current environment
+    cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
+    ${GENERATION_DIR}/createExtendedSwaggerSpecification.sh \
+        -s "${SWAGGER_SPEC_FILE}" \
+        -o "${SWAGGER_RESULT_FILE}" \
+        -i "${AUTOMATION_BUILD_DIR}/apigw.json"
 
     # Check generation was successful
     if [[ ! -f "${SWAGGER_RESULT_FILE}" ]]; then

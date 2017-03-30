@@ -3,6 +3,9 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
+# Ensure we are in the directory where the repo was checked out
+cd ${AUTOMATION_BUILD_DIR}
+
 # Check for repo provided deployment unit list
 # slice(s).ref and slices.json are legacy - always use deployment_units.json
 if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then

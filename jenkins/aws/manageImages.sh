@@ -5,6 +5,9 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
+# Ensure we are in the directory where local images have been built
+cd ${AUTOMATION_BUILD_DIR}
+
 function usage() {
     cat <<EOF
 

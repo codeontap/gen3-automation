@@ -409,6 +409,12 @@ case "${AUTOMATION_PROVIDER}" in
         # Working directory
         AUTOMATION_DATA_DIR="${WORKSPACE}"
         
+        # Build directory
+        AUTOMATION_BUILD_DIR="${AUTOMATION_DATA_DIR}"
+        if [[ -d checkout ]]; then 
+            AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/checkout"
+        fi
+        
         # Job identifier
         AUTOMATION_JOB_IDENTIFIER="${BUILD_NUMBER}"
         ;;
@@ -708,6 +714,7 @@ echo "AUTOMATION_PROVIDER=${AUTOMATION_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/cont
 echo "AUTOMATION_PROVIDER_DIR=${AUTOMATION_PROVIDER_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_DIR=${AUTOMATION_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_DATA_DIR=${AUTOMATION_DATA_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "AUTOMATION_BUILD_DIR=${AUTOMATION_BUILD_DIR}" >> ${AUTOMATION_BUILD_DIR}/context.properties
 echo "AUTOMATION_JOB_IDENTIFIER=${AUTOMATION_JOB_IDENTIFIER}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
 

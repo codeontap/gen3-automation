@@ -411,8 +411,8 @@ case "${AUTOMATION_PROVIDER}" in
         
         # Build directory
         AUTOMATION_BUILD_DIR="${AUTOMATION_DATA_DIR}"
-        if [[ -d checkout ]]; then 
-            AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/checkout"
+        if [[ -d build ]]; then 
+            AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
         fi
         
         # Job identifier

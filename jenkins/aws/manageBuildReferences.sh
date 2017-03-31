@@ -452,7 +452,11 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                         lambda)
                             ${AUTOMATION_DIR}/manageLambda.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                             RESULT=$?
-                            ;;                            
+                            ;;
+                        swagger)
+                            ${AUTOMATION_DIR}/manageSwagger.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                            RESULT=$?
+                            ;;
                         *)
                             echo -e "\nUnknown image format \"${IMAGE_FORMAT}\"" >&2
                             exit
@@ -469,7 +473,11 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                 lambda)
                                     ${AUTOMATION_DIR}/manageLambda.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                     RESULT=$?
-                                    ;;                            
+                                    ;;
+                                swagger)
+                                    ${AUTOMATION_DIR}/manageSwagger.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                    RESULT=$?
+                                    ;;
                                 *)
                                     echo -e "\nUnknown image format \"${IMAGE_FORMAT}\"" >&2
                                     exit

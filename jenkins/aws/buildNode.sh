@@ -12,6 +12,9 @@ if [[ -z "${NODE_PACKAGE_MANAGER}" ]]; then
     fi
 fi
 
+# Make sure we are in the build directory
+cd ${AUTOMATION_BUILD_DIR}
+
 ${NODE_PACKAGE_MANAGER} install --unsafe-perm
 RESULT=$?
 if [ $RESULT -ne 0 ]; then

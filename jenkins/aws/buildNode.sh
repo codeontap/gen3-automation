@@ -3,7 +3,16 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
-npm install --unsafe-perm
+# Select the package manage to use
+if [[ -z "${NODE_PACKAGE_MANAGER}" ]]; then
+    if [[ $(which ywarn > /dev/null 2>&1) ]]; then
+        NODE_PACKAGE_MANAGER="yarn"
+    else
+        NODE_PACKAGE_MANAGER="npm"
+    fi
+fi
+
+${NODE_PACKAGE_MANAGER} install --unsafe-perm
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
    echo -e "\nnpm install failed" >&2
@@ -65,7 +74,7 @@ for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
 done
 
 # Clean up
-npm prune --production
+${NODE_PACKAGE_MANAGER} prune --production
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
    echo -e "\nnpm prune failed" >&2

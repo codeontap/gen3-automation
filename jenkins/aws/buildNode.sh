@@ -5,7 +5,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Select the package manage to use
 if [[ -z "${NODE_PACKAGE_MANAGER}" ]]; then
-    if [[ $(which ywarn > /dev/null 2>&1) ]]; then
+    if [[ $(which yarn > /dev/null 2>&1) ]]; then
         NODE_PACKAGE_MANAGER="yarn"
     else
         NODE_PACKAGE_MANAGER="npm"

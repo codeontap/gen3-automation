@@ -274,8 +274,9 @@ CODE_REPO_ARRAY=(${CODE_REPO_LIST})
 CODE_PROVIDER_ARRAY=(${CODE_PROVIDER_LIST})
 IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS_LIST})
 
-if [[ -d "${SEGMENT_APPSETTINGS_DIR}" ]]; then
+if [[ -n "${SEGMENT_APPSETTINGS_DIR}" ]]; then
     # Most operations require access to the segment build settings
+    mkdir -p ${SEGMENT_APPSETTINGS_DIR}
     cd ${SEGMENT_APPSETTINGS_DIR}
 fi
 

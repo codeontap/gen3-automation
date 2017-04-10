@@ -15,7 +15,7 @@ fi
 # Make sure we are in the build directory
 cd ${AUTOMATION_BUILD_DIR}
 
-${NODE_PACKAGE_MANAGER} install --unsafe-perm
+${NODE_PACKAGE_MANAGER} install
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
    echo -e "\nnpm install failed" >&2

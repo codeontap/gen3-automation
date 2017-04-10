@@ -77,11 +77,13 @@ for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
 done
 
 # Clean up
-${NODE_PACKAGE_MANAGER} prune --production
-RESULT=$?
-if [ $RESULT -ne 0 ]; then
-   echo -e "\nnpm prune failed" >&2
-   exit
+if [[ "${NODE_PACKAGE_MANAGER}" == "npm" ]]; then
+    ${NODE_PACKAGE_MANAGER} prune --production
+    RESULT=$?
+    if [ $RESULT -ne 0 ]; then
+       echo -e "\nnpm prune failed" >&2
+       exit
+    fi
 fi
 
 ${AUTOMATION_DIR}/manageImages.sh -f "${IMAGE_FORMATS_ARRAY[0]}"

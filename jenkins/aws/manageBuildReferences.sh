@@ -301,7 +301,6 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
     IFS="," read -ra IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
 
     # Look for the deployment unit and build reference files
-    mkdir -p ${CURRENT_DEPLOYMENT_UNIT}
     EFFECTIVE_DEPLOYMENT_UNIT="${CURRENT_DEPLOYMENT_UNIT}"
     for REF_FILE in deployment_unit.ref slice.ref; do
         DEPLOYMENT_UNIT_FILE="${CURRENT_DEPLOYMENT_UNIT}/${REF_FILE}"
@@ -317,7 +316,12 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
         LEGACY_BUILD_FILE="${EFFECTIVE_DEPLOYMENT_UNIT}/build.ref"
         BUILD_FILE="${LEGACY_BUILD_FILE}"
     fi
-        
+    
+    # Ensure appsettings directories exist
+    if [[ -n "${SEGMENT_APPSETTINGS_DIR}" ]]; then
+        mkdir -p "${CURRENT_DEPLOYMENT_UNIT}" "${EFFECTIVE_DEPLOYMENT_UNIT}"
+    fi
+
     case ${REFERENCE_OPERATION} in
         ${REFERENCE_OPERATION_ACCEPT})
             # Tag builds with an acceptance tag

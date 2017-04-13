@@ -29,7 +29,7 @@ VALIDATORS=( \
 "swagger-tools validate /app/indir/${SWAGGER_SPEC_FILE##*/}" \
 "ajv           validate -d /app/indir/${SWAGGER_SPEC_FILE##*/} -s /usr/local/lib/node_modules/swagger-schema-official/schema.json")
 for VALIDATOR in "${VALIDATORS[@]}"; do
-    docker run -v ${SWAGGER_SPEC_FILE%%/*}:/app/indir codeontap/utilities ${VALIDATOR}
+    docker run -v ${SWAGGER_SPEC_FILE%/*}:/app/indir codeontap/utilities ${VALIDATOR}
     RESULT=$?
     if [[ "${RESULT}" -ne 0 ]]; then
         echo -e "\nSwagger file is not valid" >&2
@@ -59,7 +59,7 @@ fi
 
 # Generate documentation
 docker run \
-    -v ${SWAGGER_SPEC_FILE%%/*}:/app/outdir  \
+    -v ${SWAGGER_SPEC_FILE%/*}:/app/outdir  \
     codeontap/utilities swagger2aglio \
      --input=/app/outdir/${SWAGGER_SPEC_FILE##*/} --output=/app/outdir/apidoc.html  \
      --theme-variables slate --theme-template triple

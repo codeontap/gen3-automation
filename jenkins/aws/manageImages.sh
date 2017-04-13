@@ -132,6 +132,20 @@ for FORMAT in "${FORMATS[@]}"; do
                 RESULT=1
                 exit
             fi
+
+            DOC_FILE="./dist/apidoc.html"
+
+            if [[ -f "${DOC_FILE}" ]]; then
+                ${AUTOMATION_DIR}/manageSwagger.sh -s \
+                        -u "${DEPLOYMENT_UNIT}" \
+                        -g "${CODE_COMMIT}" \
+                        -f "${DOC_FILE}"
+                RESULT=$?
+                if [[ "${RESULT}" -ne 0 ]]; then
+                    exit
+                fi
+            fi
+
             ;;
 
         *)

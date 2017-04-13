@@ -59,9 +59,9 @@ fi
 
 # Generate documentation
 docker run \
-    -v ${SWAGGER_SPEC_FILE%/*}:/app/outdir  \
+    -v ${SWAGGER_SPEC_FILE%/*}:/app/indir -v ${DIST_DIR}:/app/outdir \
     codeontap/utilities swagger2aglio \
-     --input=/app/outdir/${SWAGGER_SPEC_FILE##*/} --output=/app/outdir/apidoc.html  \
+     --input=/app/indir/${SWAGGER_SPEC_FILE##*/} --output=/app/outdir/apidoc.html  \
      --theme-variables slate --theme-template triple
 RESULT=$?
 if [[ "${RESULT}" -ne 0 ]]; then

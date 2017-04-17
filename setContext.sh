@@ -443,7 +443,7 @@ findAndDefineSetting "CODEONTAP_GIT_DNS" "" "" "" "value" "github.com"
 findAndDefineSetting "CODEONTAP_GIT_ORG" "" "" "" "value" "codeontap"
 
 # Default who to include as the author if git updates required
-findAndDefineSetting "GIT_USER"  "" "" "" "value" "${GIT_USER_DEFAULT:-alm}"
+findAndDefineSetting "GIT_USER"  "" "" "" "value" "${GIT_USER_DEFAULT:-automation}"
 findAndDefineSetting "GIT_EMAIL" "" "" "" "value" "${GIT_EMAIL_DEFAULT}"
 
 # Separator when specifying a build reference for a deployment unit

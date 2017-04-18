@@ -145,7 +145,25 @@ for FORMAT in "${FORMATS[@]}"; do
                     exit
                 fi
             fi
+            ;;
 
+        spa)
+            IMAGE_FILE="./dist/web.zip"
+
+            if [[ -f "${IMAGE_FILE}" ]]; then
+                ${AUTOMATION_DIR}/manageSPA.sh -s \
+                        -u "${DEPLOYMENT_UNIT}" \
+                        -g "${CODE_COMMIT}" \
+                        -f "${IMAGE_FILE}"
+                RESULT=$?
+                if [[ "${RESULT}" -ne 0 ]]; then
+                    exit
+                fi
+            else
+                echo -e "\n${IMAGE_FILE} missing" >&2
+                RESULT=1
+                exit
+            fi
             ;;
 
         *)

@@ -83,6 +83,14 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             fi
             ;;
 
+        spa)
+            ${AUTOMATION_DIR}/manageSPA.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            RESULT=$?
+            if [[ "${RESULT}" -eq 0 ]]; then
+                PRESENT=1
+            fi
+            ;;
+
         *)
             echo -e "\nUnsupported image format \"${IMAGE_FORMAT}\"" >&2
             exit

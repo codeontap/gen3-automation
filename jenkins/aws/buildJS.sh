@@ -62,7 +62,7 @@ for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
                 ;;
 
             package.json)
-                BUILD_TASKS=( jq -r '.scripts | select(.!=null) | keys[]' < package.json )
+                BUILD_TASKS=( $(jq -r '.scripts | select(.!=null) | keys[]' < package.json) )
                 BUILD_UTILITY="${NODE_PACKAGE_MANAGER} run"
                 ;;
         esac

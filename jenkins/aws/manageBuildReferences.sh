@@ -462,6 +462,10 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             ${AUTOMATION_DIR}/manageSwagger.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                             RESULT=$?
                             ;;
+                        spa)
+                            ${AUTOMATION_DIR}/manageSPA.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                            RESULT=$?
+                            ;;
                         *)
                             echo -e "\nUnknown image format \"${IMAGE_FORMAT}\"" >&2
                             exit
@@ -481,6 +485,10 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     ;;
                                 swagger)
                                     ${AUTOMATION_DIR}/manageSwagger.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                    RESULT=$?
+                                    ;;
+                                spa)
+                                    ${AUTOMATION_DIR}/manageSPA.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                     RESULT=$?
                                     ;;
                                 *)

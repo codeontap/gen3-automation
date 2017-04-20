@@ -462,8 +462,8 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             ${AUTOMATION_DIR}/manageSwagger.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                             RESULT=$?
                             ;;
-                        spa)
-                            ${AUTOMATION_DIR}/manageSPA.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        cloudfront)
+                            ${AUTOMATION_DIR}/manageCloudFront.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                             RESULT=$?
                             ;;
                         *)
@@ -487,8 +487,8 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     ${AUTOMATION_DIR}/manageSwagger.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                     RESULT=$?
                                     ;;
-                                spa)
-                                    ${AUTOMATION_DIR}/manageSPA.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                cloudfront)
+                                    ${AUTOMATION_DIR}/manageCloudFront.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                     RESULT=$?
                                     ;;
                                 *)

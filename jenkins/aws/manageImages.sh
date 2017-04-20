@@ -147,11 +147,11 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             ;;
 
-        spa)
+        cloudfront)
             IMAGE_FILE="./dist/web.zip"
 
             if [[ -f "${IMAGE_FILE}" ]]; then
-                ${AUTOMATION_DIR}/manageSPA.sh -s \
+                ${AUTOMATION_DIR}/manageCloudFront.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
                         -f "${IMAGE_FILE}"

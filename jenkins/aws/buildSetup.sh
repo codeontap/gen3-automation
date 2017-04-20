@@ -83,8 +83,8 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             fi
             ;;
 
-        spa)
-            ${AUTOMATION_DIR}/manageSPA.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+        cloudfront)
+            ${AUTOMATION_DIR}/manageCloudFront.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
             if [[ "${RESULT}" -eq 0 ]]; then
                 PRESENT=1

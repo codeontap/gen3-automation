@@ -1,50 +1,52 @@
-ALM Setup
+## ALM Setup
 
-In general ALM consists of jenkins,docker and httpd as frontend. Jenkins is distributed as a war file and thus needs some container service to be run on, we use tomcat7.
+In general ALM consists of jenkins, docker and httpd as frontend. Jenkins is distributed as a war file and thus needs some container service to be run on, we use tomcat7.
 
--1) Run up ALM server, and create DNS entry for it - {automation}.domain
-
-a) Install the required packages
-
+1) **Run up ALM server, and create DNS entry for it - `{automation}.domain`**
+2) **Install the required packages**
+```
 yum -y update
-
 yum install -y git jq dos2unix
-
 yum install -y httpd24  mod24_ssl
-
 yum install -y tomcat7
-
 yum install -y docker
-
 yum groupinstall "Development Tools"
+```
+3) **Configure tomcat7**
 
-b) configure tomcat7
-
-Put the following line just before to trailing tag to /etc/tomcat7/context.xml:
-
- < Environment name="JENKINS_HOME" value="/codeontap/jenkins/" type="java.lang.String"/>
-
-Put the following lines for JAVA_OPTS in /etc/tomcat7/tomcat7.conf
-
+Put the following line just before to trailing tag to `/etc/tomcat7/context.xml`:
+```
+<Environment name="JENKINS_HOME" value="/codeontap/jenkins/" type="java.lang.String"/>
+```
+Put the following lines for `JAVA_OPTS` in `/etc/tomcat7/tomcat7.conf`:
+```
 JAVA_OPTS="${JAVA_OPTS} -Dhudson.DNSMultiCast.disabled=true"
 
 JAVA_OPTS="${JAVA_OPTS} -Dorg.apache.commons.jelly.tags.fmt.timeZone=Australia/Sydney"
-
-Configure UTF8 as base encoding, thus add the following attribute - URIEncoding="UTF-8"  - to Connector section of /etc/tomcat7/server.xml file
-
-Add tomcat user to docker group to access docker
-
+```
+Configure `UTF8` as base encoding, thus add the following attribute to `Connector` section of `/etc/tomcat7/server.xml` file:
+```
+URIEncoding="UTF-8"
+```
+Add tomcat user to docker group to access docker:
+```
 usermod -aG docker tomcat
+```
+4) **Setup jenkins**
 
-c) setup jenkins
-  cd /usr/share/tomcat7/webapps
-  wget http://mirrors.jenkins.io/war-stable/latest/jenkins.war
-  mv jenkins.war ROOT.war
-  mkdir -p /codeontap/jenkins
-  chown tomcat:tomcat /codeontap/jenkins
-
-Create backup script in /root/backup_data.sh - replace {domain} to required domain
-
+Download the latest stable version to `/root` directory, rename it to `jenkins-{version}.war`, copy it to `webapps` dir as `ROOT.war`:
+```
+sudo su
+cd ~
+wget http://mirrors.jenkins.io/war-stable/latest/jenkins.war
+mv jenkins.war jenkins-{version}.war
+cd /usr/share/tomcat7/webapps
+cp ~/jenkins-{version}.war ROOT.war
+mkdir -p /codeontap/jenkins
+chown tomcat:tomcat /codeontap/jenkins
+```
+Create backup script in `/root/backup_data.sh` - replace `{domain}` to required domain:
+```
 #!/bin/bash
 JENKINS_DIR="/codeontap/jenkins"
 REGION="ap-southeast-2"
@@ -52,9 +54,13 @@ BUCKET="s3://operations-alm-automation.{domain}/Backups/alm"
 TIMESTAMP=`date +"%Y-%m-%d-%H-%M"`
 aws s3 cp --recursive --exclude "*log" $JENKINS_DIR/jobs $BUCKET/jenkins/$TIMESTAMP/jobs --region $REGION
 aws s3 cp $JENKINS_DIR/config.xml $BUCKET/jenkins/$TIMESTAMP/config.xml --region $REGION
-
-Create crontab
-
+```
+Change mode for backup script to make it executable:
+```
+chmod 755 /root/backup_data.sh
+```
+Create crontab:
+```
 # Copy key data to S3 each day
 0  2 * * * /root/backup_data.sh
 #
@@ -63,32 +69,29 @@ Create crontab
 #
 # Keep SSL certificate up to date
 5 0,8,16 * * * /root/certbot-auto renew >> /var/log/renew_cert_check.log 2>&1
-
-Start tomcat
-
+```
+Start tomcat:
+```
 service tomcat7 start
- 
-
-d) setup docker
- 
-
+```
+5) **Setup docker**
+```
 service docker start
+```
+6) **Setup httpd**
 
- 
-e) setup httpd
-
-Create jenkins.conf vhost for http redirect to https - replacing {domain} with the required domain
-
-< VirtualHost *:80>
+Create `jenkins.conf` vhost for http redirect to https - replacing `{domain}` with the required domain:
+```
+<VirtualHost *:80>
     ServerName automation.{domain}
     RewriteEngine on
     ReWriteCond %{SERVER_PORT} !^443$
     RewriteRule ^/(.*) https://%{HTTP_HOST}/$1 [NC,R,L]
-< /VirtualHost>
-
-Create jenkins-ssl.conf vhost for jenkins - replacing {domain} with the required domain   
-
-< VirtualHost *:443>
+</VirtualHost>
+```
+Create `jenkins-ssl.conf` vhost for jenkins - replacing `{domain}` with the required domain:
+```
+<VirtualHost *:443>
     ServerName automation.{domain}
     SSLProxyEngine On
     SSLProxyCheckPeerCN on
@@ -114,101 +117,109 @@ Create jenkins-ssl.conf vhost for jenkins - replacing {domain} with the required
     ProxyPassReverse  /  http://localhost:8080/
     ProxyRequests     Off
     AllowEncodedSlashes NoDecode
-    < Proxy http://localhost:8080/*>
+    <Proxy http://localhost:8080/*>
        Order deny,allow
        Allow from all
-    < /Proxy>
-< /VirtualHost>
-
-Install let's encrypt functionality to obtain/maintain SSL certificate
-
+    </Proxy>
+</VirtualHost>
+```
+Install let's encrypt functionality to obtain/maintain SSL certificate into root home directory:
+```
+cd ~
 wget https://dl.eff.org/certbot-auto
 chmod +x certbot-auto
 ./certbot-auto certonly --debug
+```
+Ignore any errors involving apachectl (config will be invalid until certificate obtained), choose `(3) (Spin up temporary webserver)` as the authentication method required, and `automation.{domain}` as the required domain.
 
-Ignore any errors involving apachectl (config will be invalid until certificate obtained), choose (3) (Spin up temporary webserver) as the authentication method required, and automation.{domain} as the required domain.
-
-Start the httpd server
-
+Start the httpd server:
+```
 service httpd start
-
-Check renewal will work ok - need to reconfigure to allow for running http server (choose 2) to renew certificate). If this works, then crontab job should be ok as well.
-
+```
+Check renewal will work ok - need to reconfigure to allow for running http server (choose 2) to renew certificate). If this works, then crontab job should be ok as well:
+```
 ./certbot-auto --apache certonly --debug
 ./certbot-auto renew --dry-run
-
-g) configure the services in chkconfig:
+```
+7) **configure the services in chkconfig:**
+```
   chkconfig tomcat7 on
   chkconfig httpd on
   chkconfig docker on
+```
+8) **Configure Jenkins.**
 
-h) Go to Jenkins at https://automation.{domain} in a browser. initial admin password in /codeontap/jenkins/initialAdminPassword.
+Go to Jenkins at https://automation.{domain} in a browser (initial admin password in `/codeontap/jenkins/secrets/initialAdminPassword`).
+Install the recommended plugins, and **DON'T** set up an admin user - we will configure authentication using github.
+In `Configure System`, set the Jenkins `Location` to `automation.{domain}`, save and confirm proxy is now working correctly.
+In `Manage Plugins`, install non-standard plugins:
+  1. GitHub Authentication
+  2. Slack Notification 
+  3. Extended Choice Parameter
+  4. User build Vars
+  5. Environment Injector
+  6. Parameterized Trigger
 
-Install the recommended plugins, and DON'T set up an admin user - we will configure authentication using github.
-In Configure system, set the Jenkins Location to automation.{domain}, save and confirm proxy is now working correctly.
-In Manage Plugins, install non-standard plugins:
+9) **Add GitHub Authentication**
 
-  Github authentication, slack, extended choice parameter, user build vars, environment injector, parameterized trigger
+Add OAuth Application in github organisation, set callback to `https://automation.{domain}/securityRealm/finishLogin`.
 
-i) Add github authentication
+>If you don't have access to github organisation settings, add OAuth Application in your account (Settings -> Developer Settings -> OAuth application -> Register a new application) and request owner transfer to organisation.
 
-Add OAuth Application. callback is https://automation.{domain}/securityRealm/finishLogin
+Select `any logged in user` for the authorisation, save, and log off/log on to confirm authentication now through github.
+Switch to `project based matrix authorisation`, add an entry for the organsiation granting general read, add an entry for the org devops group granting all permissions, save and confirm can still log in as part of devops team (create in github if not there already)..
 
-Select "any logged in user" for the authorisation, save, and log off/log on to confirm authentication now through github
+10) **Add Credentials**
 
-Switch to project based matrix authorisation, add an entry for the organsiation granting general read, add an entry for the org devops group granting all permissions, save and confirm can still log in as part of devops team (create in github if not there already)
+In `Jenkins->Credentials` add global credentials (Usename/Password) for GitHub and AWS. Set a 
+Add Jenkins integration to Slack team to get a token, add a global credential (secret text) for Slack.
+Pick the credential on `Jenkins->Manage Jenkins->Configure System` screen in 'Global Slack Notifier Settings' section. Set `Team Subdomain` and `Channel`.
+The credentials can be decrypted from `aws-accounts` repo in `gs-gs` account.
 
-Add global credentials for github, aws and slack
+11) **Run sudo commands without tty**
 
-j) if tomcat user needs to be able to run sudo commands without tty, you need to the following:
+If tomcat user needs to be able to run sudo commands without tty, you need to the following:
+```
 visudo
+```
 Change the line
+```
 Defaults    requiretty
+```
 to
+```
 Defaults    !requiretty
+```
 and add the following line to the very end of file:
+```
 %tomcat ALL=NOPASSWD: ALL
-and change tomcat shell in /etc/passwd to /bin/bash
+```
+and change tomcat shell in `/etc/passwd` to `/bin/bash`
  
-NOTE: This is not necessary if sudo is only required to be able to run docker assuming tomcat added to the docker group as shown above
- 
-Setting up jenkins authentication
+> *NOTE: This is not necessary if sudo is only required to be able to run docker assuming tomcat added to the docker group as shown above*
 
-a) Open jenkins URL(since it is not setup yet, it should allow anonymous login)
-
-b) Go to Manage Jenkins -> Configure Global Security
-
-c) There you will need to check Enable Security box and then select LDAP as security Realm
-
-d) Once it is done you will need to click on Advanced box under LDAP security realm and configure LDAP with the following values:
-
+12) ***Set up LDAP jenkins authentication (as alternative to GitHub Authentication)***
+  1. Open jenkins URL(since it is not setup yet, it should allow anonymous login)
+  2. Go to Manage Jenkins -> Configure Global Security
+  3. There you will need to check Enable Security box and then select LDAP as security Realm
+  4. Once it is done you will need to click on Advanced box under LDAP security realm and configure LDAP with the following values:
+```
 Server: alm.gosource.com.au
-
 root DN: dc=gosource,dc=com,dc=au
-
 User search base: ou=Users
-
 User search filter: uid={0}
-
 Group search base: ou=Groups,ou=env01,ou=accounts,ou=env,ou=organisations (it depends on the organization name)
-
 Group search filter:
-
 Group membership: select Parse user attribute for list of groups from dropdown and put memberOf as Group membership attribute
-
 Manager DN: this one should be populated with the alm CN created for the organization
-
 Manager Password: this one should be populated with the alm password
-
 Display Name LDAP attribute: displayname
-
 Email Address LDAP attribute: mail
-
+```
+  5. After LDAP is configured you will need to choose the proper Authorization, it is Project-based Matrix Authorization Strategy, configure local-alm group with the full access and other LDAP groups with the Read Permissions as required
  
-e) After LDAP is configured you will need to choose the proper Authorization, it is Project-based Matrix Authorization Strategy, configure local-alm group with the full access and other LDAP groups with the Read Permissions as required
  
- 
-Adding docker images to the private registry
+12) Adding docker images to the private registry
 
 a) First you need to login to the instance with the running docker daemon(alm fits best for this purpose) and login to the private registry:
 
@@ -227,7 +238,8 @@ d) And then it could be pushed to the registry:
 docker push docker.env01.gosource.com.au:443/logstash
 
 
-Google email domains and addresses
+
+13) Google email domains and addresses
 GoSource uses Google to host the various email domains it uses under gosource.com.au. To set up an email domain;
 
 Add the domain in the Google console->Domains. Domains take the form {OrganisationIdentifier}{SequenceNumber = 01, 02...}, e.g. fin01, gs03. NOTE: Make sure "Add another domain" is selected NOT the default "Add a domain alias of gosource.com.au"
@@ -288,8 +300,7 @@ Phone Number: +61261983268
 Technical Details: <same as admin details>
 Ensure the resulting certificate is provided in PEM format, and save it in S3 with the CSR as {domain}-ssl-crt.pem. It may also be necessary to capture issuer intermediary certificates, e.g. rapidssl-ssl-intermediate.pem.
 
-Edit
-Shelf Account Creation
+14) Shelf Account Creation
 In order to speed up the process of organisation account creation, we maintain a few GoSource "shelf" accounts - shelf01, shelf02, ..shelfnn. These are basically fully set up AWS accounts. Importantly, they are already linked for consolidated billing and have cross-account access established via the gosource-administration role.
 
 When a customer needs a new account, a shelf account is converted into an organisation account as described below.
@@ -335,8 +346,7 @@ Enter the ID of the GoSource Production account (514002541898) or development ac
 Click "Select" next to "Administrator Access". We will tighten this later via the CloudFormation template but for now, this will avoid any permissions issues when projects are provisioned into the account. Click "Next Step" again then click "Create Role".
 NOTE: the steps above are for manual creation of the the shelf account. The next step will be to change this to use a CloudFormation script for as much of the creation as possible.
 
-Edit
-Conversion of Shelf Account to Organisation Account
+15) Conversion of Shelf Account to Organisation Account
 Most of the work to set up an AWS account is performed as part of creating the shelf account. The following steps are needed;
 
 If not already set up, create a new email domain based on the organisation id, e.g. fin01.gosource.com.au.

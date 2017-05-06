@@ -402,16 +402,16 @@ Next we need to configure the SNS topic to send notifications to the account ale
 
 When the domain and DKIM settings are verified (it can take a while but if it seems to be taking forever, the DNS entries might not be quite right):
 
-  4.  Go back in to the domain settings in the SES console
-  5.  Expand the DKIM section, and click "Enable". This will result in all emails for the domain being signed with DKIM.
+  1.  Go back in to the domain settings in the SES console
+  2.  Expand the DKIM section, and click "Enable". This will result in all emails for the domain being signed with DKIM.
 
 Finally:
 
-  6.  Click on the Dashboard menu entry in the SES console
-  7.  Click on "Request Production Access"
-  8.  Select the region used, and the limit "Desired Daily Sending Quota". Enter 200 as the limit. It can be increased later if required,
-  9.  Select Mail Type as "Other", website URL as "https://www.compliancetest.net" and "Yes" in all the dropdowns.
-  10.  "Use case description" - "GoSource uses a separate AWS account to host each of its customer's development facilities. This includes both an Application Lifecycle Management support and project environments. It is a common requirement for email notifications to be sent from these environments. 
+  1.  Click on the Dashboard menu entry in the SES console
+  2.  Click on "Request Production Access"
+  3.  Select the region used, and the limit "Desired Daily Sending Quota". Enter 200 as the limit. It can be increased later if required,
+  4.  Select Mail Type as "Other", website URL as "https://www.compliancetest.net" and "Yes" in all the dropdowns.
+  5.  "Use case description" - "GoSource uses a separate AWS account to host each of its customer's development facilities. This includes both an Application Lifecycle Management support and project environments. It is a common requirement for email notifications to be sent from these environments. 
 
 We expect actual send rates to be low so are ok with the default limits to start with. It is mainly the ability to send to a broad range of email addresses that we are seeking at this stage.
   *  Add your email address as a CC on the request, and click the "Web" contact mechanism. The request creates a support ticket which you can see via the Support menu in the top right-hand corner of the console when logged in to the organisation account.

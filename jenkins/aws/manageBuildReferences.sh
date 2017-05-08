@@ -60,10 +60,10 @@ EOF
 # $3 = build tag (? = no tag)
 # $4 = image formats (? = not provided)
 function updateDetail() {
-    UD_DEPLOYMENT_UNIT="${1,,}"
-    UD_COMMIT="${2,,:-?}"
-    UD_TAG="${3:-?}"
-    UD_FORMATS="${4,,:-?}"
+    local UD_DEPLOYMENT_UNIT="${1,,}"
+    local UD_COMMIT="${2,,:-?}"
+    local UD_TAG="${3:-?}"
+    local UD_FORMATS="${4,,:-?}"
 
     if [[ ("${UD_COMMIT}" != "?") || ("${UD_TAG}" != "?") ]]; then
         DETAIL_MESSAGE="${DETAIL_MESSAGE}, ${UD_DEPLOYMENT_UNIT}="
@@ -88,7 +88,8 @@ function updateDetail() {
 # The current format uses JSON with parts as attributes
 # $1 = build reference
 function getBuildReferenceParts() {
-    GBRP_REFERENCE="${1}"
+    local GBRP_REFERENCE="${1}"
+    local ATTRIBUTE=
     
     if [[ "${GBRP_REFERENCE}" =~ ^\{ ]]; then
         # Newer JSON based format
@@ -122,9 +123,10 @@ function getBuildReferenceParts() {
 # $2 = build tag (? = no tag)
 # $3 = formats (default is docker)
 function formatBuildReference() {
-    FBR_COMMIT="${1,,}"
-    FBR_TAG="${2:-?}"
-    FBR_FORMATS="${3,,:-?}"
+    local FBR_COMMIT="${1,,}"
+    local FBR_TAG="${2:-?}"
+    local FBR_FORMATS="${3,,:-?}"
+    local INDEX=
 
     BUILD_REFERENCE="{\"Commit\": \"${FBR_COMMIT}\""
     if [[ "${FBR_TAG}" != "?" ]]; then 
@@ -145,8 +147,8 @@ function formatBuildReference() {
 # $1 = provider
 # $2 = variable prefix
 function defineGitProviderAttributes() {
-    DGPA_PROVIDER="${1^^}"
-    DGPA_PREFIX="${2^^}"
+    local DGPA_PROVIDER="${1^^}"
+    local DGPA_PREFIX="${2^^}"
 
     # Attribute variable names
     for DGPA_ATTRIBUTE in "DNS" "API_DNS" "ORG" "CREDENTIALS_VAR"; do

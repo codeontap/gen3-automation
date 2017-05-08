@@ -126,7 +126,6 @@ function formatBuildReference() {
     local FBR_COMMIT="${1,,}"
     local FBR_TAG="${2:-?}"
     local FBR_FORMATS="${3,,:-?}"
-    local INDEX=
 
     BUILD_REFERENCE="{\"Commit\": \"${FBR_COMMIT}\""
     if [[ "${FBR_TAG}" != "?" ]]; then 
@@ -137,8 +136,8 @@ function formatBuildReference() {
     fi
     IFS="," read -ra FBR_FORMATS_ARRAY <<< "${FBR_FORMATS}"
     BUILD_REFERENCE="${BUILD_REFERENCE}, \"Formats\": [\"${FBR_FORMATS_ARRAY[0]}\""
-    for ((INDEX=1; INDEX<${#FBR_FORMATS_ARRAY[@]}; INDEX++)); do
-        BUILD_REFERENCE="${BUILD_REFERENCE},\"${FBR_FORMATS_ARRAY[$INDEX]}\""
+    for ((FORMAT_INDEX=1; FORMAT_INDEX<${#FBR_FORMATS_ARRAY[@]}; FORMAT_INDEX++)); do
+        BUILD_REFERENCE="${BUILD_REFERENCE},\"${FBR_FORMATS_ARRAY[$FORMAT_INDEX]}\""
     done
     BUILD_REFERENCE="${BUILD_REFERENCE} ]}"
 }

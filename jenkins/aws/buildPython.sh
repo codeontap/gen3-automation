@@ -3,6 +3,9 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
+# Make sure we are in the build directory
+cd ${AUTOMATION_BUILD_DIR}
+
 # Is this really a python based project
 if [[ ! -f requirements.txt ]]; then
    echo -e "\nNo requirements.txt - is this really a python base repo?" >&2

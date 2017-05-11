@@ -77,7 +77,14 @@ for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
 done
 
 # Clean up dev dependencies
-npm prune --production
+case ${NODE_PACKAGE_MANAGER} in
+    yarn)
+        yarn install --production
+        ;;
+    *)
+        npm prune --production
+        ;;
+esac
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
    echo -e "\nPrune failed" >&2

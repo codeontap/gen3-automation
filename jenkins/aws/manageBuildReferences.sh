@@ -448,6 +448,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     (-f ${NEW_BUILD_FILE}) ]]; then
                 getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
                 IMAGE_FORMATS="${BUILD_REFERENCE_FORMATS}"
+                IFS="," read -ra IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
             fi
 
             # Confirm the commit built successfully into an image

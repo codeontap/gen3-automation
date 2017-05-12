@@ -596,6 +596,8 @@ if [[ -n "${UPDATED_UNITS}" ]]; then echo "DEPLOYMENT_UNITS=${UPDATED_UNITS}" >>
 
 ### Release management ###
  
+# This format of checking detects if the variable is set (though possibly empty), i.e. it is
+# defined as a parameter on the job though possibly empty
 if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
     
     case "${RELEASE_MODE}" in
@@ -660,13 +662,13 @@ fi
 
 ### Tags ###
 
-    RELEASE_TAG_BODY="${RELEASE_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
-    if [[ "${RELEASE_TAG_BODY}" =~ [0-9]+ ]]; then
+    AUTOMATION_RELEASE_IDENTIFIER="${RELEASE_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
+    if [[ "${AUTOMATION_RELEASE_IDENTIFIER}" =~ [0-9]+ ]]; then
         # If its just a number then add an "r" in front otherwise assume
         # the user is deciding the naming scheme
-        RELEASE_TAG_BODY="r${RELEASE_TAG_BODY}"
+        AUTOMATION_RELEASE_IDENTIFIER="r${AUTOMATION_RELEASE_IDENTIFIER}"
     fi
-    defineSetting "RELEASE_TAG" "${RELEASE_TAG_BODY}-${SEGMENT}"
+    defineSetting "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
 
 case "${RELEASE_MODE}" in
     ${RELEASE_MODE_CONTINUOUS})
@@ -679,12 +681,12 @@ case "${RELEASE_MODE}" in
         ;;
 
     ${RELEASE_MODE_PROMOTION})
-        defineSetting "ACCEPTANCE_TAG" "${RELEASE_TAG_BODY}-${FROM_SEGMENT}"
+        defineSetting "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${FROM_SEGMENT}"
         defineSetting "RELEASE_MODE_TAG" "p${ACCEPTANCE_TAG}-${SEGMENT}"
         ;;
 
     ${RELEASE_MODE_HOTFIX})
-        defineSetting "RELEASE_MODE_TAG" "h${RELEASE_TAG_BODY}-${SEGMENT}"
+        defineSetting "RELEASE_MODE_TAG" "h${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
         defineSetting "ACCEPTANCE_TAG" "latest"
         ;;
 esac
@@ -716,6 +718,7 @@ echo "AUTOMATION_DIR=${AUTOMATION_DIR}" >> ${AUTOMATION_DATA_DIR}/context.proper
 echo "AUTOMATION_DATA_DIR=${AUTOMATION_DATA_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_BUILD_DIR=${AUTOMATION_BUILD_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_JOB_IDENTIFIER=${AUTOMATION_JOB_IDENTIFIER}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "AUTOMATION_RELEASE_IDENTIFIER=${AUTOMATION_RELEASE_IDENTIFIER}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
 
 # All good

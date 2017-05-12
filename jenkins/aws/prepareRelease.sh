@@ -34,5 +34,10 @@ ${AUTOMATION_DIR}/manageRepo.sh -p \
 RESULT=$?
 if [[ ${RESULT} -ne 0 ]]; then exit; fi
 
++
++# Record key parameters for downstream jobs
++echo "RELEASE_IDENTIFIER=${AUTOMATION_RELEASE_IDENTIFIER}" >> $AUTOMATION_DATA_DIR/chain.properties
++
+
 # All good
 RESULT=0

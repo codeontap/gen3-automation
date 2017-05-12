@@ -442,6 +442,13 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     continue
                 fi
             fi
+            
+            # If no formats explicitly defined, use those in the build reference if defined
+            if [[ ("${IMAGE_FORMATS}" == "?") &&
+                    (-f ${NEW_BUILD_FILE}) ]]; then
+                getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
+                IMAGE_FORMATS="${BUILD_REFERENCE_FORMATS}"
+            fi
 
             # Confirm the commit built successfully into an image
             if [[ "${IMAGE_FORMATS}" != "?" ]]; then

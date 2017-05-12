@@ -591,8 +591,12 @@ echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.prop
 echo "CODE_REPO_LIST=${CODE_REPO_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_PROVIDER_LIST=${CODE_PROVIDER_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-if [[ -n "${UPDATED_UNITS}" ]]; then echo "DEPLOYMENT_UNITS=${UPDATED_UNITS}" >> ${AUTOMATION_DATA_DIR}/context.properties; fi
-
+if [[ -n "${UPDATED_UNITS}" ]]; then
+    echo "DEPLOYMENT_UNITS=${UPDATED_UNITS}" >> ${AUTOMATION_DATA_DIR}/context.properties
+fi
+if [[ -n "${SEGMENT}" ]]; then
+    echo "SEGMENT_APPSETTINGS_DIR=${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/appsettings/${SEGMENT}" >> ${AUTOMATION_DATA_DIR}/context.properties
+fi
 
 ### Release management ###
  

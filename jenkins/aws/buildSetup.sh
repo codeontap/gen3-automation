@@ -9,14 +9,14 @@ cd ${AUTOMATION_BUILD_DIR}
 # Check for repo provided deployment unit list
 # slice(s).ref and slices.json are legacy - always use deployment_units.json
 if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
-    for DU_FILE in deployment_units.json slices.json slices.ref slice.ref; do
-        if [[ -f ${DU_FILE} ]]; then
-            case ${DU_FILE##*.} in
+    for DU_FILE in "codeontap/deployment_units.json" deployment_units.json slices.json slices.ref slice.ref; do
+        if [[ -f "${DU_FILE}" ]]; then
+            case "${DU_FILE##*.}" in
                 json)
                     for ATTRIBUTE in units slices formats; do 
-                        ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" < ${DU_FILE} | tr -s "\r\n" " ")
+                        ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" < "${DU_FILE}" | tr -s "\r\n" " ")
                         if [[ -z "${ATTRIBUTE_VALUE}" ]]; then
-                            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" < ${DU_FILE} | tr -s "\r\n" " ")
+                            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" < "${DU_FILE}" | tr -s "\r\n" " ")
                         fi
                         declare "${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE}"
                     done
@@ -25,7 +25,7 @@ if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
                     ;;
     
                 ref)
-                    export DEPLOYMENT_UNIT_LIST=$(cat ${DU_FILE})
+                    export DEPLOYMENT_UNIT_LIST=$(cat "${DU_FILE}")
                     break
                     ;;
             esac

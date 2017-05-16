@@ -667,7 +667,7 @@ fi
 ### Tags ###
 
     AUTOMATION_RELEASE_IDENTIFIER="${RELEASE_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
-    if [[ "${AUTOMATION_RELEASE_IDENTIFIER}" =~ [0-9]+ ]]; then
+    if [[ "${AUTOMATION_RELEASE_IDENTIFIER}" =~ ^[0-9]+$ ]]; then
         # If its just a number then add an "r" in front otherwise assume
         # the user is deciding the naming scheme
         AUTOMATION_RELEASE_IDENTIFIER="r${AUTOMATION_RELEASE_IDENTIFIER}"

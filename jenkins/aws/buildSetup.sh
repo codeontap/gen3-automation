@@ -9,7 +9,7 @@ cd ${AUTOMATION_BUILD_DIR}
 # Check for repo provided deployment unit list
 # slice(s).ref and slices.json are legacy - always use deployment_units.json
 if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
-    for DU_FILE in "codeontap/deployment_units.json" deployment_units.json slices.json slices.ref slice.ref; do
+    for DU_FILE in "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/deployment_units.json" deployment_units.json slices.json slices.ref slice.ref; do
         if [[ -f "${DU_FILE}" ]]; then
             case "${DU_FILE##*.}" in
                 json)

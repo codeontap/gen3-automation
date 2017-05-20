@@ -3,24 +3,23 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
-# Make sure we are in the build directory
-cd ${AUTOMATION_BUILD_DIR}
+# Make sure we are in the build source directory
+cd ${AUTOMATION_BUILD_SRC_DIR}
 
 # Is this really a python based project
 if [[ ! -f requirements.txt ]]; then
    echo -e "\nNo requirements.txt - is this really a python base repo?" >&2
-   RESULT=1
-   exit
+   RESULT=1 && exit
 fi
 
-# Set up the virtual build environment
-virtualenv .venv
+# Set up the virtual build environment - keep out of source tree
+virtualenv ${AUTOMATION_BUILD_DIR}/.venv
 RESULT=$?
 if [ ${RESULT} -ne 0 ]; then
    echo -e "\nCreation of virtual build environment failed" >&2
    exit
 fi
-. .venv/bin/activate
+. ${AUTOMATION_BUILD_DIR}/.venv/bin/activate
 
 # Process requirements files
 shopt -s nullglob

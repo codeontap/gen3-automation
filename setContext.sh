@@ -414,7 +414,21 @@ case "${AUTOMATION_PROVIDER}" in
         if [[ -d build ]]; then 
             AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
         fi
-        
+
+        # Build source directory
+        AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"
+        if [[ -d "${AUTOMATION_BUILD_DIR}/src" ]]; then
+            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
+        fi
+
+        # Build devops directory
+        AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}"
+        if [[ -d "${AUTOMATION_BUILD_DIR}/devops" ]]; then
+            AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}/devops"
+        fi
+        if [[ -d "${AUTOMATION_BUILD_DIR}/deploy" ]]; then
+            AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}/deploy"
+        fi
         # Job identifier
         AUTOMATION_JOB_IDENTIFIER="${BUILD_NUMBER}"
         ;;
@@ -721,6 +735,8 @@ echo "AUTOMATION_PROVIDER_DIR=${AUTOMATION_PROVIDER_DIR}" >> ${AUTOMATION_DATA_D
 echo "AUTOMATION_DIR=${AUTOMATION_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_DATA_DIR=${AUTOMATION_DATA_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_BUILD_DIR=${AUTOMATION_BUILD_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "AUTOMATION_BUILD_SRC_DIR=${AUTOMATION_BUILD_SRC_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
+echo "AUTOMATION_BUILD_DEVOPS_DIR=${AUTOMATION_BUILD_DEVOPS_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_JOB_IDENTIFIER=${AUTOMATION_JOB_IDENTIFIER}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "AUTOMATION_RELEASE_IDENTIFIER=${AUTOMATION_RELEASE_IDENTIFIER}" >> ${AUTOMATION_DATA_DIR}/context.properties
 

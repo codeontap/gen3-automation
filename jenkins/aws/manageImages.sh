@@ -83,7 +83,11 @@ for FORMAT in "${FORMATS[@]}"; do
     case ${FORMAT,,} in
         docker)
             # Package for docker
-            if [[ -f Dockerfile ]]; then
+            DOCKERFILE="./Dockerfile"
+            if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile" ]]; then
+                DOCKEFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
+            fi
+            if [[ -f "${DOCKERFILE}" ]]; then
                 ${AUTOMATION_DIR}/manageDocker.sh -b -s "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                 RESULT=$?
                 if [[ "${RESULT}" -ne 0 ]]; then

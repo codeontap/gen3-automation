@@ -278,7 +278,7 @@ case ${DOCKER_OPERATION} in
         # Locate the Dockerfile
         DOCKERFILE="./Dockerfile"
         if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile" ]]; then
-            DOCKEFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
+            DOCKERFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
         fi
         docker build \
             -t "${FULL_DOCKER_IMAGE}" \

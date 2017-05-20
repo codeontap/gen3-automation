@@ -85,7 +85,7 @@ for FORMAT in "${FORMATS[@]}"; do
             # Package for docker
             DOCKERFILE="./Dockerfile"
             if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile" ]]; then
-                DOCKEFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
+                DOCKERFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
             fi
             if [[ -f "${DOCKERFILE}" ]]; then
                 ${AUTOMATION_DIR}/manageDocker.sh -b -s "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"

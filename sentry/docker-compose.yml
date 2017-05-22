@@ -1,0 +1,42 @@
+version: '2'
+
+services:
+  redis:
+    image: redis:3.0
+    restart: always
+
+  postgres:
+    image: postgres
+    env_file: sentry.env
+    volumes:
+      - ./var/pg_data/:/var/lib/postgresql/data
+      - ./var/pg_backups/:/backups
+    restart: always
+
+  sentry:
+    image: sentry
+    ports:
+      - 8000:9000
+    links:
+      - redis
+      - postgres
+    env_file: sentry.env
+    restart: always
+
+  celerybeat:
+    image: sentry
+    links:
+      - redis
+      - postgres
+    command: sentry run cron
+    env_file: sentry.env
+    restart: always
+
+  celeryworker:
+    image: sentry
+    links:
+      - redis
+      - postgres
+    command: sentry run worker
+    env_file: sentry.env
+    restart: always

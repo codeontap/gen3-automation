@@ -419,6 +419,10 @@ case "${AUTOMATION_PROVIDER}" in
         AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"
         if [[ -d "${AUTOMATION_BUILD_DIR}/src" ]]; then
             AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
+        else
+            if [[ -d "${AUTOMATION_BUILD_DIR}/app" ]]; then
+                AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
+            fi
         fi
 
         # Build devops directory

@@ -411,7 +411,9 @@ case "${AUTOMATION_PROVIDER}" in
         
         # Build directory
         AUTOMATION_BUILD_DIR="${AUTOMATION_DATA_DIR}"
+        AUTOMATION_BUILD_RELATIVE_DIR=""
         if [[ -d build ]]; then 
+            AUTOMATION_BUILD_RELATIVE_DIR="build/"
             AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
         fi
 

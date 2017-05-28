@@ -53,6 +53,11 @@ if [[ -f bower.json ]]; then
     fi
 fi
 
+# Run unit tests - there should always be a task even if it does nothing
+if [[ -f manage.py ]]; then
+    python manage.py test
+fi
+
 # Package for lambda if required
 for ZAPPA_DIR in "${AUTOMATION_BUILD_DEVOPS_DIR}/lambda" "./"; do
     if [[ -f "${ZAPPA_DIR}/zappa_settings.json" ]]; then

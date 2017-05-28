@@ -13,7 +13,7 @@ if [[ ! -f requirements.txt ]]; then
 fi
 
 # Set up the virtual build environment - keep out of source tree
-PYTHON_VERSION="${AUTOMATION_PYTHON_VERSION:+ -p } ${AUTOMATION_PYTHON}"
+PYTHON_VERSION="${AUTOMATION_PYTHON_VERSION:+ -p } ${AUTOMATION_PYTHON_VERSION}"
 virtualenv ${PYTHON_VERSION} ${AUTOMATION_BUILD_DIR}/.venv
 RESULT=$?
 if [ ${RESULT} -ne 0 ]; then

@@ -44,7 +44,7 @@ REQUIRED_TASKS=( "${REQUIRED_TASKS[@]}" "${FORMATS[@]}" )
 # The build file existence checks below rely on nullglob
 # to return nothing if no match
 shopt -s nullglob
-BUILD_FILES=( ?runtfile.js ?ulpfile.js )
+BUILD_FILES=( ?runtfile.js ?ulpfile.js package.json)
 
 # Perform build tasks in the order specified
 for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
@@ -59,6 +59,11 @@ for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
             ?ulpfile.js)
                 BUILD_TASKS=( $(gulp --tasks-simple) )
                 BUILD_UTILITY="gulp"
+                ;;
+
+            package.json)
+                BUILD_TASKS=( $(jq -r '.scripts | select(.!=null) | keys[]' < package.json) )
+                BUILD_UTILITY="${NODE_PACKAGE_MANAGER} run"
                 ;;
         esac
 

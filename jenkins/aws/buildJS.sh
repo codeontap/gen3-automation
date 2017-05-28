@@ -3,6 +3,9 @@
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
+# Make sure we are in the build source directory
+cd ${AUTOMATION_BUILD_SRC_DIR}
+
 # Select the package manage to use
 if [[ -z "${NODE_PACKAGE_MANAGER}" ]]; then
     if $(which yarn > /dev/null 2>&1) ; then
@@ -11,9 +14,6 @@ if [[ -z "${NODE_PACKAGE_MANAGER}" ]]; then
         NODE_PACKAGE_MANAGER="npm"
     fi
 fi
-
-# Make sure we are in the build directory
-cd ${AUTOMATION_BUILD_DIR}
 
 ${NODE_PACKAGE_MANAGER} install
 RESULT=$?

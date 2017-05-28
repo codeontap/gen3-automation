@@ -182,7 +182,10 @@ function isAWSRegistry() {
 function dockerLogin() {
     isAWSRegistry $1 $2
     if [[ $? -eq 0 ]]; then
-        $(aws --region ${AWS_REGISTRY_REGION} ecr get-login --registry-ids ${AWS_REGISTRY_ID})
+        unset AWS_REGISTRY_OPTIONS
+        if [[ $(aws ecr help | grep no-include-email) ]]; then
+            AWS_REGISTRY_OPTIONS="--no-include-email"
+        $(aws --region ${AWS_REGISTRY_REGION} ecr get-login ${AWS_REGISTRY_OPTIONS} --registry-ids ${AWS_REGISTRY_ID})
     else
         docker login -u ${3} -p ${4} ${1}
     fi

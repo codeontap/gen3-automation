@@ -433,6 +433,7 @@ case "${AUTOMATION_PROVIDER}" in
         if [[ -d "${AUTOMATION_BUILD_DIR}/deploy" ]]; then
             AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}/deploy"
         fi
+
         # Job identifier
         AUTOMATION_JOB_IDENTIFIER="${BUILD_NUMBER}"
         ;;

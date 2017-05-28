@@ -53,13 +53,15 @@ if [[ -f bower.json ]]; then
 fi
 
 # Package for lambda if required
-if [[ -f zappa_settings.json ]]; then
-    BUILD=$(zappa package default | tail -1 | cut -d' ' -f3)
-    if [[ -f ${BUILD} ]]; then
-        mkdir -p dist/
-        mv ${BUILD} dist/lambda.zip
+for ZAPPA_DIR in "${AUTOMATION_BUILD_DEVOPS_DIR}/lambda" "./"; do
+    if [[ -f "${ZAPPA_DIR}/zappa_settings.json" ]]; then
+        BUILD=$(zappa package default | tail -1 | cut -d' ' -f3)
+        if [[ -f ${BUILD} ]]; then
+            mkdir -p "${AUTOMATION_BUILD_DIR}/dist"
+            mv ${BUILD} "${AUTOMATION_BUILD_DIR}/dist/lambda.zip"
+        fi
     fi
-fi
+done
 
 # Clean up
 if [[ -f package.json ]]; then

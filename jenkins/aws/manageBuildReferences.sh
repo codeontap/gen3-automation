@@ -330,17 +330,11 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                 for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
                     IMAGE_PROVIDER_VAR="PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
                     IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
-                    case ${IMAGE_FORMAT,,} in
-                        docker)
-                            ${AUTOMATION_DIR}/manageDocker.sh -k -a "${IMAGE_PROVIDER}" \
+                    IMAGE_FORMAT_LOWER=${IMAGE_FORMAT,,}
+                    case ${IMAGE_FORMAT_LOWER} in
+                        docker|lambda|swagger|cloudfront)
+                            ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
                                 -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
-                            RESULT=$?
-                            if [[ "${RESULT}" -ne 0 ]]; then exit; fi
-                            ;;
-    
-                        lambda)
-                            ${AUTOMATION_DIR}/manageLambda.sh -k -a "${IMAGE_PROVIDER}" \
-                                -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
                             if [[ "${RESULT}" -ne 0 ]]; then exit; fi
                             ;;

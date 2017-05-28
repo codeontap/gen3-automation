@@ -102,6 +102,9 @@ for FORMAT in "${FORMATS[@]}"; do
 
         lambda)
             IMAGE_FILE="./dist/lambda.zip"
+            if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip" ]]; then
+                IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip"
+            fi
 
             if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageLambda.sh -s \
@@ -152,10 +155,10 @@ for FORMAT in "${FORMATS[@]}"; do
             ;;
 
         cloudfront)
-            IMAGE_FILE="./dist/web.zip"
+            IMAGE_FILE="./dist/bundle.zip"
 
             if [[ -f "${IMAGE_FILE}" ]]; then
-                ${AUTOMATION_DIR}/manageCloudFront.sh -s \
+                ${AUTOMATION_DIR}/manageCloudfront.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
                         -f "${IMAGE_FILE}"

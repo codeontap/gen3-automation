@@ -13,7 +13,8 @@ if [[ ! -f requirements.txt ]]; then
 fi
 
 # Set up the virtual build environment - keep out of source tree
-virtualenv ${AUTOMATION_BUILD_DIR}/.venv
+PYTHON_VERSION="${AUTOMATION_PYTHON_VERSION:+ -p } ${AUTOMATION_PYTHON}"
+virtualenv ${PYTHON_VERSION} ${AUTOMATION_BUILD_DIR}/.venv
 RESULT=$?
 if [ ${RESULT} -ne 0 ]; then
    echo -e "\nCreation of virtual build environment failed" >&2

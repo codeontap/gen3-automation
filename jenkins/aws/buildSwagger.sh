@@ -38,14 +38,18 @@ for VALIDATOR in "${VALIDATORS[@]}"; do
 done
 
 # Augment the swagger file if required
-if [[ -f "${AUTOMATION_BUILD_DIR}/apigw.json" ]]; then
+APIGW_CONFIG="${AUTOMATION_BUILD_DIR}/apigw.json"
+if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/apigw.json" ]]; then
+    APIGW_CONFIG="${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/apigw.json"
+fi
+if [[ -f "${APIGW_CONFIG}" ]]; then
 
     # Generate the swagger file in the context of the current environment
     cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
     ${GENERATION_DIR}/createExtendedSwaggerSpecification.sh \
         -s "${SWAGGER_SPEC_FILE}" \
         -o "${SWAGGER_RESULT_FILE}" \
-        -i "${AUTOMATION_BUILD_DIR}/apigw.json"
+        -i "${APIGW_CONFIG}"
 
     # Check generation was successful
     if [[ ! -f "${SWAGGER_RESULT_FILE}" ]]; then

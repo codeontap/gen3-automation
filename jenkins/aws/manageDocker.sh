@@ -185,6 +185,7 @@ function dockerLogin() {
         unset AWS_REGISTRY_OPTIONS
         if [[ $(aws ecr help | grep no-include-email) ]]; then
             AWS_REGISTRY_OPTIONS="--no-include-email"
+        fi
         $(aws --region ${AWS_REGISTRY_REGION} ecr get-login ${AWS_REGISTRY_OPTIONS} --registry-ids ${AWS_REGISTRY_ID})
     else
         docker login -u ${3} -p ${4} ${1}

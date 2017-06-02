@@ -62,7 +62,7 @@ else
 fi
 
 # Generate documentation
-docker run \
+docker run --rm \
     -v ${SWAGGER_SPEC_FILE%/*}:/app/indir -v ${DIST_DIR}:/app/outdir \
     codeontap/utilities swagger2aglio \
      --input=/app/indir/${SWAGGER_SPEC_FILE##*/} --output=/app/outdir/apidoc.html  \

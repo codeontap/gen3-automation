@@ -299,7 +299,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
     CODE_REPO="${CODE_REPO_ARRAY[${INDEX}]:-?}"
     CODE_PROVIDER="${CODE_PROVIDER_ARRAY[${INDEX}]:-?}"
     IMAGE_FORMATS="${IMAGE_FORMATS_ARRAY[${INDEX}]:-?}"
-    IFS="," read -ra IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
+    IFS="," read -ra CODE_IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
 
     # Look for the deployment unit and build reference files
     EFFECTIVE_DEPLOYMENT_UNIT="${CURRENT_DEPLOYMENT_UNIT}"
@@ -327,7 +327,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
         ${REFERENCE_OPERATION_ACCEPT})
             # Tag builds with an acceptance tag
             if [[ "${IMAGE_FORMATS}" != "?" ]]; then
-                for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
+                for IMAGE_FORMAT in "${CODE_IMAGE_FORMATS_ARRAY[@]}"; do
                     IMAGE_PROVIDER_VAR="PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
                     IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
                     IMAGE_FORMAT_LOWER=${IMAGE_FORMAT,,}
@@ -442,12 +442,12 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     (-f ${NEW_BUILD_FILE}) ]]; then
                 getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
                 IMAGE_FORMATS="${BUILD_REFERENCE_FORMATS}"
-                IFS="," read -ra IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
+                IFS="," read -ra CODE_IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
             fi
 
             # Confirm the commit built successfully into an image
             if [[ "${IMAGE_FORMATS}" != "?" ]]; then
-                for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
+                for IMAGE_FORMAT in "${CODE_IMAGE_FORMATS_ARRAY[@]}"; do
                     IMAGE_PROVIDER_VAR="PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
                     IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
                     FROM_IMAGE_PROVIDER_VAR="FROM_PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"

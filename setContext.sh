@@ -467,8 +467,10 @@ findAndDefineSetting "CODEONTAP_GIT_ORG" "" "" "" "value" "codeontap"
 findAndDefineSetting "GIT_USER"  "" "" "" "value" "${GIT_USER_DEFAULT:-automation}"
 findAndDefineSetting "GIT_EMAIL" "" "" "" "value" "${GIT_EMAIL_DEFAULT}"
 
-# Separator when specifying a build reference for a deployment unit
-findAndDefineSetting "BUILD_REFERENCE_PART_SEPARATOR" "" "${PRODUCT}" "${SEGMENT}" "value" "!"
+# Separators
+findAndDefineSetting "DEPLOYMENT_UNIT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" " ,"
+findAndDefineSetting "BUILD_REFERENCE_PART_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" "!?&"
+findAndDefineSetting "IMAGE_FORMAT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" ":;|"
 
 # Modes
 findAndDefineSetting "DEPLOYMENT_MODE" "" "" "" "value" "${MODE}"
@@ -538,9 +540,9 @@ CODE_TAG_ARRAY=()
 CODE_REPO_ARRAY=()
 CODE_PROVIDER_ARRAY=()
 IMAGE_FORMATS_ARRAY=()
-UNITS="${DEPLOYMENT_UNITS:-${DEPLOYMENT_UNIT:-${SLICES:-${SLICE}}}}"
-for CURRENT_DEPLOYMENT_UNIT in ${UNITS}; do
-    IFS="${BUILD_REFERENCE_PART_SEPARATOR}" read -ra BUILD_REFERENCE_PARTS <<< "${CURRENT_DEPLOYMENT_UNIT}"
+IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${DEPLOYMENT_UNITS:-${DEPLOYMENT_UNIT:-${SLICES:-${SLICE}}}}"
+for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
+    IFS="${BUILD_REFERENCE_PART_SEPARATORS}" read -ra BUILD_REFERENCE_PARTS <<< "${CURRENT_DEPLOYMENT_UNIT}"
     DEPLOYMENT_UNIT_PART="${BUILD_REFERENCE_PARTS[0]}"
     TAG_PART="${BUILD_REFERENCE_PARTS[1]:-?}"
     FORMATS_PART="${BUILD_REFERENCE_PARTS[2]:-?}"
@@ -548,12 +550,14 @@ for CURRENT_DEPLOYMENT_UNIT in ${UNITS}; do
     if [[ "${#DEPLOYMENT_UNIT_ARRAY[@]}" -eq 0 ]]; then
         # Processing the first deployment unit
         if [[ -n "${CODE_TAG}" ]]; then
-            # Permit separate variable for commit/tag value - easier if only one repo involved
+            # Permit separate variable for tag/commit value - easier if only one repo involved
             TAG_PART="${CODE_TAG}"
         fi
         if [[ (-n "${IMAGE_FORMATS}") || (-n "${IMAGE_FORMAT}") ]]; then
-            # Permit separate variable for commit/tag value - easier if only one repo involved
-            FORMATS_PART=$(tr -s " " "," <<< "${IMAGE_FORMATS:-${IMAGE_FORMAT}}")
+            # Permit separate variable for formats value - easier if only one repo involved
+            # Allow comma and space since its a dedicated parameter - normally they are not format separators
+            IFS="${IMAGE_FORMAT_SEPARATORS}, " read -ra FORMATS <<< "${IMAGE_FORMATS:-${IMAGE_FORMAT}}"
+            FORMATS_PART=$(IFS="${IMAGE_FORMAT_SEPARATORS}"; echo "${FORMATS[*]}")
         fi
     fi
         
@@ -593,16 +597,16 @@ DEPLOYMENT_UNIT_SEPARATOR=""
 for INDEX in $( seq 0 $((${#DEPLOYMENT_UNIT_ARRAY[@]}-1)) ); do
     UPDATED_UNITS="${UPDATED_UNITS}${DEPLOYMENT_UNIT_SEPARATOR}${DEPLOYMENT_UNIT_ARRAY[$INDEX]}"
     if [[ "${CODE_TAG_ARRAY[$INDEX]}" != "?" ]]; then
-        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATOR}${CODE_TAG_ARRAY[$INDEX]}"
+        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${CODE_TAG_ARRAY[$INDEX]}"
     else
         if [[ "${CODE_COMMIT_ARRAY[$INDEX]}" != "?" ]]; then
-            UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATOR}${CODE_COMMIT_ARRAY[$INDEX]}"
+            UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${CODE_COMMIT_ARRAY[$INDEX]}"
         fi
     fi
     if [[ "${IMAGE_FORMATS_ARRAY[$INDEX]}" != "?" ]]; then
-        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATOR}${IMAGE_FORMATS_ARRAY[$INDEX]}"
+        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${IMAGE_FORMATS_ARRAY[$INDEX]}"
     fi
-    DEPLOYMENT_UNIT_SEPARATOR=" "
+DEPLOYMENT_UNIT_SEPARATOR="${DEPLOYMENT_UNIT_SEPARATORS:0:1}"
 done
 
 # Save for subsequent processing

@@ -77,7 +77,7 @@ if [[ (-z "${DEPLOYMENT_UNIT}") ||
     exit
 fi
 
-IFS="," read -ra FORMATS <<< "${IMAGE_FORMATS}"
+IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra FORMATS <<< "${IMAGE_FORMATS}"
 
 for FORMAT in "${FORMATS[@]}"; do
     case ${FORMAT,,} in

@@ -101,9 +101,9 @@ function getBuildReferenceParts() {
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done
         for ATTRIBUTE in formats; do 
-            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" ",")
+            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" "${IMAGE_FORMAT_SEPARATORS:0:1}")
             if [[ -z "${ATTRIBUTE_VALUE}" ]]; then
-                ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" ",")
+                ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}" | tr -s "\r\n" "${IMAGE_FORMAT_SEPARATORS:0:1}")
             fi
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done
@@ -134,7 +134,7 @@ function formatBuildReference() {
     if [[ "${FBR_FORMATS}" == "?" ]]; then
         FBR_FORMATS="docker"
     fi
-    IFS="," read -ra FBR_FORMATS_ARRAY <<< "${FBR_FORMATS}"
+    IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra FBR_FORMATS_ARRAY <<< "${FBR_FORMATS}"
     BUILD_REFERENCE="${BUILD_REFERENCE}, \"Formats\": [\"${FBR_FORMATS_ARRAY[0]}\""
     for ((FORMAT_INDEX=1; FORMAT_INDEX<${#FBR_FORMATS_ARRAY[@]}; FORMAT_INDEX++)); do
         BUILD_REFERENCE="${BUILD_REFERENCE},\"${FBR_FORMATS_ARRAY[$FORMAT_INDEX]}\""
@@ -299,7 +299,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
     CODE_REPO="${CODE_REPO_ARRAY[${INDEX}]:-?}"
     CODE_PROVIDER="${CODE_PROVIDER_ARRAY[${INDEX}]:-?}"
     IMAGE_FORMATS="${IMAGE_FORMATS_ARRAY[${INDEX}]:-?}"
-    IFS="," read -ra CODE_IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
+    IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra CODE_IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
 
     # Look for the deployment unit and build reference files
     EFFECTIVE_DEPLOYMENT_UNIT="${CURRENT_DEPLOYMENT_UNIT}"
@@ -442,7 +442,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     (-f ${NEW_BUILD_FILE}) ]]; then
                 getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
                 IMAGE_FORMATS="${BUILD_REFERENCE_FORMATS}"
-                IFS="," read -ra CODE_IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
+                IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra CODE_IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
             fi
 
             # Confirm the commit built successfully into an image

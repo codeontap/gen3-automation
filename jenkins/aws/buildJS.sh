@@ -38,7 +38,7 @@ REQUIRED_TASKS=( "build" )
 
 # Perform format specific tasks if defined
 IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS_LIST})
-IFS="," read -ra FORMATS <<< "${IMAGE_FORMATS_ARRAY[0]}"
+IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra FORMATS <<< "${IMAGE_FORMATS_ARRAY[0]}"
 REQUIRED_TASKS=( "${REQUIRED_TASKS[@]}" "${FORMATS[@]}" )
 
 # The build file existence checks below rely on nullglob

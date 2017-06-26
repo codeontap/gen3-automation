@@ -12,13 +12,14 @@ REGISTRY_OPERATION_VERIFY="verify"
 REGISTRY_OPERATION_TAG="tag"
 REGISTRY_OPERATION_PULL="pull"
 REGISTRY_OPERATION_DEFAULT="${REGISTRY_OPERATION_VERIFY}"
+REGISTRY_EXPAND_DEFAULT="false"
 
 function usage() {
     cat <<EOF
 
 Manage images in an S3 backed registry
 
-Usage: $(basename $0) -s -v -p -k
+Usage: $(basename $0) -s -v -p -k -x
                         -y REGISTRY_TYPE
                         -a REGISTRY_PROVIDER
                         -l REGISTRY_REPO
@@ -51,6 +52,8 @@ where
 (o) -u REGISTRY_DEPLOYMENT_UNIT is the deployment unit to use when defaulting REGISTRY_REPO
 (o) -v                          verify image is present in local registry
                                 (REGISTRY_OPERATION=${REGISTRY_OPERATION_VERIFY})
+(o) -x                          expand on save if REGISTRY_FILENAME is a zip file
+                                (REGISTRY_EXPAND=true)
 (m) -y REGISTRY_TYPE            is the registry image type
 (o) -z REMOTE_REGISTRY_PROVIDER is the registry provider to pull from
 
@@ -69,6 +72,7 @@ REMOTE_REGISTRY_REPO=REGISTRY_REPO
 REMOTE_REGISTRY_TAG=REGISTRY_TAG
 REGISTRY_OPERATION=${REGISTRY_OPERATION_DEFAULT}
 REGISTRY_PRODUCT=${PRODUCT}
+REGISTRY_EXPAND=${REGISTRY_EXPAND_DEFAULT}
 
 NOTES:
 
@@ -77,7 +81,7 @@ EOF
 }
 
 # Parse options
-while getopts ":a:d:f:g:hki:l:pr:st:u:vy:z:" opt; do
+while getopts ":a:d:f:g:hki:l:pr:st:u:vxy:z:" opt; do
     case $opt in
         a)
             REGISTRY_PROVIDER="${OPTARG}"
@@ -120,6 +124,9 @@ while getopts ":a:d:f:g:hki:l:pr:st:u:vy:z:" opt; do
             ;;
         v)
             REGISTRY_OPERATION="${REGISTRY_OPERATION_VERIFY}"
+            ;;
+        x)
+            REGISTRY_EXPAND="true"
             ;;
         y)
             REGISTRY_TYPE="${OPTARG}"
@@ -200,12 +207,39 @@ function setCredentials() {
 
 }
 
+# Copy files to the registry
+# $1 = file to copy
+function copyToRegistry() {
+
+    # Key variables
+    local FILE_TO_COPY="${1^^}"
+    local FILES_TEMP_DIR="temp_files_dir"
+
+    rm -rf "${FILES_TEMP_DIR}"
+    mkdir -p "${FILES_TEMP_DIR}"
+    cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}"
+    [[ ${FILE_TO_COPY##*.} == "zip" ]] && unzip "${FILE_TO_COPY}" -d temp_files
+
+    aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive ""${FILES_TEMP_DIR}"/" "${FULL_REGISTRY_IMAGE_PATH}/" >/dev/null
+    RESULT=$?
+    if [ $RESULT -ne 0 ]; then
+        echo -e "\nUnable to save ${BASE_REGISTRY_FILENAME} in the local registry" >&2
+        exit
+    fi
+    aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}" >/dev/null
+    RESULT=$?
+    if [ $RESULT -ne 0 ]; then
+        echo -e "\nUnable to tag ${BASE_REGISTRY_FILENAME} as latest" >&2
+        exit
+    fi
+}
+
 # Apply local registry defaults
 REGISTRY_TYPE="${REGISTRY_TYPE,,:-${REGISTRY_TYPE_DEFAULT}}"
 REGISTRY_PROVIDER_VAR="PRODUCT_${REGISTRY_TYPE^^}_PROVIDER"
 REGISTRY_PROVIDER="${REGISTRY_PROVIDER:-${!REGISTRY_PROVIDER_VAR}}"
 REGISTRY_FILENAME="${REGISTRY_FILENAME:-${REGISTRY_FILENAME_DEFAULT}}"
-BASE_REGISTRY_FILENAME=$(basename "${REGISTRY_FILENAME}")
+BASE_REGISTRY_FILENAME="${REGISTRY_FILENAME##*/}"
 REGISTRY_TAG="${REGISTRY_TAG:-${REGISTRY_TAG_DEFAULT}}"
 REGISTRY_OPERATION="${REGISTRY_OPERATION:-${REGISTRY_OPERATION_DEFAULT}}"
 REGISTRY_PRODUCT="${REGISTRY_PRODUCT:-${PRODUCT}}"
@@ -253,6 +287,7 @@ fi
 REGISTRY_IMAGE="${REGISTRY_TYPE}/${REGISTRY_REPO}/${BASE_REGISTRY_FILENAME}"
 TAGGED_REGISTRY_IMAGE="${REGISTRY_TYPE}/${REGISTRY_REPO}/tags/${REGISTRY_TAG}"
 FULL_REGISTRY_IMAGE="s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_IMAGE}"
+FULL_REGISTRY_IMAGE_PATH="s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_IMAGE}/${REGISTRY_TYPE}/${REGISTRY_REPO}"
 FULL_TAGGED_REGISTRY_IMAGE="s3://${REGISTRY_PROVIDER_DNS}/${TAGGED_REGISTRY_IMAGE}"
 
 # Set up credentials for registry access
@@ -269,18 +304,7 @@ fi
 # Perform the required action
 case ${REGISTRY_OPERATION} in
     ${REGISTRY_OPERATION_SAVE})
-        aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${REGISTRY_FILENAME}" "${FULL_REGISTRY_IMAGE}" >/dev/null
-        RESULT=$?
-        if [ $RESULT -ne 0 ]; then
-            echo -e "\nUnable to save ${BASE_REGISTRY_FILENAME} in the local registry" >&2
-            exit
-        fi
-        aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}" >/dev/null
-        RESULT=$?
-        if [ $RESULT -ne 0 ]; then
-            echo -e "\nUnable to tag ${BASE_REGISTRY_FILENAME} as latest" >&2
-            exit
-        fi
+        copyToRegistry "${REGISTRY_FILENAME}"
         ;;
 
     ${REGISTRY_OPERATION_VERIFY})
@@ -345,18 +369,7 @@ case ${REGISTRY_OPERATION} in
         # Now copy to local rgistry
         setCredentials "${REGISTRY_PROVIDER}"
 
-        aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${IMAGE_FILE}" "${FULL_REGISTRY_IMAGE}" >/dev/null
-        RESULT=$?
-        if [ $RESULT -ne 0 ]; then
-            echo -e "\nUnable to save ${BASE_REGISTRY_FILENAME} in the local registry" >&2
-            exit
-        fi
-        aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}" >/dev/null
-        RESULT=$?
-        if [ $RESULT -ne 0 ]; then
-            echo -e "\nUnable to tag ${BASE_REGISTRY_FILENAME} as latest" >&2
-            exit
-        fi        
+        copyToRegistry "${IMAGE_FILE}"
         ;;        
         
     *)

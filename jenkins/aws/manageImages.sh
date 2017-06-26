@@ -123,7 +123,7 @@ for FORMAT in "${FORMATS[@]}"; do
             ;;
 
         swagger)
-            IMAGE_FILE="./dist/swagger.json"
+            IMAGE_FILE="./dist/swagger.zip"
 
             if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageSwagger.sh -s \

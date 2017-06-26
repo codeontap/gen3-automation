@@ -8,7 +8,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 # Define the desired result file
 DIST_DIR="${AUTOMATION_BUILD_DIR}/dist"
 mkdir -p ${DIST_DIR}
-SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.json"
+SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 
 if [[ -f "${AUTOMATION_BUILD_DIR}/swagger.yaml" ]]; then
     SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.json"
@@ -44,8 +44,7 @@ if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/apigw.json" ]]; then
 fi
 if [[ -f "${APIGW_CONFIG}" ]]; then
 
-    # Generate the swagger file in the context of the current environment
-    cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
+    # Generate the swagger file
     ${GENERATION_DIR}/createExtendedSwaggerSpecification.sh \
         -s "${SWAGGER_SPEC_FILE}" \
         -o "${SWAGGER_RESULT_FILE}" \
@@ -53,12 +52,12 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
 
     # Check generation was successful
     if [[ ! -f "${SWAGGER_RESULT_FILE}" ]]; then
-        echo -e "\nCan't find generated swagger file. Was it generated successfully?" >&2
+        echo -e "\nCan't find generated swagger files. Were they generated successfully?" >&2
         exit
     fi
 
 else
-    cp "${SWAGGER_SPEC_FILE}" "${SWAGGER_RESULT_FILE}"
+    zip "${SWAGGER_RESULT_FILE}" "${SWAGGER_SPEC_FILE}"
 fi
 
 # Generate documentation

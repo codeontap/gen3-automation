@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
-trap 'rm -f ./temp*; exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+trap 'rm -rf ./temp_*; exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Defaults
 REGISTRY_TAG_DEFAULT="latest"
@@ -218,9 +218,9 @@ function copyToRegistry() {
     rm -rf "${FILES_TEMP_DIR}"
     mkdir -p "${FILES_TEMP_DIR}"
     cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}"
-    [[ ${FILE_TO_COPY##*.} == "zip" ]] && unzip "${FILE_TO_COPY}" -d temp_files
+    [[ ${FILE_TO_COPY##*.} == "zip" ]] && unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
 
-    aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive ""${FILES_TEMP_DIR}"/" "${FULL_REGISTRY_IMAGE_PATH}/" >/dev/null
+    aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILES_TEMP_DIR}/" "${FULL_REGISTRY_IMAGE_PATH}/" >/dev/null
     RESULT=$?
     if [ $RESULT -ne 0 ]; then
         echo -e "\nUnable to save ${BASE_REGISTRY_FILENAME} in the local registry" >&2

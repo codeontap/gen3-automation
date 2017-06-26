@@ -332,9 +332,15 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
                     IMAGE_FORMAT_LOWER=${IMAGE_FORMAT,,}
                     case ${IMAGE_FORMAT_LOWER} in
-                        docker|lambda|swagger|cloudfront)
+                        docker)
                             ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
                                 -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                            RESULT=$?
+                            if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+                            ;;
+                        lambda|swagger|cloudfront)
+                            ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
+                                -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
                             if [[ "${RESULT}" -ne 0 ]]; then exit; fi
                             ;;
@@ -487,7 +493,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     RESULT=$?
                                     ;;
                                 swagger)
-                                    ${AUTOMATION_DIR}/manageSwagger.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                    ${AUTOMATION_DIR}/manageSwagger.sh -x -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                     RESULT=$?
                                     ;;
                                 cloudfront)

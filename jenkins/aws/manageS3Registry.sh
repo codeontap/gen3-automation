@@ -219,7 +219,7 @@ function copyToRegistry() {
     mkdir -p "${FILES_TEMP_DIR}"
     cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}"
     if [[ ("${REGISTRY_EXPAND}" == "true") &&
-            ("${FILE_TO_COPY##*.}" == "zip") ]] then
+            ("${FILE_TO_COPY##*.}" == "zip") ]]; then
         unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
     fi
 

@@ -220,13 +220,13 @@ function copyToRegistry() {
     cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}"
     [[ ${FILE_TO_COPY##*.} == "zip" ]] && unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
 
-    aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILES_TEMP_DIR}/" "${FULL_REGISTRY_IMAGE_PATH}/" >/dev/null
+    aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILES_TEMP_DIR}/" "${FULL_REGISTRY_IMAGE_PATH}/"
     RESULT=$?
     if [ $RESULT -ne 0 ]; then
         echo -e "\nUnable to save ${BASE_REGISTRY_FILENAME} in the local registry" >&2
         exit
     fi
-    aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}" >/dev/null
+    aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}"
     RESULT=$?
     if [ $RESULT -ne 0 ]; then
         echo -e "\nUnable to tag ${BASE_REGISTRY_FILENAME} as latest" >&2
@@ -287,7 +287,7 @@ fi
 REGISTRY_IMAGE="${REGISTRY_TYPE}/${REGISTRY_REPO}/${BASE_REGISTRY_FILENAME}"
 TAGGED_REGISTRY_IMAGE="${REGISTRY_TYPE}/${REGISTRY_REPO}/tags/${REGISTRY_TAG}"
 FULL_REGISTRY_IMAGE="s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_IMAGE}"
-FULL_REGISTRY_IMAGE_PATH="s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_IMAGE}/${REGISTRY_TYPE}/${REGISTRY_REPO}"
+FULL_REGISTRY_IMAGE_PATH="s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_TYPE}/${REGISTRY_REPO}"
 FULL_TAGGED_REGISTRY_IMAGE="s3://${REGISTRY_PROVIDER_DNS}/${TAGGED_REGISTRY_IMAGE}"
 
 # Set up credentials for registry access

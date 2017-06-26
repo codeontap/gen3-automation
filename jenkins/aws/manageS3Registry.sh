@@ -212,7 +212,7 @@ function setCredentials() {
 function copyToRegistry() {
 
     # Key variables
-    local FILE_TO_COPY="${1^^}"
+    local FILE_TO_COPY="${1}"
     local FILES_TEMP_DIR="temp_files_dir"
 
     rm -rf "${FILES_TEMP_DIR}"

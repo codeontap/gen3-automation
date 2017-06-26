@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
-trap "[[ -n "${AUTOMATION_DEBUG}" ]] && rm -rf ./temp_*; exit ${RESULT:-1}" EXIT SIGHUP SIGINT SIGTERM
+trap '[[ -z ${AUTOMATION_DEBUG} ]] && rm -rf ./temp_*; exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Defaults
 REGISTRY_TAG_DEFAULT="latest"

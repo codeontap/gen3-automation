@@ -499,7 +499,6 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     exit
                                     ;;
                             esac
-                            RESULT=$?
                             if [[ "${RESULT}" -ne 0 ]]; then
                                 echo -e "\nUnable to pull ${IMAGE_FORMAT,,} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" >&2
                                 exit

@@ -218,7 +218,10 @@ function copyToRegistry() {
     rm -rf "${FILES_TEMP_DIR}"
     mkdir -p "${FILES_TEMP_DIR}"
     cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}"
-    [[ ${FILE_TO_COPY##*.} == "zip" ]] && unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
+    if [[ ("${REGISTRY_EXPAND}" == "true") &&
+            ("${FILE_TO_COPY##*.}" == "zip") ]] then
+        unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
+    fi
 
     aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILES_TEMP_DIR}/" "${FULL_REGISTRY_IMAGE_PATH}/"
     RESULT=$?

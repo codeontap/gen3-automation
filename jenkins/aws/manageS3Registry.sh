@@ -293,6 +293,12 @@ FULL_REGISTRY_IMAGE="s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_IMAGE}"
 FULL_REGISTRY_IMAGE_PATH="s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_TYPE}/${REGISTRY_REPO}"
 FULL_TAGGED_REGISTRY_IMAGE="s3://${REGISTRY_PROVIDER_DNS}/${TAGGED_REGISTRY_IMAGE}"
 
+# Formulate the remote registry details
+REMOTE_REGISTRY_IMAGE="${REGISTRY_TYPE}/${REMOTE_REGISTRY_REPO}/${BASE_REGISTRY_FILENAME}"
+REMOTE_TAGGED_REGISTRY_IMAGE="${REGISTRY_TYPE}/${REMOTE_REGISTRY_REPO}/tags/${REMOTE_REGISTRY_TAG}"
+FULL_REMOTE_REGISTRY_IMAGE="s3://${REMOTE_REGISTRY_PROVIDER_DNS}/${REMOTE_REGISTRY_IMAGE}"
+FULL_REMOTE_TAGGED_REGISTRY_IMAGE="s3://${REMOTE_REGISTRY_PROVIDER_DNS}/${REMOTE_TAGGED_REGISTRY_IMAGE}"
+
 # Set up credentials for registry access
 setCredentials "${REGISTRY_PROVIDER}"
 
@@ -333,10 +339,10 @@ case ${REGISTRY_OPERATION} in
             exit
         else
             # Copy to S3
-            aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}" >/dev/null
+            aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_REMOTE_TAGGED_REGISTRY_IMAGE}" >/dev/null
             RESULT=$?
             if [[ "$?" -ne 0 ]]; then
-                echo -e "\nCouldn't tag image ${FULL_REGISTRY_IMAGE} with tag ${REGISTRY_TSAG}" >&2
+                echo -e "\nCouldn't tag image ${FULL_REGISTRY_IMAGE} with tag ${REMOTE_REGISTRY_TAG}" >&2
                 exit
             fi
         fi

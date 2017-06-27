@@ -646,7 +646,7 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
                 defineSetting "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
             fi
 
-            findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${PROMOTION_FROM_SEGMENT}" "value"
+            findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${FROM_SEGMENT}" "value"
             if [[ (-n "${FROM_SEGMENT}") &&
                     (-n "${FROM_ACCOUNT}")]]; then
                 defineGitProviderSettings    "FROM_ACCOUNT" "" "${FROM_ACCOUNT}" "" "github"

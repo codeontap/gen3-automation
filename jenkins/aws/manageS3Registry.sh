@@ -209,15 +209,17 @@ function setCredentials() {
 
 # Copy files to the registry
 # $1 = file to copy
+# $2 = name to save it as
 function copyToRegistry() {
 
     # Key variables
     local FILE_TO_COPY="${1}"
+    local SAVE_AS="${2:-${1}}"
     local FILES_TEMP_DIR="temp_files_dir"
 
     rm -rf "${FILES_TEMP_DIR}"
     mkdir -p "${FILES_TEMP_DIR}"
-    cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}"
+    cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}/${SAVE_AS}"
     if [[ ("${REGISTRY_EXPAND}" == "true") &&
             ("${FILE_TO_COPY##*.}" == "zip") ]]; then
         unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
@@ -336,7 +338,7 @@ case ${REGISTRY_OPERATION} in
             exit
         else
             # Copy to S3
-            aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_REMOTE_TAGGED_REGISTRY_IMAGE}" >/dev/null
+            aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_REMOTE_TAGGED_REGISTRY_IMAGE}"
             RESULT=$?
             if [[ "$?" -ne 0 ]]; then
                 echo -e "\nCouldn't tag image ${FULL_REGISTRY_IMAGE} with tag ${REMOTE_REGISTRY_TAG}" >&2
@@ -364,7 +366,7 @@ case ${REGISTRY_OPERATION} in
             exit
         else
             # Copy image
-            aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${FULL_REMOTE_REGISTRY_IMAGE}" "${IMAGE_FILE}" >/dev/null
+            aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${FULL_REMOTE_REGISTRY_IMAGE}" "${IMAGE_FILE}"
             RESULT=$?
             if [[ "$RESULT" -ne 0 ]]; then
                 echo -e "\nCan't copy remote image ${FULL_REMOTE_REGISTRY_IMAGE}" >&2
@@ -375,7 +377,7 @@ case ${REGISTRY_OPERATION} in
         # Now copy to local rgistry
         setCredentials "${REGISTRY_PROVIDER}"
 
-        copyToRegistry "${IMAGE_FILE}"
+        copyToRegistry "${IMAGE_FILE}" "${REGISTRY_FILENAME}"
         ;;        
         
     *)

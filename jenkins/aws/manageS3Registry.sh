@@ -214,7 +214,7 @@ function copyToRegistry() {
 
     # Key variables
     local FILE_TO_COPY="${1}"
-    local SAVE_AS="${2}}"
+    local SAVE_AS="${2}"
     local FILES_TEMP_DIR="temp_files_dir"
 
     rm -rf "${FILES_TEMP_DIR}"

@@ -214,15 +214,25 @@ function copyToRegistry() {
 
     # Key variables
     local FILE_TO_COPY="${1}"
-    local SAVE_AS="${2:-${1}}"
+    local SAVE_AS="${2}}"
     local FILES_TEMP_DIR="temp_files_dir"
 
     rm -rf "${FILES_TEMP_DIR}"
     mkdir -p "${FILES_TEMP_DIR}"
     cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}/${SAVE_AS}"
+    RESULT=$?
+    if [ $RESULT -ne 0 ]; then
+        echo -e "\nUnable to copy ${FILE_TO_COPY}" >&2
+        exit
+    fi
     if [[ ("${REGISTRY_EXPAND}" == "true") &&
             ("${FILE_TO_COPY##*.}" == "zip") ]]; then
         unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
+        RESULT=$?
+        if [ $RESULT -ne 0 ]; then
+            echo -e "\nUnable to unzip ${FILE_TO_COPY}" >&2
+            exit
+        fi
     fi
 
     aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILES_TEMP_DIR}/" "${FULL_REGISTRY_IMAGE_PATH}/"
@@ -309,7 +319,7 @@ fi
 # Perform the required action
 case ${REGISTRY_OPERATION} in
     ${REGISTRY_OPERATION_SAVE})
-        copyToRegistry "${REGISTRY_FILENAME}"
+        copyToRegistry "${REGISTRY_FILENAME}" "${BASE_REGISTRY_FILENAME}"
         ;;
 
     ${REGISTRY_OPERATION_VERIFY})
@@ -353,7 +363,7 @@ case ${REGISTRY_OPERATION} in
         REMOTE_TAGGED_REGISTRY_IMAGE="${REGISTRY_TYPE}/${REMOTE_REGISTRY_REPO}/tags/${REMOTE_REGISTRY_TAG}"
         FULL_REMOTE_REGISTRY_IMAGE="s3://${REMOTE_REGISTRY_PROVIDER_DNS}/${REMOTE_REGISTRY_IMAGE}"
         FULL_REMOTE_TAGGED_REGISTRY_IMAGE="s3://${REMOTE_REGISTRY_PROVIDER_DNS}/${REMOTE_TAGGED_REGISTRY_IMAGE}"
-        IMAGE_FILE="./temp_${REGISTRY_FILENAME}"
+        IMAGE_FILE="./temp_${BASE_REGISTRY_FILENAME}"
 
         # Get access to the remote registry
         setCredentials "${REMOTE_REGISTRY_PROVIDER}"
@@ -377,7 +387,7 @@ case ${REGISTRY_OPERATION} in
         # Now copy to local rgistry
         setCredentials "${REGISTRY_PROVIDER}"
 
-        copyToRegistry "${IMAGE_FILE}" "${REGISTRY_FILENAME}"
+        copyToRegistry "${IMAGE_FILE}" "${BASE_REGISTRY_FILENAME}"
         ;;        
         
     *)

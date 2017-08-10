@@ -21,7 +21,7 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
         # Combine the two
         docker run --rm \
             -v ${AUTOMATION_BUILD_DIR}:/app/indir -v ${AUTOMATION_BUILD_DIR}:/app/outdir \
-            codeontap/utilities swagger-manage-extensions \
+            codeontap/utilities sme \
             /app/indir/${SWAGGER_SPEC_YAML_FILE} \
             /app/indir/${SWAGGER_SPEC_YAML_EXTENSIONS_FILE} \
             /app/outdir/temp_swagger.yaml

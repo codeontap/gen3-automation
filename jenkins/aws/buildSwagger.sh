@@ -12,10 +12,10 @@ SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 
 # Possible input files
 SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/swagger.json"
-SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/swagger.yml"
-SWAGGER_SPEC_YAML_EXTENSIONS_FILE="${AUTOMATION_BUILD_DIR}/swagger_extensions.yml"
+SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/swagger.yaml"
+SWAGGER_SPEC_YAML_EXTENSIONS_FILE="${AUTOMATION_BUILD_DIR}/swagger_extensions.yaml"
 
-# Convert yaml files to json, possibly including a separate yml based extensions file
+# Convert yaml files to json, possibly including a separate yaml based extensions file
 if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
     if [[ -f "${SWAGGER_SPEC_YML_EXTENSIONS_FILE}" ]]
         # Combine the two
@@ -24,9 +24,9 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
             codeontap/utilities swagger-manage-extensions \
             /app/indir/${SWAGGER_SPEC_YAML_FILE} \
             /app/indir/${SWAGGER_SPEC_YAML_EXTENSIONS_FILE} \
-            /app/outdir/temp_swagger.yml
+            /app/outdir/temp_swagger.yaml
         # Use the combined file
-        SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.yml"
+        SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.yaml"
         
     fi
     SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.json"

@@ -17,7 +17,7 @@ SWAGGER_SPEC_YAML_EXTENSIONS_FILE="${AUTOMATION_BUILD_DIR}/swagger_extensions.ya
 
 # Convert yaml files to json, possibly including a separate yaml based extensions file
 if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
-    if [[ -f "${SWAGGER_SPEC_YML_EXTENSIONS_FILE}" ]]; then
+    if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
         # Combine the two
         docker run --rm \
             -v ${AUTOMATION_BUILD_DIR}:/app/indir -v ${AUTOMATION_BUILD_DIR}:/app/outdir \

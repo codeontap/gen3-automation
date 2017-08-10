@@ -10,11 +10,27 @@ DIST_DIR="${AUTOMATION_BUILD_DIR}/dist"
 mkdir -p ${DIST_DIR}
 SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 
-if [[ -f "${AUTOMATION_BUILD_DIR}/swagger.yaml" ]]; then
+# Possible input files
+SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/swagger.json"
+SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/swagger.yml"
+SWAGGER_SPEC_YAML_EXTENSIONS_FILE="${AUTOMATION_BUILD_DIR}/swagger_extensions.yml"
+
+# Convert yaml files to json, possibly including a separate yml based extensions file
+if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
+    if [[ -f "${SWAGGER_SPEC_YML_EXTENSIONS_FILE}" ]]
+        # Combine the two
+        docker run --rm \
+            -v ${AUTOMATION_BUILD_DIR}:/app/indir -v ${AUTOMATION_BUILD_DIR}:/app/outdir \
+            codeontap/utilities swagger-manage-extensions \
+            /app/indir/${SWAGGER_SPEC_YAML_FILE} \
+            /app/indir/${SWAGGER_SPEC_YAML_EXTENSIONS_FILE} \
+            /app/outdir/temp_swagger.yml
+        # Use the combined file
+        SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.yml"
+        
+    fi
     SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.json"
-    yaml2json "${AUTOMATION_BUILD_DIR}/swagger.yaml" > "${SWAGGER_SPEC_FILE}"
-else
-    SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/swagger.json"
+    yaml2json "${SWAGGER_SPEC_YAML_FILE}" > "${SWAGGER_SPEC_FILE}"
 fi
 
 if [[ ! -f "${SWAGGER_SPEC_FILE}" ]]; then

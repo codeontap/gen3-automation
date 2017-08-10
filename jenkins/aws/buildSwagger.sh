@@ -14,16 +14,20 @@ SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/swagger.json"
 SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/swagger.yaml"
 SWAGGER_SPEC_YAML_EXTENSIONS_FILE="${AUTOMATION_BUILD_DIR}/swagger_extensions.yaml"
+if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/swagger_extensions.yaml" ]]; then
+    SWAGGER_SPEC_YAML_EXTENSIONS_FILE="${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/swagger_extensions.yaml"
+fi
 
 # Convert yaml files to json, possibly including a separate yaml based extensions file
 if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
     if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
         # Combine the two
+        cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${AUTOMATION_BUILD_DIR}/temp_swagger_extensions.yaml"
         docker run --rm \
             -v ${AUTOMATION_BUILD_DIR}:/app/indir -v ${AUTOMATION_BUILD_DIR}:/app/outdir \
-            codeontap/utilities sme \
-            /app/indir/${SWAGGER_SPEC_YAML_FILE} \
-            /app/indir/${SWAGGER_SPEC_YAML_EXTENSIONS_FILE} \
+            codeontap/utilities sme merge \
+            /app/indir/swagger.yaml \
+            /app/indir/temp_swagger_extensions.yaml \
             /app/outdir/temp_swagger.yaml
         # Use the combined file
         SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.yaml"       

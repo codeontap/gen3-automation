@@ -33,7 +33,12 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
         SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.yaml"       
     fi
     SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.json"
-    yaml2json "${SWAGGER_SPEC_YAML_FILE}" > "${SWAGGER_SPEC_FILE}"
+    # Need to use a yaml to json converter that preserves comments in YAML multi-line blocks, as
+    # AWS uses these are directives in API Gateway templates
+    docker run --rm \
+        -v ${AUTOMATION_BUILD_DIR}:/app/indir -v ${AUTOMATION_BUILD_DIR}:/app/outdir \
+        codeontap/python-utilities \
+        -c "import sys, yaml, json; json.dump(yaml.load(open('/app/indir/temp_swagger.yaml','r')), open('/app/outdir/temp_swagger.json','w'), indent=4)"
 fi
 
 if [[ ! -f "${SWAGGER_SPEC_FILE}" ]]; then

@@ -34,7 +34,11 @@ fi
 
 # Determine required tasks
 # Build is always first
-REQUIRED_TASKS=( "build" )
+if [[ -n "${BUILD_TASKS}" ]]; then
+    REQUIRED_TASKS=( ${BUILD_TASKS} )
+else
+    REQUIRED_TASKS=( "build" )
+fi
 
 # Perform format specific tasks if defined
 IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS_LIST})

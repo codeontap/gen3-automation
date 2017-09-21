@@ -1,10 +1,10 @@
 #!/bin/bash
 
+# AUTOMATION_BASE_DIR assumed to be pointing to base of gen3-automation tree
+
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
-
-AUTOMATION_BASE_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd )
 
 DEPLOYMENT_MODE_UPDATE="update"
 DEPLOYMENT_MODE_STOPSTART="stopstart"
@@ -411,21 +411,19 @@ case "${AUTOMATION_PROVIDER}" in
         
         # Build directory
         AUTOMATION_BUILD_DIR="${AUTOMATION_DATA_DIR}"
-        AUTOMATION_BUILD_RELATIVE_DIR=""
-        if [[ -d build ]]; then 
-            AUTOMATION_BUILD_RELATIVE_DIR="build/"
+        [[ -d build ]] && \
             AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
+        [[ -n "${BUILD_PATH}" ]] && \
+            AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}"
         fi
 
         # Build source directory
         AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"
-        if [[ -d "${AUTOMATION_BUILD_DIR}/src" ]]; then
+        [[ -d "${AUTOMATION_BUILD_DIR}/src" ]] && \
             AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
-        else
-            if [[ -d "${AUTOMATION_BUILD_DIR}/app" ]]; then
-                AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
-            fi
-        fi
+
+        [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] && \
+            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
 
         # Build devops directory
         AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}"

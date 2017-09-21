@@ -1,17 +1,18 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Update build references
 ${AUTOMATION_DIR}/manageBuildReferences.sh -u
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then exit; fi
+[[ ${RESULT} -ne 0 ]] && exit
 
 # Create the templates
 ${AUTOMATION_DIR}/createTemplates.sh -t application -c "${RELEASE_TAG}"
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then exit; fi
+[[ ${RESULT} -ne 0 ]] && exit
 
 # All ok so tag the config repo
 ${AUTOMATION_DIR}/manageRepo.sh -p \
@@ -21,7 +22,7 @@ ${AUTOMATION_DIR}/manageRepo.sh -p \
     -m "${DETAIL_MESSAGE}" \
     -b ${PRODUCT_CONFIG_REFERENCE}
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then exit; fi
+[[ ${RESULT} -ne 0 ]] && exit
 
 # Commit the generated application templates
 ${AUTOMATION_DIR}/manageRepo.sh -p \
@@ -31,7 +32,7 @@ ${AUTOMATION_DIR}/manageRepo.sh -p \
     -m "${DETAIL_MESSAGE}" \
     -b ${PRODUCT_INFRASTRUCTURE_REFERENCE}
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then exit; fi
+[[ ${RESULT} -ne 0 ]] && exit
 
 # Record key parameters for downstream jobs
 echo "RELEASE_IDENTIFIER=${AUTOMATION_RELEASE_IDENTIFIER}" >> $AUTOMATION_DATA_DIR/chain.properties

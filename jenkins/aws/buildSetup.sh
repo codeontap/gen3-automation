@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Ensure we are in the directory where the repo was checked out
 cd ${AUTOMATION_BUILD_DIR}
@@ -53,7 +54,7 @@ echo "IMAGE_FORMATS=${IMAGE_FORMATS_LIST}" >> $AUTOMATION_DATA_DIR/chain.propert
 # Include the build information in the detail message
 ${AUTOMATION_DIR}/manageBuildReferences.sh -l
 RESULT=$?
-if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+[[ "${RESULT}" -ne 0 ]] && exit
 
 # Ensure no builds exist regardless of format
 PRESENT=0
@@ -62,44 +63,35 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
         docker)
             ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
-            if [[ "${RESULT}" -eq 0 ]]; then
-                PRESENT=1
-            fi
+            [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         lambda)
             ${AUTOMATION_DIR}/manageLambda.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
-            if [[ "${RESULT}" -eq 0 ]]; then
-                PRESENT=1
-            fi
+            [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         swagger)
             ${AUTOMATION_DIR}/manageSwagger.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
-            if [[ "${RESULT}" -eq 0 ]]; then
-                PRESENT=1
-            fi
+            [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         cloudfront)
             ${AUTOMATION_DIR}/manageCloudFront.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
-            if [[ "${RESULT}" -eq 0 ]]; then
-                PRESENT=1
-            fi
+            [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         *)
-            echo -e "\nUnsupported image format \"${IMAGE_FORMAT}\"" >&2
-            exit
+            fatal "Unsupported image format \"${IMAGE_FORMAT}\""
             ;;
     esac
 done
 
 RESULT=${PRESENT}
-if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+[[ "${RESULT}" -ne 0 ]] && exit
 
 # Perform prebuild actions
 if [[ -f prebuild.json ]]; then
@@ -117,14 +109,12 @@ if [[ -f prebuild.json ]]; then
                         -n "${REPO_NAME}" -v "${REPO_PROVIDER^^}" \
                         -d "./${REPO_NAME}"
                     RESULT=$?
-                    if [[ ${RESULT} -ne 0 ]]; then
-                        exit
-                    fi
+                    [[ ${RESULT} -ne 0 ]] && exit
                 else
-                    echo -e "\nWARNING: \"${REPO_NAME} repo already exists - using existing local rather than fetching again" >&2
+                    warn "\"${REPO_NAME}\" repo already exists - using existing local rather than fetching again"
                 fi
             else
-                echo -e "\nWARNING: Incorrectly formatted include repo information: ${ENTRY}" >&2
+                warn "Incorrectly formatted include repo information: ${ENTRY}"
             fi
         else
             # No more entries to process

@@ -1,26 +1,20 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 cd laravel/
 
 /usr/local/bin/composer install --prefer-source --no-interaction
 RESULT=$?
-if [ $RESULT -ne 0 ]; then
-   echo -e "\ncomposer install fails with the exit code $RESULT" >&2
-   exit
-fi
+[[ $RESULT -ne 0 ]] && fatal "Composer install fails with the exit code $RESULT"
 
 /usr/local/bin/composer update
 RESULT=$?
-if [ $RESULT -ne 0 ]; then
-   echo -e "\ncomposer update fails with the exit code $RESULT" >&2
-   exit
-fi
+[[ $RESULT -ne 0 ]] && fatal "Composer update fails with the exit code $RESULT"
 
 cd ../
-
 
 ${AUTOMATION_DIR}/manageImages.sh
 RESULT=$?

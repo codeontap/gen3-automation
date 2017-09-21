@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
 
@@ -23,10 +24,8 @@ TASK_LIST="${TASK_LIST:-$TASK}"
 for CURRENT_TASK in $TASK_LIST; do
     ${GENERATION_DIR}/runTask.sh -t "${TASK_TIER}" -i "${TASK_COMPONENT}" -w "${CURRENT_TASK}" "${ENVS[@]}"
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nRunning of task ${CURRENT_TASK} failed" >&2
-        exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && \
+        fatal "Running of task ${CURRENT_TASK} failed"
 done
 
 # All good

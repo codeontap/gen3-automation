@@ -3,7 +3,9 @@
 # This script needs work - the content below was just captured here as a starting point
 # It is based on  a very old codeontap setup
 
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit $RESULT' EXIT SIGHUP SIGINT SIGTERM
+. "${GENERATION_DIR}/common.sh"
 
 SUFFIX="immiaccount"
 REGISTRY="docker.immi01.gosource.com.au:443"
@@ -11,11 +13,7 @@ DOCKER_USER="alm@immi01.gosource.com.au"
 DOCKER_PASS="CTZH3R8tX2BRqYXmm8yj"
 RELEASE=`echo $GIT_BRANCH|cut -f 2 -d/`
 
-if [ -z "$RELEASE" ]
-  then
-  RELEASE="master"
-fi
-
+[[ -z "$RELEASE" ]] && RELEASE="master"
 
 sudo docker login -u $DOCKER_USER -p $DOCKER_PASS -e $DOCKER_USER $REGISTRY
 if [ "$?" -ne 0 ] ;  

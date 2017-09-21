@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap '[[ -z ${AUTOMATION_DEBUG} ]] && rm -rf ./temp_*; exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Defaults
 REGISTRY_TAG_DEFAULT="latest"
@@ -135,12 +136,10 @@ while getopts ":a:d:f:g:hki:l:pr:st:u:vxy:z:" opt; do
             REMOTE_REGISTRY_PROVIDER="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}" >&2
-            exit
+            fatalOption
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument" >&2
-            exit
+            fatalOptionArgument
             ;;
      esac
 done
@@ -180,9 +179,7 @@ function setCredentials() {
             export AWS_ACCESS_KEY_ID="${PROVIDER_AWS_ACCESS_KEY_IDS[$INDEX]}"
             export AWS_SECRET_ACCESS_KEY="${PROVIDER_AWS_SECRET_ACCESS_KEYS[$INDEX]}"
             export AWS_SESSION_TOKEN="${PROVIDER_AWS_SESSION_TOKENS[$INDEX]}"
-            if [[ -z "${AWS_SESSION_TOKEN}" ]]; then
-                unset AWS_SESSION_TOKEN
-            fi
+            [[ -z "${AWS_SESSION_TOKEN}" ]] && unset AWS_SESSION_TOKEN
             return 0
         fi
     done
@@ -194,9 +191,7 @@ function setCredentials() {
     export AWS_ACCESS_KEY_ID="${AWS_CRED_TEMP_AWS_ACCESS_KEY_ID:-${!AWS_CRED_AWS_ACCESS_KEY_ID_VAR}}"
     export AWS_SECRET_ACCESS_KEY="${AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY:-${!AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}}"
     export AWS_SESSION_TOKEN="${AWS_CRED_TEMP_AWS_SESSION_TOKEN}"
-    if [[ -z "${AWS_SESSION_TOKEN}" ]]; then
-        unset AWS_SESSION_TOKEN
-    fi
+    [[ -z "${AWS_SESSION_TOKEN}" ]] && unset AWS_SESSION_TOKEN
 
     # Cache the redentials
     PROVIDER_IDS+=("${SC_PROVIDER}")
@@ -221,32 +216,25 @@ function copyToRegistry() {
     mkdir -p "${FILES_TEMP_DIR}"
     cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}/${SAVE_AS}"
     RESULT=$?
-    if [ $RESULT -ne 0 ]; then
-        echo -e "\nUnable to copy ${FILE_TO_COPY}" >&2
-        exit
-    fi
+    [[ $RESULT -ne 0 ]] && fatal "Unable to copy ${FILE_TO_COPY}"
+
     if [[ ("${REGISTRY_EXPAND}" == "true") &&
             ("${FILE_TO_COPY##*.}" == "zip") ]]; then
         unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
         RESULT=$?
-        if [ $RESULT -ne 0 ]; then
-            echo -e "\nUnable to unzip ${FILE_TO_COPY}" >&2
-            exit
-        fi
+        [[ $RESULT -ne 0 ]] && \
+            fatal "Unable to unzip ${FILE_TO_COPY}"
     fi
 
     aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILES_TEMP_DIR}/" "${FULL_REGISTRY_IMAGE_PATH}/"
     RESULT=$?
-    if [ $RESULT -ne 0 ]; then
-        echo -e "\nUnable to save ${BASE_REGISTRY_FILENAME} in the local registry" >&2
-        exit
-    fi
+    [[ $RESULT -ne 0 ]] && \
+        fatal "Unable to save ${BASE_REGISTRY_FILENAME} in the local registry"
+
     aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}"
     RESULT=$?
-    if [ $RESULT -ne 0 ]; then
-        echo -e "\nUnable to tag ${BASE_REGISTRY_FILENAME} as latest" >&2
-        exit
-    fi
+    [[ $RESULT -ne 0 ]] && \
+        fatal "Unable to tag ${BASE_REGISTRY_FILENAME} as latest"
 }
 
 # Apply local registry defaults
@@ -278,10 +266,8 @@ touch "${TAG_FILE}"
 defineRegistryProviderAttributes "${REGISTRY_PROVIDER}" "${REGISTRY_TYPE}" "REGISTRY_PROVIDER"
 
 # Ensure the local repository has been determined
-if [[ -z "${REGISTRY_REPO}" ]]; then
-    echo -e "\nJob requires the local repository name, or the product/deployment unit/commit" >&2
-    exit
-fi
+[[ -z "${REGISTRY_REPO}" ]] && \
+    fatal "Job requires the local repository name, or the product/deployment unit/commit"
 
 # Apply remote registry defaults
 REMOTE_REGISTRY_PROVIDER_VAR="PRODUCT_REMOTE_${REGISTRY_TYPE^^}_PROVIDER"
@@ -311,10 +297,8 @@ setCredentials "${REGISTRY_PROVIDER}"
 # Confirm access to the local registry
 aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_TYPE}" >/dev/null 2>&1
 RESULT=$?
-if [[ "$RESULT" -ne 0 ]]; then
-    echo -e "\nCan't access ${REGISTRY_TYPE} registry at ${REGISTRY_PROVIDER_DNS}" >&2
-    exit
-fi
+[[ "$RESULT" -ne 0 ]] && \
+    fatal "Can't access ${REGISTRY_TYPE} registry at ${REGISTRY_PROVIDER_DNS}"
 
 # Perform the required action
 case ${REGISTRY_OPERATION} in
@@ -326,11 +310,11 @@ case ${REGISTRY_OPERATION} in
         # Check whether the image is already in the local registry
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FULL_TAGGED_REGISTRY_IMAGE}" >/dev/null 2>&1
         RESULT=$?
-        if [[ "${RESULT}" -eq 0 ]]; then
-            echo -e "\n${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} present in the local registry" 
+        [[ "${RESULT}" -eq 0 ]] && \
+            info "${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} present in the local registry" 
             exit
         else
-            echo -e "\n${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} with tag ${REGISTRY_TAG} not present in the local registry" >&2
+            info "${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} with tag ${REGISTRY_TAG} not present in the local registry"
             exit
         fi
         ;;
@@ -344,16 +328,13 @@ case ${REGISTRY_OPERATION} in
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FULL_REGISTRY_IMAGE}" >/dev/null 2>&1
         RESULT=$?
         if [[ "$RESULT" -ne 0 ]]; then
-            echo -e "\nCan't find ${REGISTRY_IMAGE} in ${REGISTRY_PROVIDER_DNS}" >&2
-            exit
+            fatal "Can't find ${REGISTRY_IMAGE} in ${REGISTRY_PROVIDER_DNS}"
         else
             # Copy to S3
             aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_REMOTE_TAGGED_REGISTRY_IMAGE}"
             RESULT=$?
-            if [[ "$?" -ne 0 ]]; then
-                echo -e "\nCouldn't tag image ${FULL_REGISTRY_IMAGE} with tag ${REMOTE_REGISTRY_TAG}" >&2
-                exit
-            fi
+            [[ "${RESULT}" -ne 0 ]] && \
+                fatal "Couldn't tag image ${FULL_REGISTRY_IMAGE} with tag ${REMOTE_REGISTRY_TAG}"
         fi
         ;;        
 
@@ -372,16 +353,13 @@ case ${REGISTRY_OPERATION} in
         aws --region "${REMOTE_REGISTRY_PROVIDER_REGION}" s3 ls "${FULL_REMOTE_TAGGED_REGISTRY_IMAGE}" >/dev/null 2>&1
         RESULT=$?
         if [[ "$RESULT" -ne 0 ]]; then
-            echo -e "\nCan't find ${REMOTE_REGISTRY_IMAGE} in ${REMOTE_REGISTRY_PROVIDER_DNS}" >&2
-            exit
+            fatal "Can't find ${REMOTE_REGISTRY_IMAGE} in ${REMOTE_REGISTRY_PROVIDER_DNS}"
         else
             # Copy image
             aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${FULL_REMOTE_REGISTRY_IMAGE}" "${IMAGE_FILE}"
             RESULT=$?
-            if [[ "$RESULT" -ne 0 ]]; then
-                echo -e "\nCan't copy remote image ${FULL_REMOTE_REGISTRY_IMAGE}" >&2
-                exit
-            fi
+            [[ "$RESULT" -ne 0 ]] && \
+                fatal "Can't copy remote image ${FULL_REMOTE_REGISTRY_IMAGE}"
         fi
 
         # Now copy to local rgistry
@@ -391,8 +369,7 @@ case ${REGISTRY_OPERATION} in
         ;;        
         
     *)
-        echo -e "\n Unknown operation \"${REGISTRY_OPERATION}\"" >&2
-        exit
+        fatal "Unknown operation \"${REGISTRY_OPERATION}\""
         ;;
 esac
 

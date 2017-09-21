@@ -2,8 +2,9 @@
 
 # Augment a swagger file with AWS API gateway integration semantics
  
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Define the desired result file
 DIST_DIR="${AUTOMATION_BUILD_DIR}/dist"
@@ -41,10 +42,7 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
         -c "import sys, yaml, json; json.dump(yaml.load(open('/app/indir/temp_swagger.yaml','r')), open('/app/outdir/temp_swagger.json','w'), indent=4)"
 fi
 
-if [[ ! -f "${SWAGGER_SPEC_FILE}" ]]; then
-    echo -e "\nCan't find source swagger file" >&2
-    exit
-fi
+[[ ! -f "${SWAGGER_SPEC_FILE}" ]] && fatal "Can't find source swagger file"
 
 # Validate it
 # We use a few different validators until we settle on a preferred one
@@ -55,10 +53,7 @@ VALIDATORS=( \
 for VALIDATOR in "${VALIDATORS[@]}"; do
     docker run --rm -v ${SWAGGER_SPEC_FILE%/*}:/app/indir codeontap/utilities ${VALIDATOR}
     RESULT=$?
-    if [[ "${RESULT}" -ne 0 ]]; then
-        echo -e "\nSwagger file is not valid" >&2
-        exit
-    fi
+    [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file is not valid"
 done
 
 # Augment the swagger file if required
@@ -75,11 +70,8 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
         -i "${APIGW_CONFIG}"
 
     # Check generation was successful
-    if [[ ! -f "${SWAGGER_RESULT_FILE}" ]]; then
-        echo -e "\nCan't find generated swagger files. Were they generated successfully?" >&2
-        exit
-    fi
-
+    [[ ! -f "${SWAGGER_RESULT_FILE}" ]] && \
+        fatal "Can't find generated swagger files. Were they generated successfully?"
 else
     zip "${SWAGGER_RESULT_FILE}" "${SWAGGER_SPEC_FILE}"
 fi
@@ -91,10 +83,7 @@ docker run --rm \
      --input=/app/indir/${SWAGGER_SPEC_FILE##*/} --output=/app/outdir/apidoc.html  \
      --theme-variables slate --theme-template triple
 RESULT=$?
-if [[ "${RESULT}" -ne 0 ]]; then
-    echo -e "\nSwagger file documentation generation failed" >&2
-    exit
-fi
+[[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed"
 
 # All good
 RESULT=0

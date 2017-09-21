@@ -1,12 +1,12 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Create the templates
 ${AUTOMATION_DIR}/createTemplates.sh -t application -c "${PRODUCT_CONFIG_COMMIT}"
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then exit; fi
+[[ ${RESULT} -ne 0 ]] && exit
 
 # Update the stacks
 ${AUTOMATION_DIR}/manageStacks.sh

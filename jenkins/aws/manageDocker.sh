@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Defaults
 DOCKER_TAG_DEFAULT="latest"
@@ -110,12 +111,10 @@ while getopts ":a:bd:g:hki:l:pr:s:t:u:vz:" opt; do
             REMOTE_DOCKER_PROVIDER="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}" >&2
-            exit
+            fatalOption
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument" >&2
-            exit
+            fatalOptionArgument
             ;;
      esac
 done
@@ -141,16 +140,12 @@ function isAWSRegistry() {
                 export AWS_ACCESS_KEY_ID="${PROVIDER_AWS_ACCESS_KEY_IDS[$INDEX]}"
                 export AWS_SECRET_ACCESS_KEY="${PROVIDER_AWS_SECRET_ACCESS_KEYS[$INDEX]}"
                 export AWS_SESSION_TOKEN="${PROVIDER_AWS_SESSION_TOKENS[$INDEX]}"
-                if [[ -z "${AWS_SESSION_TOKEN}" ]]; then
-                    unset AWS_SESSION_TOKEN
-                fi
+                [[ -z "${AWS_SESSION_TOKEN}" ]] && unset AWS_SESSION_TOKEN
                 return 0
             fi
         done
 
-        if [[ -z "$2" ]]; then
-            return 0
-        fi
+        [[ -z "$2" ]] && return 0
 
         # New registry - set up the AWS credentials
         . ${AUTOMATION_DIR}/setCredentials.sh ${2^^}
@@ -159,9 +154,7 @@ function isAWSRegistry() {
         export AWS_ACCESS_KEY_ID="${AWS_CRED_TEMP_AWS_ACCESS_KEY_ID:-${!AWS_CRED_AWS_ACCESS_KEY_ID_VAR}}"
         export AWS_SECRET_ACCESS_KEY="${AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY:-${!AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}}"
         export AWS_SESSION_TOKEN="${AWS_CRED_TEMP_AWS_SESSION_TOKEN}"
-        if [[ -z "${AWS_SESSION_TOKEN}" ]]; then
-            unset AWS_SESSION_TOKEN
-        fi
+        [[ -z "${AWS_SESSION_TOKEN}" ]] && unset AWS_SESSION_TOKEN
 
         # Cache the redentials
         PROVIDER_REGISTRY_IDS+=("${AWS_REGISTRY_ID}")
@@ -244,10 +237,8 @@ fi
 defineDockerProviderAttributes "${DOCKER_PROVIDER}" "DOCKER_PROVIDER"
 
 # Ensure the local repository has been determined
-if [[ -z "${DOCKER_REPO}" ]]; then
-    echo -e "\nJob requires the local repository name, or the product/deployment unit/commit" >&2
-    exit
-fi
+[[ -z "${DOCKER_REPO}" ]] && \
+    fatal "Job requires the local repository name, or the product/deployment unit/commit"
 
 # Apply remote registry defaults
 REMOTE_DOCKER_PROVIDER="${REMOTE_DOCKER_PROVIDER:-${PRODUCT_REMOTE_DOCKER_PROVIDER}}"
@@ -271,10 +262,7 @@ FULL_DOCKER_IMAGE="${DOCKER_PROVIDER_DNS}/${DOCKER_IMAGE}"
 # Confirm access to the local registry
 dockerLogin ${DOCKER_PROVIDER_DNS} ${DOCKER_PROVIDER} ${!DOCKER_PROVIDER_USER_VAR} ${!DOCKER_PROVIDER_PASSWORD_VAR}
 RESULT=$?
-if [[ "$RESULT" -ne 0 ]]; then
-    echo -e "\nCan't log in to ${DOCKER_PROVIDER_DNS}" >&2
-    exit
-fi
+[[ "$RESULT" -ne 0 ]] && fatal "Can't log in to ${DOCKER_PROVIDER_DNS}"
 
 # Perform the required action
 case ${DOCKER_OPERATION} in
@@ -289,20 +277,17 @@ case ${DOCKER_OPERATION} in
             -f "${DOCKERFILE}" \
             "${AUTOMATION_BUILD_DIR}"
         RESULT=$?
-        if [ $RESULT -ne 0 ]; then
-            echo -e "\nCannot build image ${DOCKER_IMAGE}" >&2
-            exit
-        fi
+        [[ $RESULT -ne 0 ]] && fatal "Cannot build image ${DOCKER_IMAGE}"
+
         createRepository ${DOCKER_PROVIDER_DNS} ${DOCKER_REPO}
         RESULT=$?
-        if [ $RESULT -ne 0 ]; then
-            echo -e "\nUnable to create repository ${DOCKER_REPO} in the local registry" >&2
-        fi
+        [[ $RESULT -ne 0 ]] && \
+            fatal "Unable to create repository ${DOCKER_REPO} in the local registry"
+
         docker push ${FULL_DOCKER_IMAGE}
         RESULT=$?
-        if [ $RESULT -ne 0 ]; then
-            echo -e "\nUnable to push ${DOCKER_IMAGE} to the local registry" >&2
-        fi
+        [[ $RESULT -ne 0 ]] && \
+            fatal "Unable to push ${DOCKER_IMAGE} to the local registry"
         ;;
 
     ${DOCKER_OPERATION_VERIFY})
@@ -318,13 +303,10 @@ case ${DOCKER_OPERATION} in
             DOCKER_IMAGE_PRESENT=$(curl -s https://${DOCKER_USER}:${DOCKER_PASSWORD}@${DOCKER_PROVIDER_API_DNS}/v1/repositories/${DOCKER_REPO}/tags | jq ".[\"${DOCKER_TAG}\"] | select(.!=null)")
         fi
 
-        if [[ -n "${DOCKER_IMAGE_PRESENT}" ]]; then
-            echo -e "\nDocker image ${DOCKER_IMAGE} present in the local registry"
-            RESULT=0
-        else
-            echo -e "\nDocker image ${DOCKER_IMAGE} not present in the local registry" >&2
-            RESULT=1
-        fi
+        [[ -n "${DOCKER_IMAGE_PRESENT}" ]] && RESULT=0 && \
+            info "Docker image ${DOCKER_IMAGE} present in the local registry"
+        [[ ! -n "${DOCKER_IMAGE_PRESENT}" ]] && RESULT=1 && \
+            info "Docker image ${DOCKER_IMAGE} not present in the local registry"
         ;;
 
     ${DOCKER_OPERATION_TAG})
@@ -335,26 +317,26 @@ case ${DOCKER_OPERATION} in
         # Pull in the local image
         docker pull ${FULL_DOCKER_IMAGE}
         RESULT=$?
-        if [[ "$RESULT" -ne 0 ]]; then
-            echo -e "\nCan't pull ${DOCKER_IMAGE} from ${DOCKER_PROVIDER_DNS}" >&2
+        [[ "$RESULT" -ne 0 ]] && \
+            ; then
+            error "Can't pull ${DOCKER_IMAGE} from ${DOCKER_PROVIDER_DNS}"
         else
             # Tag the image ready to push to the registry
             docker tag ${FULL_DOCKER_IMAGE} ${FULL_REMOTE_DOCKER_IMAGE}
             RESULT=$?
             if [[ "$?" -ne 0 ]]; then
-                echo -e "\nCouldn't tag image ${FULL_DOCKER_IMAGE} with ${FULL_REMOTE_DOCKER_IMAGE}" >&2
+                error "Couldn't tag image ${FULL_DOCKER_IMAGE} with ${FULL_REMOTE_DOCKER_IMAGE}"
             else
                 # Push to registry
                 createRepository ${DOCKER_PROVIDER_DNS} ${REMOTE_DOCKER_REPO}
                 RESULT=$?
-                if [ $RESULT -ne 0 ]; then
-                    echo -e "\nUnable to create repository ${REMOTE_DOCKER_REPO} in the local registry" >&2
-                fi
-
-                docker push ${FULL_REMOTE_DOCKER_IMAGE}
-                RESULT=$?
-                if [[ "$?" -ne 0 ]]; then
-                    echo -e "\nUnable to push ${REMOTE_DOCKER_IMAGE} to the local registry" >&2
+                if [[ $RESULT -ne 0 ]]; then
+                    error "Unable to create repository ${REMOTE_DOCKER_REPO} in the local registry"
+                else
+                    docker push ${FULL_REMOTE_DOCKER_IMAGE}
+                    RESULT=$?
+                    [[ $RESULT -ne 0 ]] && \
+                        error "Unable to push ${REMOTE_DOCKER_IMAGE} to the local registry"
                 fi
             fi
         fi
@@ -371,10 +353,8 @@ case ${DOCKER_OPERATION} in
                 # Confirm access to the remote registry
                 dockerLogin ${REMOTE_DOCKER_PROVIDER_DNS} ${REMOTE_DOCKER_PROVIDER} ${!REMOTE_DOCKER_PROVIDER_USER_VAR} ${!REMOTE_DOCKER_PROVIDER_PASSWORD_VAR}
                 RESULT=$?
-                if [[ "$RESULT" -ne 0 ]]; then
-                    echo -e "\nCan't log in to ${REMOTE_DOCKER_PROVIDER_DNS}" >&2
-                    exit
-                fi
+                [[ "$RESULT" -ne 0 ]] && \
+                    fatal "Can't log in to ${REMOTE_DOCKER_PROVIDER_DNS}"
                 ;;
                 
             *)
@@ -387,24 +367,24 @@ case ${DOCKER_OPERATION} in
         docker pull ${FULL_REMOTE_DOCKER_IMAGE}
         RESULT=$?
         if [[ "$RESULT" -ne 0 ]]; then
-            echo -e "\nCan't pull ${REMOTE_DOCKER_IMAGE} from ${DOCKER_IMAGE_SOURCE}" >&2
+            error "Can't pull ${REMOTE_DOCKER_IMAGE} from ${DOCKER_IMAGE_SOURCE}"
         else
             # Tag the image ready to push to the registry
             docker tag ${FULL_REMOTE_DOCKER_IMAGE} ${FULL_DOCKER_IMAGE}
             RESULT=$?
             if [[ "$RESULT" -ne 0 ]]; then
-                echo -e "\nCouldn't tag image ${FULL_REMOTE_DOCKER_IMAGE} with ${FULL_DOCKER_IMAGE}" >&2
+                error "Couldn't tag image ${FULL_REMOTE_DOCKER_IMAGE} with ${FULL_DOCKER_IMAGE}"
             else
                 # Push to registry
                 createRepository ${DOCKER_PROVIDER_DNS} ${DOCKER_REPO}
                 RESULT=$?
-                if [ $RESULT -ne 0 ]; then
-                    echo -e "\nUnable to create repository ${DOCKER_REPO} in the local registry" >&2
+                if [[ $RESULT -ne 0 ]]; then
+                    error "Unable to create repository ${DOCKER_REPO} in the local registry"
                 else
                     docker push ${FULL_DOCKER_IMAGE}
                     RESULT=$?
-                    if [[ "$RESULT" -ne 0 ]]; then
-                        echo -e "\nUnable to push ${DOCKER_IMAGE} to the local registry" >&2
+                    [[ "$RESULT" -ne 0 ]] && \
+                        error "Unable to push ${DOCKER_IMAGE} to the local registry"
                     fi
                 fi
             fi
@@ -412,20 +392,15 @@ case ${DOCKER_OPERATION} in
         ;;        
         
     *)
-        echo -e "\n Unknown operation \"${DOCKER_OPERATION}\"" >&2
-        exit
+        fatal "Unknown operation \"${DOCKER_OPERATION}\""
         ;;
 esac
 
 IMAGEID=$(docker images | grep "${REMOTE_DOCKER_REPO}" | grep "${REMOTE_DOCKER_TAG}" | head -1 |awk '{print($3)}')
-if [[ "${IMAGEID}" != "" ]]; then
-    docker rmi -f ${IMAGEID}
-fi
+[[ "${IMAGEID}" != "" ]] && docker rmi -f ${IMAGEID}
 
 IMAGEID=$(docker images | grep "${DOCKER_REPO}" | grep "${DOCKER_TAG}" | head -1 |awk '{print($3)}')
-if [[ "${IMAGEID}" != "" ]]; then
-    docker rmi -f ${IMAGEID}
-fi
+[[ "${IMAGEID}" != "" ]] && docker rmi -f ${IMAGEID}
 
 # The RESULT variable is not explicitly set here so result of operation
 # can be returned after image cleanup.

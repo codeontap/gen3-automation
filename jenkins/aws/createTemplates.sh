@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${GENERATION_DIR}/common.sh"
 
 # Defaults
 TYPE_DEFAULT="application"
@@ -59,12 +60,10 @@ while getopts ":c:hr:s:t:u:" opt; do
             DEPLOYMENT_UNIT_LIST="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}" >&2
-            exit
+            fatalOption
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument" >&2
-            exit
+            fatalOptionArgument
             ;;
      esac
 done
@@ -73,25 +72,19 @@ done
 export TYPE="${TYPE:-${TYPE_DEFAULT}}"
 
 # Ensure mandatory arguments have been provided
-if [[ (-z "${CONFIGURATION_REFERENCE}") ||
-        (-z "${DEPLOYMENT_UNIT_LIST}") ||
-        (-z "${TYPE}") ]]; then
-    echo -e "\nInsufficient arguments" >&2
-    exit
-fi
+[[ (-z "${CONFIGURATION_REFERENCE}") ||
+    (-z "${DEPLOYMENT_UNIT_LIST}") ||
+    (-z "${TYPE}") ]] && fatalMandatory
 
-cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
+cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
 
 for CURRENT_DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST}; do
 
     # Generate the template for each deployment unit
     ${GENERATION_DIR}/createTemplate.sh -u "${CURRENT_DEPLOYMENT_UNIT}"
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
- 		echo -e "\nGeneration of template for deployment unit ${CURRENT_DEPLOYMENT_UNIT} failed" >&2
-        exit
-    fi
-
+    [[ ${RESULT} -ne 0 ]] && \
+        fatal "Generation of template for deployment unit ${CURRENT_DEPLOYMENT_UNIT} failed"
 done
 
 # All good

@@ -1,25 +1,22 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Make sure we are in the build source directory
 cd ${AUTOMATION_BUILD_SRC_DIR}
 
 # Is this really a python based project
-if [[ ! -f requirements.txt ]]; then
-   echo -e "\nNo requirements.txt - is this really a python base repo?" >&2
-   RESULT=1 && exit
-fi
+[[ ! -f requirements.txt ]] && RESULT=1 && \
+    fatal "No requirements.txt - is this really a python base repo?"
 
 # Set up the virtual build environment - keep out of source tree
 PYTHON_VERSION="${AUTOMATION_PYTHON_VERSION:+ -p } ${AUTOMATION_PYTHON_VERSION}"
 virtualenv ${PYTHON_VERSION} ${AUTOMATION_BUILD_DIR}/.venv
 RESULT=$?
-if [ ${RESULT} -ne 0 ]; then
-   echo -e "\nCreation of virtual build environment failed" >&2
-   exit
-fi
+[[ ${RESULT} -ne 0 ]] && fatal "Creation of virtual build environment failed"
+
 . ${AUTOMATION_BUILD_DIR}/.venv/bin/activate
 
 # Process requirements files
@@ -28,29 +25,20 @@ REQUIREMENTS_FILES=( requirements*.txt )
 for REQUIREMENTS_FILE in "${REQUIREMENTS_FILES[@]}"; do
     pip install -r ${REQUIREMENTS_FILE} --upgrade
     RESULT=$?
-    if [ ${RESULT} -ne 0 ]; then
-       echo -e "\nInstallation of requirements failed" >&2
-       exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && fatal "Installation of requirements failed"
 done
 
 if [[ -f package.json ]]; then
     npm install --unsafe-perm
     RESULT=$?
-    if [ ${RESULT} -ne 0 ]; then
-       echo -e "\nnpm install failed" >&2
-       exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && fatal "npm install failed"
 fi
 
 # Run bower as part of the build if required
 if [[ -f bower.json ]]; then
     bower install --allow-root
     RESULT=$?
-    if [ ${RESULT} -ne 0 ]; then
-       echo -e "\nbower install failed" >&2
-       exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && fatal "Bower install failed"
 fi
 
 # Run unit tests - there should always be a task even if it does nothing
@@ -85,10 +73,7 @@ done
 if [[ -f package.json ]]; then
     npm prune --production
     RESULT=$?
-    if [ ${RESULT} -ne 0 ]; then
-       echo -e "\nnpm prune failed" >&2
-       exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && "npm prune failed"
 fi
 
 # All good

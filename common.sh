@@ -68,5 +68,26 @@ function fatalMandatory() {
     fatal "Mandatory arguments missing. Check usage via -h option."
 }
 
+function findSubDir() {
+    local MARKER="${1}"
+    shift
+    local ROOT_DIR="${1:-$(pwd)}"
 
+    local NULLGLOB=$(shopt -p nullglob)
+    local GLOBSTAR=$(shopt -p globstar)
 
+    shopt -s nullglob globstar
+    MATCHES=("${ROOT_DIR}"/**/${MARKER})
+
+    ${NULLGLOB}
+    ${GLOBSTAR}
+
+    if [[ $(arrayIsEmpty "MATCHES") ]]; then
+        return 1
+    fi
+
+    [[ -f "${MATCHES[0]}" ]] && \
+        echo -n "$(filePath "${MATCHES[0]}")" || \
+        echo -n "${MATCHES[0]}"
+    return 0
+}

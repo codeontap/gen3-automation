@@ -1,12 +1,12 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Update the stacks
 ${AUTOMATION_DIR}/manageStacks.sh
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then exit; fi
+[[ ${RESULT} -ne 0 ]] && exit
 
 # Add release and deployment tags to details
 DETAIL_MESSAGE="deployment=${RELEASE_TAG}, release=${RELEASE_TAG}, ${DETAIL_MESSAGE}"

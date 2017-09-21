@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 REPO_OPERATION_CLONE="clone"
 REPO_OPERATION_INIT="init"
@@ -67,22 +68,16 @@ function init() {
         git init .
     fi
 
-    if [[ (-z "${REPO_REMOTE}") ]]; then
-        echo -e "\nInsufficient arguments" >&2
-        exit
-    fi
+    [[ (-z "${REPO_REMOTE}") ]] && fatalMandatory
+
     git remote show "${REPO_REMOTE}" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
-        if [[ (-z "${REPO_URL}") ]]; then
-            echo -e "\nInsufficient arguments" >&2
-            exit
-        fi
+        [[ -z "${REPO_URL}" ]] && fatalMandatory
+
         git remote add "${REPO_REMOTE}" "${REPO_URL}"
         RESULT=$?
-        if [[ ${RESULT} -ne 0 ]]; then
-            echo -e "\nCan't add remote ${REPO_REMOTE} to ${REPO_LOG_NAME} repo" >&2
-            exit
-        fi
+        [[ ${RESULT} -ne 0 ]] && \
+            fatal "Can't add remote ${REPO_REMOTE} to ${REPO_LOG_NAME} repo"
     fi
     
     git log -n 1 >/dev/null 2>&1
@@ -98,36 +93,26 @@ function init() {
 }
 
 function clone() {
-    echo -e "Cloning the ${REPO_LOG_NAME} repo and checking out the ${REPO_BRANCH} branch ..."
-    if [[ (-z "${REPO_URL}") ||
-            (-z "${REPO_BRANCH}") ]]; then
-        echo -e "\nInsufficient arguments" >&2
-        exit
-    fi
+    info "Cloning the ${REPO_LOG_NAME} repo and checking out the ${REPO_BRANCH} branch ..."
+    [[ (-z "${REPO_URL}") ||
+        (-z "${REPO_BRANCH}") ]] && fatalMandatory
 
     git clone -b "${REPO_BRANCH}" "${REPO_URL}" .
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nCan't clone ${REPO_LOG_NAME} repo" >&2
-        exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && \
+        fatal "Can't clone ${REPO_LOG_NAME} repo"
 }
 
 function push() {
-    if [[ (-z "${GIT_USER}") ||
-            (-z "${GIT_EMAIL}") ||
-            (-z "${REPO_MESSAGE}") ||
-            (-z "${REPO_REMOTE}") ]]; then
-        echo -e "\nInsufficient arguments" >&2
-        exit
-    fi
+    [[ (-z "${GIT_USER}") ||
+        (-z "${GIT_EMAIL}") ||
+        (-z "${REPO_MESSAGE}") ||
+        (-z "${REPO_REMOTE}") ]] && fatalMandatory
 
     git remote show "${REPO_REMOTE}" >/dev/null 2>&1
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nRemote ${REPO_REMOTE} is not initialised" >&2
-        exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && \
+        fatal "Remote ${REPO_REMOTE} is not initialised"
 
     # Ensure git knows who we are
     git config user.name  "${GIT_USER}"
@@ -141,10 +126,9 @@ function push() {
         echo -e "Committing to the ${REPO_LOG_NAME} repo..."
         git commit -m "${REPO_MESSAGE}"
         RESULT=$?
-        if [[ ${RESULT} -ne 0 ]]; then
-            echo -e "\nCan't commit to the ${REPO_LOG_NAME} repo" >&2
-            exit
-        fi
+        [[ ${RESULT} -ne 0 ]] && \
+            fatal "Can't commit to the ${REPO_LOG_NAME} repo"
+
         REPO_PUSH_REQUIRED="true"
     fi
 
@@ -153,10 +137,9 @@ function push() {
         echo -e "Adding tag \"${REPO_TAG}\" to the ${REPO_LOG_NAME} repo..."
         git tag -a "${REPO_TAG}" -m "${REPO_MESSAGE}"
         RESULT=$?
-        if [[ ${RESULT} -ne 0 ]]; then
-            echo -e "\nCan't tag the ${REPO_LOG_NAME} repo" >&2
-            exit
-        fi
+        [[ ${RESULT} -ne 0 ]] && \
+            fatal "Can't tag the ${REPO_LOG_NAME} repo"
+
         REPO_PUSH_REQUIRED="true"
     fi
 
@@ -165,10 +148,8 @@ function push() {
         echo -e "Pushing the ${REPO_LOG_NAME} repo upstream..."
         git push --tags ${REPO_REMOTE} ${REPO_BRANCH}
         RESULT=$?
-        if [[ ${RESULT} -ne 0 ]]; then
-            echo -e "\nCan't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}" >&2
-            exit
-        fi
+        [[ ${RESULT} -ne 0 ]] && \
+            fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}"
     fi
 }
 
@@ -235,12 +216,10 @@ while getopts ":b:cd:e:hil:m:n:pr:s:t:u:v:" opt; do
             REPO_PROVIDER="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}" >&2
-            exit
+            fatalOption
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument" >&2
-            exit
+            fatalOptionArgument
             ;;
      esac
 done
@@ -262,20 +241,15 @@ if [[ -z "${REPO_URL}" ]]; then
 fi
 
 # Ensure mandatory arguments have been provided
-if [[ (-z "${REPO_DIR}") ||
-        (-z "${REPO_LOG_NAME}") ]]; then
-    echo -e "\nInsufficient arguments" >&2
-    exit
-fi
+[[ (-z "${REPO_DIR}") ||
+    (-z "${REPO_LOG_NAME}") ]] && fatalMandatory
 
 # Ensure we are inside the repo directory
 if [[ ! -d "${REPO_DIR}" ]]; then
     mkdir -p "${REPO_DIR}"
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nCan't create repo directory ${REPO_DIR}" >&2
-        exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && \
+        fatal "Can't create repo directory ${REPO_DIR}"
 fi
 cd "${REPO_DIR}"
 

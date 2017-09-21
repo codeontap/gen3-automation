@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Make sure we are in the build source directory
 cd ${AUTOMATION_BUILD_SRC_DIR}
@@ -17,19 +18,13 @@ fi
 
 ${NODE_PACKAGE_MANAGER} install
 RESULT=$?
-if [ $RESULT -ne 0 ]; then
-   echo -e "\nnpm install failed" >&2
-   exit
-fi
+[[ $RESULT -ne 0 ]] && fatal "npm install failed"
 
 # Run bower as part of the build if required
 if [[ -f bower.json ]]; then
     bower install --allow-root
     RESULT=$?
-    if [ $RESULT -ne 0 ]; then
-       echo -e "\nbower install failed" >&2
-       exit
-    fi
+    [[ $RESULT -ne 0 ]] && fatal "Bower install failed"
 fi
 
 # Determine required tasks
@@ -70,10 +65,7 @@ for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
         if [[ "${BUILD_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" != "${BUILD_TASKS[*]}" ]]; then
             ${BUILD_UTILITY} ${REQUIRED_TASK}
             RESULT=$?
-            if [ $RESULT -ne 0 ]; then
-                echo -e "\n${BUILD_UTILITY} \"${TASK}\" task failed" >&2
-                exit
-            fi
+            [[ $RESULT -ne 0 ]] && fatal "${BUILD_UTILITY} \"${TASK}\" task failed"
 
             # Task complete so stop looking for build file supporting it
             break
@@ -91,10 +83,7 @@ case ${NODE_PACKAGE_MANAGER} in
         ;;
 esac
 RESULT=$?
-if [ $RESULT -ne 0 ]; then
-   echo -e "\nPrune failed" >&2
-   exit
-fi
+[[ $RESULT -ne 0 ]] && fatal "Prune failed"
 
 ${AUTOMATION_DIR}/manageImages.sh -f "${IMAGE_FORMATS_ARRAY[0]}"
 RESULT=$?

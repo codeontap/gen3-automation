@@ -1,7 +1,9 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
+
 AUTOMATION_BASE_DIR=$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd )
 
 DEPLOYMENT_MODE_UPDATE="update"
@@ -81,12 +83,10 @@ while getopts ":a:d:e:hi:p:r:s:t:" OPT; do
             TENANT="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}" >&2
-            exit
+            fatalOption
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument" >&2
-            exit
+            fatalOptionArgument
             ;;
      esac
 done
@@ -585,9 +585,7 @@ done
 # Capture any provided git commit
 case ${AUTOMATION_PROVIDER} in
     jenkins)
-        if [[ -n "${GIT_COMMIT}" ]]; then
-            CODE_COMMIT_ARRAY[0]="${GIT_COMMIT}"
-        fi
+        [[ -n "${GIT_COMMIT}" ]] && CODE_COMMIT_ARRAY[0]="${GIT_COMMIT}"
         ;;
 esac
 
@@ -616,12 +614,8 @@ echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.prop
 echo "CODE_REPO_LIST=${CODE_REPO_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "CODE_PROVIDER_LIST=${CODE_PROVIDER_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-if [[ -n "${UPDATED_UNITS}" ]]; then
-    echo "DEPLOYMENT_UNITS=${UPDATED_UNITS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-fi
-if [[ -n "${SEGMENT}" ]]; then
-    echo "SEGMENT_APPSETTINGS_DIR=${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/appsettings/${SEGMENT}" >> ${AUTOMATION_DATA_DIR}/context.properties
-fi
+[[ -n "${UPDATED_UNITS}" ]] && echo "DEPLOYMENT_UNITS=${UPDATED_UNITS}" >> ${AUTOMATION_DATA_DIR}/context.properties
+[[ -n "${SEGMENT}" ]] && echo "SEGMENT_APPSETTINGS_DIR=${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/appsettings/${SEGMENT}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
 ### Release management ###
  
@@ -656,8 +650,7 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
                     defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
                 done
             else
-                echo -e "\nPROMOTION segment/account not defined" >&2
-                exit
+                fatal "PROMOTION segment/account not defined"
             fi
             ;;
 
@@ -681,8 +674,7 @@ if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
                     defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
                 done
             else
-                echo -e "\HOTFIX segment/account not defined" >&2
-                exit
+                fatal "HOTFIX segment/account not defined"
             fi
             ;;
     esac

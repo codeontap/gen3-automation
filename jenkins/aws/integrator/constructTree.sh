@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Defaults
 INTEGRATOR_REFERENCE_DEFAULT="master"
@@ -46,12 +47,10 @@ while getopts ":b:hi:" opt; do
             INTEGRATOR_REFERENCE="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}" >&2
-            exit
+            fatalOption
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument" >&2
-            exit
+            fatalOptionArgument
             ;;
      esac
 done
@@ -70,20 +69,16 @@ BASE_DIR="${AUTOMATION_DATA_DIR}"
 INTEGRATOR_DIR="${BASE_DIR}/${INTEGRATOR}"
 git clone https://${!INTEGRATOR_GIT_CREDENTIALS_VAR}@${INTEGRATOR_GIT_DNS}/${INTEGRATOR_GIT_ORG}/${INTEGRATOR_REPO} ${INTEGRATOR_DIR}
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then
-    echo -e "\nCan't fetch the integrator repo" >&2
-    exit
-fi
+[[ ${RESULT} -ne 0 ]] && fatal "Can't fetch the integrator repo"
+
 echo "INTEGRATOR_DIR=${INTEGRATOR_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 
 # Pull in the default generation repo
 GENERATION_DIR="${BASE_DIR}/bin"
 git clone https://${GENERATION_GIT_DNS}/${GENERATION_GIT_ORG}/${GENERATION_BIN_REPO} -b ${GENERATION_BIN_REFERENCE} ${GENERATION_DIR}
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then
-    echo -e "\nCan't fetch the GENERATION repo" >&2
-    exit
-fi
+[[ ${RESULT} -ne 0 ]] && fatal "Can't fetch the GENERATION repo"
+
 # echo "GENERATION_DIR=${GENERATION_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
 echo "GENERATION_DIR=${GENERATION_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
 

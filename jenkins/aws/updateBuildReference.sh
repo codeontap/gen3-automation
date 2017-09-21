@@ -1,12 +1,13 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Update build references
 ${AUTOMATION_DIR}/manageBuildReferences.sh -u
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then exit; fi
+[[ ${RESULT} -ne 0 ]] && exit
 
 TAG_SWITCH=()
 if [[ -n "${RELEASE_MODE_TAG}" ]]; then
@@ -20,13 +21,12 @@ ${AUTOMATION_DIR}/manageRepo.sh -p \
     "${TAG_SWITCH[@]}" \
     -b ${PRODUCT_CONFIG_REFERENCE}
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then exit; fi
+[[ ${RESULT} -ne 0 ]] && exit
 
 if [[ (-n "${AUTODEPLOY+x}") &&
         ("$AUTODEPLOY" != "true") ]]; then
-  echo -e "\nAUTODEPLOY is not true, triggering exit" >&2
-  RESULT=2
-  exit
+    RESULT=2
+    fatal "AUTODEPLOY is not true, triggering exit"
 fi
 
 # Record key parameters for downstream jobs

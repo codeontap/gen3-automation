@@ -1,18 +1,17 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Ensure RELEASE_IDENTIFIER have been provided
-if [[ -z "${RELEASE_IDENTIFIER}" ]]; then
-	echo -e "\nJob requires the identifier of the release to use in the deployment" >&2
-    exit
+[[ -z "${RELEASE_IDENTIFIER}" ]] && \
+    fatal "Job requires the identifier of the release to use in the deployment"
 fi
 
 # Ensure at least one deployment unit has been provided
-if [[ ( -z "${DEPLOYMENT_UNIT_LIST}" ) ]]; then
-	echo -e "\nJob requires at least one deployment unit" >&2
-    exit
+[[ ( -z "${DEPLOYMENT_UNIT_LIST}" ) ]] && \
+    fatal "Job requires at least one deployment unit"
 fi
 
 # Don't forget -c ${RELEASE_TAG} -i ${RELEASE_TAG} on constructTree.sh

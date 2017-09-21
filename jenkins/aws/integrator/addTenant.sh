@@ -1,17 +1,15 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${GENERATION_DIR}/common.sh"
 
 cd ${AUTOMATION_DATA_DIR}/${INTEGRATOR}
 
 # Add the tenant
 ${GENERATION_DIR}/integrator/addTenant.sh
 RESULT=$?
-if [[ ${RESULT} -ne 0 ]]; then
-	echo "Can't add tenant, exiting..."
-	exit
-fi
+[[ ${RESULT} -ne 0 ]] && fatal "Can't add tenant"
 
 # Save the additions to the repo
 ${AUTOMATION_DIR}/manageRepo.sh -n ${INTEGRATOR_REPO} -m "Added tenant ${TENANT}"

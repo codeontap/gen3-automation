@@ -8,7 +8,7 @@
 
 AWS_CRED_ACCOUNT="${1^^}"
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 
 # Clear any previous results
 unset AWS_CRED_AWS_ACCESS_KEY_ID_VAR

@@ -1,24 +1,21 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
-if [[ -z ${GIT_COMMIT} ]]; then
-  echo -e "\nThis job requires a GIT_COMMIT value" >&2
-  exit
-fi
+[[ -z ${GIT_COMMIT} ]] && \
+    fatal "This job requires a GIT_COMMIT value"
 
 # Ensure at least one deployment unit has been provided
-if [[ ( -z "${DEPLOYMENT_UNIT_LIST}" ) ]]; then
-	echo -e "\nJob requires at least one deployment unit" >&2
-    exit
-fi
+[[ -z "${DEPLOYMENT_UNIT_LIST}" ]] && \
+    fatal "Job requires at least one deployment unit"
 
-# Ensure at least one format has been built
-if [[ ( -z "${IMAGE_FORMAT}" ) && ( -z "${IMAGE_FORMATS}" ) ]]; then
-	echo -e "\nJob requires the image format(s) used to package the build" >&2
-    exit
-fi
+# Ensure at least one deployment unit has been provided
+[[ ( -z "${IMAGE_FORMAT}" ) && 
+    ( -z "${IMAGE_FORMATS}" ) ]] && \
+    fatal "Job requires the image format used to package the build"
+
 
 # All good
 RESULT=0

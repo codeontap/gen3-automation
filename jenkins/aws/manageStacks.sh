@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${GENERATION_DIR}/common.sh"
 
 DEPLOYMENT_MODE_UPDATE="update"
 DEPLOYMENT_MODE_STOP="stop"
@@ -60,12 +61,10 @@ while getopts ":hm:s:t:u:" opt; do
             DEPLOYMENT_UNIT_LIST="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}" >&2
-            exit
+            fatalOption
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument" >&2
-            exit
+            fatalOptionArgument
             ;;
      esac
 done
@@ -75,24 +74,19 @@ export DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-${DEPLOYMENT_MODE_DEFAULT}}"
 export TYPE="${TYPE:-${TYPE_DEFAULT}}"
 
 # Ensure mandatory arguments have been provided
-if [[ (-z "${DEPLOYMENT_MODE}") ||
-       (-z "${DEPLOYMENT_UNIT_LIST}") ||
-       (-z "${TYPE}") ]]; then
-    echo -e "\nInsufficient arguments" >&2
-    exit
-fi
+[[ (-z "${DEPLOYMENT_MODE}") ||
+    (-z "${DEPLOYMENT_UNIT_LIST}") ||
+    (-z "${TYPE}") ]] && fatalMandatory
 
-cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
+cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
 
 for CURRENT_DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST}; do
 
     if [[ "${MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT} -d; fi
     if [[ "${MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT}; fi
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
-        echo -e "\nStack operation for ${CURRENT_DEPLOYMENT_UNIT} deployment unit failed" >&2
-        exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && \
+        fatal "Stack operation for ${CURRENT_DEPLOYMENT_UNIT} deployment unit failed"
 done
 
 # All good

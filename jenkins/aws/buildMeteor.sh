@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Change to the app directory
 cd app
@@ -12,35 +13,24 @@ NODE_PACKAGE_MANAGER="${NODE_PACKAGE_MANAGER:-yarn}"
 # Install required node modules
 ${NODE_PACKAGE_MANAGER} install --production
 RESULT=$?
-if [ $RESULT -ne 0 ]; then
-   echo -e "\nnpm install failed" >&2
-   exit
-fi
+[[ $RESULT -ne 0 ]] && fatal "npm install failed"
 
 # Build meteor but don't tar it
 meteor build ../dist --directory
 RESULT=$?
-if [ $RESULT -ne 0 ]; then
-   echo -e "\nmeteor build failed" >&2
-   exit
-fi
+[[ $RESULT -ne 0 ]] && fatal "Meteor build failed"
+
 cd ..
 
 # Install the required node modules
 (cd dist/bundle/programs/server && ${NODE_PACKAGE_MANAGER} install --production)
 RESULT=$?
-if [ $RESULT -ne 0 ]; then
-   echo -e "\nInstallation of app node modules failed" >&2
-   exit
-fi
+[[ $RESULT -ne 0 ]] && "Installation of app node modules failed"
 
 # Sanity check on final size of build
 MAX_METEOR_BUILD_SIZE=${MAX_METEOR_BUILD_SIZE:-100}
-if [[ $(du -s -m ./dist | cut -f 1) -gt ${MAX_METEOR_BUILD_SIZE} ]]; then
-    RESULT=1
-    echo -e "\nBuild size exceeds ${MAX_METEOR_BUILD_SIZE}M" >&2
-    exit
-fi
+[[ $(du -s -m ./dist | cut -f 1) -gt ${MAX_METEOR_BUILD_SIZE} ]] && RESULT=1 && \ 
+    fatal "Build size exceeds ${MAX_METEOR_BUILD_SIZE}M"
 
 ${AUTOMATION_DIR}/manageImages.sh
 RESULT=$?

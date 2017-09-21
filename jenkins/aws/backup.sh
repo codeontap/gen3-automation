@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${GENERATION_DIR}/common.sh"
 
 # Formulate parameters - any provided to this script are also passed trhough
 SNAPSHOT_OPTS=
@@ -16,13 +17,9 @@ if [[ -n "${COMPONENT}" ]]; then
 fi
 
 # Snapshot the database
-cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
+cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
 
 ${GENERATION_DIR}/snapshotRDSDatabase.sh -s b${AUTOMATION_JOB_IDENTIFIER} ${SNAPSHOT_OPTS} "$@"
 RESULT=$?
-
-if [[ ${RESULT} -ne 0 ]]; then
-	echo -e "\nSnapshot of ${SEGMENT} failed" >&2
-	exit
-fi
+[[ ${RESULT} -ne 0 ]] && fatal "Snapshot of ${SEGMENT} failed"
 

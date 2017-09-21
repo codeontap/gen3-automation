@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 REFERENCE_MASTER="master"
 
@@ -84,12 +85,10 @@ while getopts ":ab:c:fhi:np:rs:" opt; do
             GENERATION_STARTUP_REFERENCE="${OPTARG}"
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}" >&2
-            exit
+            fatalOption
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument" >&2
-            exit
+            fatalOptionArgument
             ;;
      esac
 done
@@ -106,10 +105,7 @@ INCLUDE_ALL_REPOS="${INCLUDE_ALL_REPOS:-false}"
 INIT_REPOS="${INIT_REPOS:-false}"
 
 # Check for required context
-if [[ -z "${ACCOUNT}" ]]; then
-    echo -e "\nACCOUNT not defined" >&2
-    exit
-fi
+[[ -z "${ACCOUNT}" ]] && fatal "ACCOUNT not defined"
 
 # Save for later steps
 echo "PRODUCT_CONFIG_REFERENCE=${PRODUCT_CONFIG_REFERENCE}" >> ${AUTOMATION_DATA_DIR}/context.properties
@@ -126,9 +122,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
         -n "${PRODUCT_CONFIG_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
         -d "${PRODUCT_DIR}" -b "${PRODUCT_CONFIG_REFERENCE}"
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
- 	    exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && exit
     
     # Initialise if necessary
     if [[ "${INIT_REPOS}" == "true" ]]; then
@@ -136,9 +130,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
             -n "${PRODUCT_CONFIG_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
             -d "${PRODUCT_DIR}"
         RESULT=$?
-        if [[ ${RESULT} -ne 0 ]]; then
-            exit
-        fi
+        [[ ${RESULT} -ne 0 ]] && exit
     fi
 
     echo "PRODUCT_CONFIG_COMMIT=$(git -C ${PRODUCT_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
@@ -152,9 +144,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         -n "${ACCOUNT_CONFIG_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
         -d "${ACCOUNT_DIR}"
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
-        exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && exit
 
     # Initialise if necessary
     if [[ "${INIT_REPOS}" == "true" ]]; then
@@ -162,9 +152,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
             -n "${ACCOUNT_CONFIG_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
             -d "${ACCOUNT_DIR}"
         RESULT=$?
-        if [[ ${RESULT} -ne 0 ]]; then
-            exit
-        fi
+        [[ ${RESULT} -ne 0 ]] && exit
     fi
 fi
 
@@ -179,9 +167,7 @@ if [[ -z "${GENERATION_DIR}" ]]; then
             -n "${GENERATION_BIN_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
             -d "${GENERATION_DIR}" -b "${GENERATION_BIN_REFERENCE}"
         RESULT=$?
-        if [[ ${RESULT} -ne 0 ]]; then
-            exit
-        fi
+        [[ ${RESULT} -ne 0 ]] && exit
     fi
     echo "GENERATION_DIR=${GENERATION_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
 fi
@@ -198,9 +184,7 @@ if [[ -z "${GENERATION_PATTERNS_DIR}" ]]; then
                 -n "${GENERATION_PATTERNS_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
                 -d "${GENERATION_PATTERNS_DIR}" -b "${GENERATION_PATTERNS_REFERENCE}"
             RESULT=$?
-            if [[ ${RESULT} -ne 0 ]]; then
-                exit
-            fi
+            [[ ${RESULT} -ne 0 ]] && exit
         fi
         echo "GENERATION_PATTERNS_DIR=${GENERATION_PATTERNS_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
     fi
@@ -214,9 +198,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
         -n "${PRODUCT_INFRASTRUCTURE_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
         -d "${PRODUCT_DIR}" -b "${PRODUCT_INFRASTRUCTURE_REFERENCE}"
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
- 	    exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && exit
     
     # Initialise if necessary
     if [[ "${INIT_REPOS}" == "true" ]]; then
@@ -224,9 +206,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
             -n "${PRODUCT_INFRASTRUCTURE_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
             -d "${PRODUCT_DIR}"
         RESULT=$?
-        if [[ ${RESULT} -ne 0 ]]; then
-            exit
-        fi
+        [[ ${RESULT} -ne 0 ]] && exit
     fi
 
     echo "PRODUCT_INFRASTRUCTURE_COMMIT=$(git -C ${PRODUCT_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
@@ -240,9 +220,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         -n "${ACCOUNT_INFRASTRUCTURE_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
         -d "${ACCOUNT_DIR}"
     RESULT=$?
-    if [[ ${RESULT} -ne 0 ]]; then
-        exit
-    fi
+    [[ ${RESULT} -ne 0 ]] && exit
 
     # Initialise if necessary
     if [[ "${INIT_REPOS}" == "true" ]]; then
@@ -250,9 +228,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
             -n "${ACCOUNT_INFRASTRUCTURE_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
             -d "${ACCOUNT_DIR}"
         RESULT=$?
-        if [[ ${RESULT} -ne 0 ]]; then
-            exit
-        fi
+        [[ ${RESULT} -ne 0 ]] && exit
     fi
 fi
 
@@ -268,9 +244,7 @@ if [[ -z "${GENERATION_STARTUP_DIR}" ]]; then
                 -n "${GENERATION_STARTUP_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
                 -d "${GENERATION_STARTUP_DIR}" -b "${GENERATION_STARTUP_REFERENCE}"
             RESULT=$?
-            if [[ ${RESULT} -ne 0 ]]; then
-                exit
-            fi
+            [[ ${RESULT} -ne 0 ]] && exit
         fi
         echo "GENERATION_STARTUP_DIR=${GENERATION_STARTUP_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
     fi

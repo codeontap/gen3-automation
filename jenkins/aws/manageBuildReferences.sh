@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if [[ -n "${AUTOMATION_DEBUG}" ]]; then set ${AUTOMATION_DEBUG}; fi
+[[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Defaults
 REFERENCE_OPERATION_ACCEPT="accept"
@@ -201,12 +202,10 @@ while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
             VERIFICATION_TAG="${OPTARG}"            
             ;;
         \?)
-            echo -e "\nInvalid option: -${OPTARG}" >&2
-            exit
+            fatalOption
             ;;
         :)
-            echo -e "\nOption -${OPTARG} requires an argument" >&2
-            exit
+            fatalOptionArgument
             ;;
      esac
 done
@@ -219,50 +218,34 @@ case ${REFERENCE_OPERATION} in
     ${REFERENCE_OPERATION_ACCEPT})
         # Add the acceptance tag on provided deployment unit list
         # Normally this would be called after list full
-        if [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
-                (-z "${ACCEPTANCE_TAG}") ]]; then
-            echo -e "\nInsufficient arguments" >&2
-            exit
-        fi
+        [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
+            (-z "${ACCEPTANCE_TAG}") ]] && fatalMandatory
         ;;
 
     ${REFERENCE_OPERATION_LIST})
         # Format the build details based on provided deployment unit list
-        if [[ (-z "${DEPLOYMENT_UNIT_LIST}") ]]; then
-            echo -e "\nInsufficient arguments" >&2
-            exit
-        fi
+        [[ (-z "${DEPLOYMENT_UNIT_LIST}") ]] && fatalMandatory
         ;;
 
     ${REFERENCE_OPERATION_LISTFULL})
         # Populate DEPLOYMENT_UNIT_LIST based on current appsettings
-        if [[ -z "${SEGMENT_APPSETTINGS_DIR}" ]]; then
-            echo -e "\nInsufficient arguments" >&2
-            exit
-        fi
+        [[ -z "${SEGMENT_APPSETTINGS_DIR}" ]] && fatalMandatory
         ;;
 
     ${REFERENCE_OPERATION_UPDATE})
         # Update builds based on provided deployment unit list
-        if [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
-                (-z "${SEGMENT_APPSETTINGS_DIR}") ]]; then
-            echo -e "\nInsufficient arguments" >&2
-            exit
-        fi
+        [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
+            (-z "${SEGMENT_APPSETTINGS_DIR}") ]] && fatalMandatory
         ;;
 
     ${REFERENCE_OPERATION_VERIFY})
         # Verify builds based on provided deployment unit list
-        if [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
-                (-z "${VERIFICATION_TAG}") ]]; then
-            echo -e "\nInsufficient arguments" >&2
-            exit
-        fi
+        [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
+            (-z "${VERIFICATION_TAG}") ]] && fatalMandatory
         ;;
 
     *)
-        echo -e "\nInvalid REFERENCE_OPERATION \"${REFERENCE_OPERATION}\"" >&2
-        exit
+        fatal "Invalid REFERENCE_OPERATION \"${REFERENCE_OPERATION}\""
         ;;
 esac
 
@@ -336,17 +319,16 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
                                 -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
-                            if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+                            [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
                         lambda|swagger|cloudfront)
                             ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
                                 -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
-                            if [[ "${RESULT}" -ne 0 ]]; then exit; fi
+                            if [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
                         *)
-                            echo -e "\nUnknown image format \"${IMAGE_FORMAT}\"" >&2
-                            exit
+                            fatal "Unknown image format \"${IMAGE_FORMAT}\""
                             ;;
                     esac
                 done
@@ -376,7 +358,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
             # Ensure something to do for the current deployment unit
             if [[ "${CODE_COMMIT}" == "?" ]]; then continue; fi
             if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" != "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
-                echo -e "\nIgnoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
+                warn "Ignoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
                 continue
             fi
         
@@ -393,9 +375,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
             # Update the build reference
             # Use newer naming and clean up legacy named build reference files
             echo -n "${BUILD_REFERENCE}" > "${NEW_BUILD_FILE}"
-            if [[ -e "${LEGACY_BUILD_FILE}" ]]; then
-                rm "${LEGACY_BUILD_FILE}"
-            fi
+            [[ -e "${LEGACY_BUILD_FILE}" ]] && rm "${LEGACY_BUILD_FILE}"
             ;;
     
         ${REFERENCE_OPERATION_VERIFY})
@@ -403,12 +383,12 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
             if [[ "${CODE_COMMIT}" == "?" ]]; then
                 if [[ "${CODE_TAG}" != "?" ]]; then
                     if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" != "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
-                        echo -e "\nIgnoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
+                        warn "Ignoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
                         continue
                     fi
                     if [[ ("${CODE_REPO}" == "?") ||
                             ("${CODE_PROVIDER}" == "?") ]]; then
-                        echo -e "\nIgnoring tag for the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - no code repo and/or provider defined"
+                        warn "Ignoring tag for the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - no code repo and/or provider defined"
                         continue
                     fi
                     # Determine the details of the provider hosting the code repo
@@ -418,19 +398,16 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     "${CODE_TAG}" | cut -f 1)
                     CODE_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
                                     "${CODE_TAG}^{}" | cut -f 1)
-                    if [[ -z "${CODE_COMMIT}" ]]; then
-                        echo -e "\nTag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?" >&2
-                        exit
-                    fi
+                    [[ -z "${CODE_COMMIT}" ]] && \
+                        fatal "Tag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?"
                     
                     # Fetch other info about the tag
                     # We are using a github api here to avoid having to pull in the whole repo - 
                     # git currently doesn't have a command to query the message of a remote tag
                     CODE_TAG_MESSAGE=$(curl -s https://${!CODE_CREDENTIALS_VAR}@${CODE_API_DNS}/repos/${CODE_ORG}/${CODE_REPO}/git/tags/${TAG_COMMIT} | jq .message | tr -d '"')
-                    if [[ (-z "${CODE_TAG_MESSAGE}") || ("${CODE_TAG_MESSAGE}" == "Not Found") ]]; then
-                        echo -e "\nMessage for tag ${CODE_TAG} not found in the ${CODE_REPO} repo" >&2
-                        exit
-                    fi
+                    [[ (-z "${CODE_TAG_MESSAGE}") || 
+                        ("${CODE_TAG_MESSAGE}" == "Not Found") ]] && \
+                        fatal "Message for tag ${CODE_TAG} not found in the ${CODE_REPO} repo"
                     # else
                     # TODO: Confirm commit is in remote repo - for now we'll assume its there if an image exists
                 else
@@ -476,8 +453,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             RESULT=$?
                             ;;
                         *)
-                            echo -e "\nUnknown image format \"${IMAGE_FORMAT}\"" >&2
-                            exit
+                            fatal "Unknown image format \"${IMAGE_FORMAT}\""
                             ;;
                     esac
                     if [[ "${RESULT}" -ne 0 ]]; then
@@ -501,17 +477,13 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     RESULT=$?
                                     ;;
                                 *)
-                                    echo -e "\nUnknown image format \"${IMAGE_FORMAT}\"" >&2
-                                    exit
+                                    fatal "Unknown image format \"${IMAGE_FORMAT}\""
                                     ;;
                             esac
-                            if [[ "${RESULT}" -ne 0 ]]; then
-                                echo -e "\nUnable to pull ${IMAGE_FORMAT,,} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" >&2
-                                exit
-                            fi
+                            [[ "${RESULT}" -ne 0 ]] && \
+                                fatal "Unable to pull ${IMAGE_FORMAT,,} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from provider ${FROM_IMAGE_PROVIDER}. Was the build successful?"
                         else
-                            echo -e "\n${IMAGE_FORMAT^} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?" >&2
-                            exit
+                            fatal "${IMAGE_FORMAT^} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?"
                         fi
                     fi
                 done

@@ -169,6 +169,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
 fi
 
 # Pull in the default generation repo if not overridden by product or locally installed
+[[ -n "${GENERATION_BASE_DIR}" ]] && GENERATION_DIR="${GENERATION_BASE_DIR}"
 if [[ -z "${GENERATION_DIR}" ]]; then
     GENERATION_DIR="${BASE_DIR}/config/bin"
     if [[ -d ${BASE_DIR}/config/${PRODUCT}/bin ]]; then

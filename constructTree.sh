@@ -132,6 +132,12 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
         RESULT=$?
         [[ ${RESULT} -ne 0 ]] && exit
     fi
+    
+    # Accommodate multi-product repos
+    PRODUCT_SUB_DIR="$(findSubDir "${PRODUCT}/product.json" "${PRODUCT_DIR}")"
+    [[ -n "${PRODUCT_SUB_DIR}" ]] && \
+        PRODUCT_DIR="${BASE_DIR}/config/products" &&
+        mv "${BASE_DIR}/config/${PRODUCT}" "${PRODUCT_DIR}"
 
     echo "PRODUCT_CONFIG_COMMIT=$(git -C ${PRODUCT_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
 fi
@@ -154,6 +160,12 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         RESULT=$?
         [[ ${RESULT} -ne 0 ]] && exit
     fi
+
+    # Accommodate multi-account repos
+    ACCOUNT_SUB_DIR="$(findSubDir "${ACCOUNT}/account.json" "${ACCOUNT_DIR}")"
+    [[ -n "${ACCOUNT_SUB_DIR}" ]] && \
+        ACCOUNT_DIR="${BASE_DIR}/config/accounts" &&
+        mv "${BASE_DIR}/config/${ACCOUNT}" "${ACCOUNT_DIR}"
 fi
 
 # Pull in the default generation repo if not overridden by product or locally installed
@@ -209,6 +221,12 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
         [[ ${RESULT} -ne 0 ]] && exit
     fi
 
+    # Accommodate multi-product repos
+    PRODUCT_SUB_DIR="$(findSubDir "${PRODUCT}" "${PRODUCT_DIR}")"
+    [[ -n "${PRODUCT_SUB_DIR}" ]] && \
+        PRODUCT_DIR="${BASE_DIR}/infrastructure/products" &&
+        mv "${BASE_DIR}/infrastructure/${PRODUCT}" "${PRODUCT_DIR}"
+
     echo "PRODUCT_INFRASTRUCTURE_COMMIT=$(git -C ${PRODUCT_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
 fi
 
@@ -230,6 +248,12 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         RESULT=$?
         [[ ${RESULT} -ne 0 ]] && exit
     fi
+
+    # Accommodate multi-account repos
+    ACCOUNT_SUB_DIR="$(findSubDir "${ACCOUNT}" "${ACCOUNT_DIR}")"
+    [[ -n "${ACCOUNT_SUB_DIR}" ]] && \
+        ACCOUNT_DIR="${BASE_DIR}/infrastructure/accounts" &&
+        mv "${BASE_DIR}/infrastructure/${ACCOUNT}" "${ACCOUNT_DIR}"
 fi
 
 # Pull in the default generation startup repo if not overridden by product or locally installed

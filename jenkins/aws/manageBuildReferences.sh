@@ -325,7 +325,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
                                 -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
-                            if [[ "${RESULT}" -ne 0 ]] && exit
+                            [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
                         *)
                             fatal "Unknown image format \"${IMAGE_FORMAT}\""

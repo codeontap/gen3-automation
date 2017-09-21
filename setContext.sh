@@ -415,7 +415,6 @@ case "${AUTOMATION_PROVIDER}" in
             AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
         [[ -n "${BUILD_PATH}" ]] && \
             AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}"
-        fi
 
         # Build source directory
         AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"

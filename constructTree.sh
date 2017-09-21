@@ -169,20 +169,22 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
 fi
 
 # Pull in the default generation repo if not overridden by product or locally installed
-[[ -n "${GENERATION_BASE_DIR}" ]] && GENERATION_DIR="${GENERATION_BASE_DIR}"
 if [[ -z "${GENERATION_DIR}" ]]; then
-    GENERATION_DIR="${BASE_DIR}/config/bin"
-    if [[ -d ${BASE_DIR}/config/${PRODUCT}/bin ]]; then
-        mkdir -p "${GENERATION_DIR}"
-        cp -rp ${BASE_DIR}/config/${PRODUCT}/bin "${GENERATION_DIR}"
-    else
-        ${AUTOMATION_DIR}/manageRepo.sh -c -l "generation bin" \
-            -n "${GENERATION_BIN_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
-            -d "${GENERATION_DIR}" -b "${GENERATION_BIN_REFERENCE}"
-        RESULT=$?
-        [[ ${RESULT} -ne 0 ]] && exit
+    if [[ -z "${GENERATION_BASE_DIR}" ]]; then
+        GENERATION_BASE_DIR="${BASE_DIR}/config/bin"
+        PRODUCT_GENERATION_BASE_DIR="$(findSubDir "${PRODUCT}/bin" "${PRODUCT_DIR}")"
+        if [[ -n "${PRODUCT_GENERATION_BASE_DIR}" ]]; then
+            mkdir -p "${GENERATION_BASE_DIR}"
+            cp -rp "${PRODUCT_GENERATION_BASE_DIR}" "${GENERATION_BASE_DIR}"
+        else
+            ${AUTOMATION_DIR}/manageRepo.sh -c -l "generation bin" \
+                -n "${GENERATION_BIN_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
+                -d "${GENERATION_BASE_DIR}" -b "${GENERATION_BIN_REFERENCE}"
+            RESULT=$?
+            [[ ${RESULT} -ne 0 ]] && exit
+        fi
     fi
-    echo "GENERATION_DIR=${GENERATION_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
+    echo "GENERATION_DIR=${GENERATION_BASE_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
 fi
 
 # Pull in the patterns repo if not overridden by product or locally installed

@@ -82,9 +82,7 @@ function findSubDir() {
     ${NULLGLOB}
     ${GLOBSTAR}
 
-    if [[ $(arrayIsEmpty "MATCHES") ]]; then
-        return 1
-    fi
+    [[ -z "${MATCHES[0]}" ]] && return 1
 
     [[ -f "${MATCHES[0]}" ]] && \
         echo -n "$(filePath "${MATCHES[0]}")" || \

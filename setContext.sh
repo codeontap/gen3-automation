@@ -411,10 +411,12 @@ case "${AUTOMATION_PROVIDER}" in
         
         # Build directory
         AUTOMATION_BUILD_DIR="${AUTOMATION_DATA_DIR}"
-        [[ -d build ]] && \
-            AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
-        [[ -n "${BUILD_PATH}" ]] && \
-            AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}"
+        [[ -d build ]] && AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
+        if [[ -n "${BUILD_PATH}" ]]; then
+            [[-d "${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ]] && \
+                AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" || \
+                fatal "Build path directory \"$BUILD_PATH\" not found"
+        fi
 
         # Build source directory
         AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"

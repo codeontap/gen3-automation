@@ -415,7 +415,7 @@ case "${AUTOMATION_PROVIDER}" in
         if [[ -n "${BUILD_PATH}" ]]; then
             [[-d "${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ]] && \
                 AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" || \
-                fatal "Build path directory \"$BUILD_PATH\" not found"
+                fatal "Build path directory \"${BUILD_PATH}\" not found"
         fi
 
         # Build source directory

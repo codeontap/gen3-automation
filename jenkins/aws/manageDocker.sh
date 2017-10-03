@@ -384,7 +384,6 @@ case ${DOCKER_OPERATION} in
                     RESULT=$?
                     [[ "$RESULT" -ne 0 ]] && \
                         error "Unable to push ${DOCKER_IMAGE} to the local registry"
-                    fi
                 fi
             fi
         fi

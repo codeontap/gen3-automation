@@ -310,7 +310,7 @@ case ${REGISTRY_OPERATION} in
         # Check whether the image is already in the local registry
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FULL_TAGGED_REGISTRY_IMAGE}" >/dev/null 2>&1
         RESULT=$?
-        [[ "${RESULT}" -eq 0 ]] && \
+        if [[ "${RESULT}" -eq 0 ]]; then
             info "${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} present in the local registry" 
             exit
         else

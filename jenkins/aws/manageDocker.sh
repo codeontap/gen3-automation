@@ -317,8 +317,7 @@ case ${DOCKER_OPERATION} in
         # Pull in the local image
         docker pull ${FULL_DOCKER_IMAGE}
         RESULT=$?
-        [[ "$RESULT" -ne 0 ]] && \
-            ; then
+        if [[ "$RESULT" -ne 0 ]]; then
             error "Can't pull ${DOCKER_IMAGE} from ${DOCKER_PROVIDER_DNS}"
         else
             # Tag the image ready to push to the registry

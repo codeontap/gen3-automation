@@ -5,29 +5,30 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${GENERATION_DIR}/common.sh"
 
 # Defaults
-TYPE_DEFAULT="application"
+LEVEL_DEFAULT="application"
 
 function usage() {
     cat <<EOF
 
 Generate templates for one or more deployment units
 
-Usage: $(basename $0) -u DEPLOYMENT_UNIT_LIST -s DEPLOYMENT_UNIT_LIST -c CONFIGURATION_REFERENCE -r REQUEST_REFERENCE -t TYPE
+Usage: $(basename $0) -u DEPLOYMENT_UNIT_LIST -s DEPLOYMENT_UNIT_LIST -c CONFIGURATION_REFERENCE -r REQUEST_REFERENCE -l LEVEL
 
 where
 
 (m) -c CONFIGURATION_REFERENCE  is the id of the configuration (commit id, branch id, tag) used to generate the template
     -h                          shows this text
+(m) -l LEVEL                    is the template level - "account", "product", "segment", "solution", "application" or "multiple"
 (o) -r REQUEST_REFERENCE        is an opaque value to link this template to a triggering request management system
 (d) -s DEPLOYMENT_UNIT_LIST     same as -u
-(m) -t TYPE                     is the template type - "account", "product", "segment", "solution" or "application"
+(d) -t LEVEL                    same as -l
 (m) -u DEPLOYMENT_UNIT_LIST     is the list of deployment units to process
 
 (m) mandatory, (o) optional, (d) deprecated
 
 DEFAULTS:
 
-TYPE = "${TYPE_DEFAULT}"
+LEVEL = "${LEVEL_DEFAULT}"
 
 NOTES:
 
@@ -39,13 +40,16 @@ EOF
 }
 
 # Parse options
-while getopts ":c:hr:s:t:u:" opt; do
+while getopts ":c:hl:r:s:t:u:" opt; do
     case $opt in
         c)
             export CONFIGURATION_REFERENCE="${OPTARG}"
             ;;
         h)
             usage
+            ;;
+        l)
+            LEVEL="${OPTARG}"
             ;;
         r)
             export REQUEST_REFERENCE="${OPTARG}"
@@ -54,7 +58,7 @@ while getopts ":c:hr:s:t:u:" opt; do
             DEPLOYMENT_UNIT_LIST="${OPTARG}"
             ;;
         t)
-            TYPE="${OPTARG}"
+            LEVEL="${OPTARG}"
             ;;
         u)
             DEPLOYMENT_UNIT_LIST="${OPTARG}"
@@ -69,12 +73,12 @@ while getopts ":c:hr:s:t:u:" opt; do
 done
 
 # Apply defaults
-export TYPE="${TYPE:-${TYPE_DEFAULT}}"
+export LEVEL="${LEVEL:-${LEVEL_DEFAULT}}"
 
 # Ensure mandatory arguments have been provided
 [[ (-z "${CONFIGURATION_REFERENCE}") ||
     (-z "${DEPLOYMENT_UNIT_LIST}") ||
-    (-z "${TYPE}") ]] && fatalMandatory
+    (-z "${LEVEL}") ]] && fatalMandatory
 
 cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
 

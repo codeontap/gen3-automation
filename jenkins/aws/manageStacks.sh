@@ -10,21 +10,22 @@ DEPLOYMENT_MODE_STOPSTART="stopstart"
 
 # Defaults
 DEPLOYMENT_MODE_DEFAULT="${DEPLOYMENT_MODE_UPDATE}"
-TYPE_DEFAULT="application"
+LEVEL_DEFAULT="application"
 
 function usage() {
     cat <<EOF
 
 Manage stacks for one or more deployment units
 
-Usage: $(basename $0) -s DEPLOYMENT_UNIT_LIST -t TYPE -m DEPLOYMENT_MODE
+Usage: $(basename $0) -s DEPLOYMENT_UNIT_LIST -l LEVEL -m DEPLOYMENT_MODE
 
 where
 
     -h                      shows this text
+(m) -l LEVEL                is the template level - "account", "product", "segment", "solution", "application" or "multiple"
 (m) -m DEPLOYMENT_MODE      is the deployment mode
 (d) -s DEPLOYMENT_UNIT_LIST same as -u
-(m) -t TYPE                 is the template type
+(d) -t LEVEL                same as -l
 (m) -u DEPLOYMENT_UNIT_LIST is the list of deployment units to process
 
 (m) mandatory, (o) optional, (d) deprecated
@@ -32,21 +33,24 @@ where
 DEFAULTS:
 
 DEPLOYMENT_MODE = "${DEPLOYMENT_MODE_DEFAULT}"
-TYPE = "${TYPE_DEFAULT}"
+LEVEL = "${LEVEL_DEFAULT}"
 
 NOTES:
 
 1. ACCOUNT, PRODUCT and SEGMENT must already be defined
-2. All of the deployment units in DEPLOYMENT_UNIT_LIST must be the same type
+2. All of the deployment units in DEPLOYMENT_UNIT_LIST must be the same level
 
 EOF
 }
 
 # Parse options
-while getopts ":hm:s:t:u:" opt; do
+while getopts ":hl:m:s:t:u:" opt; do
     case $opt in
         h)
             usage
+            ;;
+        t)
+            LEVEL="${OPTARG}"
             ;;
         m)
             DEPLOYMENT_MODE="${OPTARG}"
@@ -55,7 +59,7 @@ while getopts ":hm:s:t:u:" opt; do
             DEPLOYMENT_UNIT_LIST="${OPTARG}"
             ;;
         t)
-            TYPE="${OPTARG}"
+            LEVEL="${OPTARG}"
             ;;
         u)
             DEPLOYMENT_UNIT_LIST="${OPTARG}"
@@ -71,12 +75,12 @@ done
 
 # Apply defaults
 export DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-${DEPLOYMENT_MODE_DEFAULT}}"
-export TYPE="${TYPE:-${TYPE_DEFAULT}}"
+export LEVEL="${LEVEL:-${LEVEL_DEFAULT}}"
 
 # Ensure mandatory arguments have been provided
 [[ (-z "${DEPLOYMENT_MODE}") ||
     (-z "${DEPLOYMENT_UNIT_LIST}") ||
-    (-z "${TYPE}") ]] && fatalMandatory
+    (-z "${LEVEL}") ]] && fatalMandatory
 
 cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
 

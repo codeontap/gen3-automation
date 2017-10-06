@@ -29,7 +29,7 @@ RESULT=$?
 
 # Sanity check on final size of build
 MAX_METEOR_BUILD_SIZE=${MAX_METEOR_BUILD_SIZE:-100}
-[[ $(du -s -m ./dist | cut -f 1) -gt ${MAX_METEOR_BUILD_SIZE} ]] && RESULT=1 && \ 
+[[ $(du -s -m ./dist | cut -f 1) -gt ${MAX_METEOR_BUILD_SIZE} ]] && RESULT=1 &&
     fatal "Build size exceeds ${MAX_METEOR_BUILD_SIZE}M"
 
 ${AUTOMATION_DIR}/manageImages.sh

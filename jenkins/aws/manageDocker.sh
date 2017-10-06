@@ -237,7 +237,7 @@ fi
 defineDockerProviderAttributes "${DOCKER_PROVIDER}" "DOCKER_PROVIDER"
 
 # Ensure the local repository has been determined
-[[ -z "${DOCKER_REPO}" ]] && \
+[[ -z "${DOCKER_REPO}" ]] &&
     fatal "Job requires the local repository name, or the product/deployment unit/commit"
 
 # Apply remote registry defaults
@@ -281,12 +281,12 @@ case ${DOCKER_OPERATION} in
 
         createRepository ${DOCKER_PROVIDER_DNS} ${DOCKER_REPO}
         RESULT=$?
-        [[ $RESULT -ne 0 ]] && \
+        [[ $RESULT -ne 0 ]] &&
             fatal "Unable to create repository ${DOCKER_REPO} in the local registry"
 
         docker push ${FULL_DOCKER_IMAGE}
         RESULT=$?
-        [[ $RESULT -ne 0 ]] && \
+        [[ $RESULT -ne 0 ]] &&
             fatal "Unable to push ${DOCKER_IMAGE} to the local registry"
         ;;
 
@@ -303,9 +303,9 @@ case ${DOCKER_OPERATION} in
             DOCKER_IMAGE_PRESENT=$(curl -s https://${DOCKER_USER}:${DOCKER_PASSWORD}@${DOCKER_PROVIDER_API_DNS}/v1/repositories/${DOCKER_REPO}/tags | jq ".[\"${DOCKER_TAG}\"] | select(.!=null)")
         fi
 
-        [[ -n "${DOCKER_IMAGE_PRESENT}" ]] && RESULT=0 && \
+        [[ -n "${DOCKER_IMAGE_PRESENT}" ]] && RESULT=0 &&
             info "Docker image ${DOCKER_IMAGE} present in the local registry"
-        [[ ! -n "${DOCKER_IMAGE_PRESENT}" ]] && RESULT=1 && \
+        [[ ! -n "${DOCKER_IMAGE_PRESENT}" ]] && RESULT=1 &&
             info "Docker image ${DOCKER_IMAGE} not present in the local registry"
         ;;
 
@@ -334,7 +334,7 @@ case ${DOCKER_OPERATION} in
                 else
                     docker push ${FULL_REMOTE_DOCKER_IMAGE}
                     RESULT=$?
-                    [[ $RESULT -ne 0 ]] && \
+                    [[ $RESULT -ne 0 ]] &&
                         error "Unable to push ${REMOTE_DOCKER_IMAGE} to the local registry"
                 fi
             fi
@@ -352,7 +352,7 @@ case ${DOCKER_OPERATION} in
                 # Confirm access to the remote registry
                 dockerLogin ${REMOTE_DOCKER_PROVIDER_DNS} ${REMOTE_DOCKER_PROVIDER} ${!REMOTE_DOCKER_PROVIDER_USER_VAR} ${!REMOTE_DOCKER_PROVIDER_PASSWORD_VAR}
                 RESULT=$?
-                [[ "$RESULT" -ne 0 ]] && \
+                [[ "$RESULT" -ne 0 ]] &&
                     fatal "Can't log in to ${REMOTE_DOCKER_PROVIDER_DNS}"
                 ;;
                 
@@ -382,7 +382,7 @@ case ${DOCKER_OPERATION} in
                 else
                     docker push ${FULL_DOCKER_IMAGE}
                     RESULT=$?
-                    [[ "$RESULT" -ne 0 ]] && \
+                    [[ "$RESULT" -ne 0 ]] &&
                         error "Unable to push ${DOCKER_IMAGE} to the local registry"
                 fi
             fi

@@ -87,7 +87,7 @@ for CURRENT_DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST}; do
     # Generate the template for each deployment unit
     ${GENERATION_DIR}/createTemplate.sh -u "${CURRENT_DEPLOYMENT_UNIT}"
     RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && \
+    [[ ${RESULT} -ne 0 ]] &&
         fatal "Generation of template for deployment unit ${CURRENT_DEPLOYMENT_UNIT} failed"
 done
 

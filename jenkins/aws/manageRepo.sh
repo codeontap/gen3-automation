@@ -76,7 +76,7 @@ function init() {
 
         git remote add "${REPO_REMOTE}" "${REPO_URL}"
         RESULT=$?
-        [[ ${RESULT} -ne 0 ]] && \
+        [[ ${RESULT} -ne 0 ]] &&
             fatal "Can't add remote ${REPO_REMOTE} to ${REPO_LOG_NAME} repo"
     fi
     
@@ -99,7 +99,7 @@ function clone() {
 
     git clone -b "${REPO_BRANCH}" "${REPO_URL}" .
     RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && \
+    [[ ${RESULT} -ne 0 ]] &&
         fatal "Can't clone ${REPO_LOG_NAME} repo"
 }
 
@@ -111,7 +111,7 @@ function push() {
 
     git remote show "${REPO_REMOTE}" >/dev/null 2>&1
     RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && \
+    [[ ${RESULT} -ne 0 ]] &&
         fatal "Remote ${REPO_REMOTE} is not initialised"
 
     # Ensure git knows who we are
@@ -126,7 +126,7 @@ function push() {
         echo -e "Committing to the ${REPO_LOG_NAME} repo..."
         git commit -m "${REPO_MESSAGE}"
         RESULT=$?
-        [[ ${RESULT} -ne 0 ]] && \
+        [[ ${RESULT} -ne 0 ]] &&
             fatal "Can't commit to the ${REPO_LOG_NAME} repo"
 
         REPO_PUSH_REQUIRED="true"
@@ -137,7 +137,7 @@ function push() {
         echo -e "Adding tag \"${REPO_TAG}\" to the ${REPO_LOG_NAME} repo..."
         git tag -a "${REPO_TAG}" -m "${REPO_MESSAGE}"
         RESULT=$?
-        [[ ${RESULT} -ne 0 ]] && \
+        [[ ${RESULT} -ne 0 ]] &&
             fatal "Can't tag the ${REPO_LOG_NAME} repo"
 
         REPO_PUSH_REQUIRED="true"
@@ -148,7 +148,7 @@ function push() {
         echo -e "Pushing the ${REPO_LOG_NAME} repo upstream..."
         git push --tags ${REPO_REMOTE} ${REPO_BRANCH}
         RESULT=$?
-        [[ ${RESULT} -ne 0 ]] && \
+        [[ ${RESULT} -ne 0 ]] &&
             fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}"
     fi
 }
@@ -248,7 +248,7 @@ fi
 if [[ ! -d "${REPO_DIR}" ]]; then
     mkdir -p "${REPO_DIR}"
     RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && \
+    [[ ${RESULT} -ne 0 ]] &&
         fatal "Can't create repo directory ${REPO_DIR}"
 fi
 cd "${REPO_DIR}"

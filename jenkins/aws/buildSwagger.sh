@@ -70,7 +70,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
         -i "${APIGW_CONFIG}"
 
     # Check generation was successful
-    [[ ! -f "${SWAGGER_RESULT_FILE}" ]] && \
+    [[ ! -f "${SWAGGER_RESULT_FILE}" ]] &&
         fatal "Can't find generated swagger files. Were they generated successfully?"
 else
     zip "${SWAGGER_RESULT_FILE}" "${SWAGGER_SPEC_FILE}"

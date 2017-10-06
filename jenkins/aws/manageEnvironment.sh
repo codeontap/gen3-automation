@@ -17,7 +17,7 @@ for LEVEL in segment solution; do
             create|update)
    	            ${GENERATION_DIR}/create${LEVEL^}Template.sh -u ${DEPLOYMENT_UNIT}
                 RESULT=$?
-                [[ "${RESULT}" -ne 0 ]] && \
+                [[ "${RESULT}" -ne 0 ]] &&
                     fatal "Generation of the ${LEVEL} level template for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
 		    ;;
         esac
@@ -25,7 +25,7 @@ for LEVEL in segment solution; do
         # Manage the stack
         ${GENERATION_DIR}/${MODE}Stack.sh -t ${LEVEL} -u ${DEPLOYMENT_UNIT}
 	    RESULT=$?
-        [[ "${RESULT}" -ne 0 ]] && \
+        [[ "${RESULT}" -ne 0 ]] &&
             fatal "Applying ${MODE} mode to the ${LEVEL} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
         
 		# Update the infrastructure repo to capture any stack changes
@@ -35,7 +35,7 @@ for LEVEL in segment solution; do
             -m "Stack changes as a result of applying ${MODE} mode to the ${LEVEL} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment"
             
 	    RESULT=$?
-        [[ "${RESULT}" -ne 0 ]] && \
+        [[ "${RESULT}" -ne 0 ]] &&
             fatal "Unable to save the changes resulting from applying ${MODE} mode to the ${LEVEL} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment"
     done
 done
@@ -60,7 +60,7 @@ if [[ "${CHECK_CREDENTIALS}" == "true" ]]; then
     git commit -m "Credential updates for the ${SEGMENT} segment"
     git push origin master
 	RESULT=$?
-    [[ "${RESULT}" -ne 0 ]] && \
+    [[ "${RESULT}" -ne 0 ]] &&
         fatal "Unable to save the credential updates for the ${SEGMENT} segment"
 fi
 

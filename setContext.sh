@@ -341,10 +341,10 @@ case "${AUTOMATION_PROVIDER}" in
         INTEGRATOR_RE=
         COT_RE="^(cot.?)-(.+)"
         for PART in ${JOB_PATH[@]}; do
-            [[ $(contains "${PART}" "^(int.?)-(.+)") ]] &&
+            contains "${PART}" "^(int.?)-(.+)" &&
                 INTEGRATOR_PARTS_ARRAY+=("${BASH_REMATCH[2]}")
 
-            if [[ $(contains "${PART}" "^(cot.?)-(.+)") ]]; then
+            if contains "${PART}" "^(cot.?)-(.+)"; then
                 case "${BASH_REMATCH[1]}" in
                     cota)
                         AGGREGATOR="${AGGREGATOR:-${BASH_REMATCH[1]}}"

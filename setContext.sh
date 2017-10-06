@@ -413,7 +413,7 @@ case "${AUTOMATION_PROVIDER}" in
         AUTOMATION_BUILD_DIR="${AUTOMATION_DATA_DIR}"
         [[ -d build ]] && AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
         if [[ -n "${BUILD_PATH}" ]]; then
-            [[-d "${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ]] && \
+            [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ]] && \
                 AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" || \
                 fatal "Build path directory \"${BUILD_PATH}\" not found"
         fi

@@ -5,7 +5,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Ensure RELEASE_IDENTIFIER have been provided
-[[ -z "${RELEASE_IDENTIFIER}" ]] && \
+[[ -z "${RELEASE_IDENTIFIER}" ]] &&
     fatal "Job requires the identifier of the release to be accepted"
 fi
 

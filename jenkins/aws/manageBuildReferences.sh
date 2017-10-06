@@ -398,7 +398,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     "${CODE_TAG}" | cut -f 1)
                     CODE_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
                                     "${CODE_TAG}^{}" | cut -f 1)
-                    [[ -z "${CODE_COMMIT}" ]] && \
+                    [[ -z "${CODE_COMMIT}" ]] &&
                         fatal "Tag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?"
                     
                     # Fetch other info about the tag
@@ -406,7 +406,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     # git currently doesn't have a command to query the message of a remote tag
                     CODE_TAG_MESSAGE=$(curl -s https://${!CODE_CREDENTIALS_VAR}@${CODE_API_DNS}/repos/${CODE_ORG}/${CODE_REPO}/git/tags/${TAG_COMMIT} | jq .message | tr -d '"')
                     [[ (-z "${CODE_TAG_MESSAGE}") || 
-                        ("${CODE_TAG_MESSAGE}" == "Not Found") ]] && \
+                        ("${CODE_TAG_MESSAGE}" == "Not Found") ]] &&
                         fatal "Message for tag ${CODE_TAG} not found in the ${CODE_REPO} repo"
                     # else
                     # TODO: Confirm commit is in remote repo - for now we'll assume its there if an image exists
@@ -480,7 +480,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     fatal "Unknown image format \"${IMAGE_FORMAT}\""
                                     ;;
                             esac
-                            [[ "${RESULT}" -ne 0 ]] && \
+                            [[ "${RESULT}" -ne 0 ]] &&
                                 fatal "Unable to pull ${IMAGE_FORMAT,,} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from provider ${FROM_IMAGE_PROVIDER}. Was the build successful?"
                         else
                             fatal "${IMAGE_FORMAT^} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?"

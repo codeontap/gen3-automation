@@ -24,7 +24,7 @@ TASK_LIST="${TASK_LIST:-$TASK}"
 for CURRENT_TASK in $TASK_LIST; do
     ${GENERATION_DIR}/runTask.sh -t "${TASK_TIER}" -i "${TASK_COMPONENT}" -w "${CURRENT_TASK}" "${ENVS[@]}"
     RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && \
+    [[ ${RESULT} -ne 0 ]] &&
         fatal "Running of task ${CURRENT_TASK} failed"
 done
 

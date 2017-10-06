@@ -89,7 +89,7 @@ for CURRENT_DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST}; do
     if [[ "${MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT} -d; fi
     if [[ "${MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT}; fi
     RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && \
+    [[ ${RESULT} -ne 0 ]] &&
         fatal "Stack operation for ${CURRENT_DEPLOYMENT_UNIT} deployment unit failed"
 done
 

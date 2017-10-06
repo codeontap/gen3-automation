@@ -134,8 +134,8 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
     fi
     
     # Accommodate multi-product repos
-    PRODUCT_SUB_DIR="$(findSubDir "${PRODUCT}/product.json" "${PRODUCT_DIR}")"
-    [[ -n "${PRODUCT_SUB_DIR}" ]] && \
+    PRODUCT_SUB_DIR="$(findDir "${PRODUCT}/product.json" "${PRODUCT_DIR}")"
+    [[ -n "${PRODUCT_SUB_DIR}" ]] &&
         PRODUCT_DIR="${BASE_DIR}/config/products" &&
         mv "${BASE_DIR}/config/${PRODUCT}" "${PRODUCT_DIR}"
 
@@ -162,8 +162,8 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
     fi
 
     # Accommodate multi-account repos
-    ACCOUNT_SUB_DIR="$(findSubDir "${ACCOUNT}/account.json" "${ACCOUNT_DIR}")"
-    [[ -n "${ACCOUNT_SUB_DIR}" ]] && \
+    ACCOUNT_SUB_DIR="$(findDir "${ACCOUNT}/account.json" "${ACCOUNT_DIR}")"
+    [[ -n "${ACCOUNT_SUB_DIR}" ]] &&
         ACCOUNT_DIR="${BASE_DIR}/config/accounts" &&
         mv "${BASE_DIR}/config/${ACCOUNT}" "${ACCOUNT_DIR}"
 fi
@@ -172,7 +172,7 @@ fi
 if [[ -z "${GENERATION_DIR}" ]]; then
     if [[ -z "${GENERATION_BASE_DIR}" ]]; then
         GENERATION_BASE_DIR="${BASE_DIR}/config/bin"
-        PRODUCT_GENERATION_BASE_DIR="$(findSubDir "${PRODUCT}/bin" "${PRODUCT_DIR}")"
+        PRODUCT_GENERATION_BASE_DIR="$(findDir "${PRODUCT}/bin" "${PRODUCT_DIR}")"
         if [[ -n "${PRODUCT_GENERATION_BASE_DIR}" ]]; then
             mkdir -p "${GENERATION_BASE_DIR}"
             cp -rp "${PRODUCT_GENERATION_BASE_DIR}" "${GENERATION_BASE_DIR}"
@@ -225,8 +225,8 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
     fi
 
     # Accommodate multi-product repos
-    PRODUCT_SUB_DIR="$(findSubDir "${PRODUCT}" "${PRODUCT_DIR}")"
-    [[ -n "${PRODUCT_SUB_DIR}" ]] && \
+    PRODUCT_SUB_DIR="$(findDir "${PRODUCT}" "${PRODUCT_DIR}")"
+    [[ -n "${PRODUCT_SUB_DIR}" ]] &&
         PRODUCT_DIR="${BASE_DIR}/infrastructure/products" &&
         mv "${BASE_DIR}/infrastructure/${PRODUCT}" "${PRODUCT_DIR}"
 
@@ -253,8 +253,8 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
     fi
 
     # Accommodate multi-account repos
-    ACCOUNT_SUB_DIR="$(findSubDir "${ACCOUNT}" "${ACCOUNT_DIR}")"
-    [[ -n "${ACCOUNT_SUB_DIR}" ]] && \
+    ACCOUNT_SUB_DIR="$(findDir "${ACCOUNT}" "${ACCOUNT_DIR}")"
+    [[ -n "${ACCOUNT_SUB_DIR}" ]] &&
         ACCOUNT_DIR="${BASE_DIR}/infrastructure/accounts" &&
         mv "${BASE_DIR}/infrastructure/${ACCOUNT}" "${ACCOUNT_DIR}"
 fi

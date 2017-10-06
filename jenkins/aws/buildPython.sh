@@ -8,7 +8,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 cd ${AUTOMATION_BUILD_SRC_DIR}
 
 # Is this really a python based project
-[[ ! -f requirements.txt ]] && RESULT=1 && \
+[[ ! -f requirements.txt ]] && RESULT=1 &&
     fatal "No requirements.txt - is this really a python base repo?"
 
 # Set up the virtual build environment - keep out of source tree

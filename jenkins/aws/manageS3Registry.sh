@@ -222,18 +222,18 @@ function copyToRegistry() {
             ("${FILE_TO_COPY##*.}" == "zip") ]]; then
         unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
         RESULT=$?
-        [[ $RESULT -ne 0 ]] && \
+        [[ $RESULT -ne 0 ]] &&
             fatal "Unable to unzip ${FILE_TO_COPY}"
     fi
 
     aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILES_TEMP_DIR}/" "${FULL_REGISTRY_IMAGE_PATH}/"
     RESULT=$?
-    [[ $RESULT -ne 0 ]] && \
+    [[ $RESULT -ne 0 ]] &&
         fatal "Unable to save ${BASE_REGISTRY_FILENAME} in the local registry"
 
     aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}"
     RESULT=$?
-    [[ $RESULT -ne 0 ]] && \
+    [[ $RESULT -ne 0 ]] &&
         fatal "Unable to tag ${BASE_REGISTRY_FILENAME} as latest"
 }
 
@@ -266,7 +266,7 @@ touch "${TAG_FILE}"
 defineRegistryProviderAttributes "${REGISTRY_PROVIDER}" "${REGISTRY_TYPE}" "REGISTRY_PROVIDER"
 
 # Ensure the local repository has been determined
-[[ -z "${REGISTRY_REPO}" ]] && \
+[[ -z "${REGISTRY_REPO}" ]] &&
     fatal "Job requires the local repository name, or the product/deployment unit/commit"
 
 # Apply remote registry defaults
@@ -297,7 +297,7 @@ setCredentials "${REGISTRY_PROVIDER}"
 # Confirm access to the local registry
 aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_TYPE}" >/dev/null 2>&1
 RESULT=$?
-[[ "$RESULT" -ne 0 ]] && \
+[[ "$RESULT" -ne 0 ]] &&
     fatal "Can't access ${REGISTRY_TYPE} registry at ${REGISTRY_PROVIDER_DNS}"
 
 # Perform the required action
@@ -333,7 +333,7 @@ case ${REGISTRY_OPERATION} in
             # Copy to S3
             aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_REMOTE_TAGGED_REGISTRY_IMAGE}"
             RESULT=$?
-            [[ "${RESULT}" -ne 0 ]] && \
+            [[ "${RESULT}" -ne 0 ]] &&
                 fatal "Couldn't tag image ${FULL_REGISTRY_IMAGE} with tag ${REMOTE_REGISTRY_TAG}"
         fi
         ;;        
@@ -358,7 +358,7 @@ case ${REGISTRY_OPERATION} in
             # Copy image
             aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${FULL_REMOTE_REGISTRY_IMAGE}" "${IMAGE_FILE}"
             RESULT=$?
-            [[ "$RESULT" -ne 0 ]] && \
+            [[ "$RESULT" -ne 0 ]] &&
                 fatal "Can't copy remote image ${FULL_REMOTE_REGISTRY_IMAGE}"
         fi
 

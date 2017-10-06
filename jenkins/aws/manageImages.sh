@@ -79,7 +79,7 @@ for FORMAT in "${FORMATS[@]}"; do
     case ${FORMAT,,} in
         docker)
             # Package for docker
-            DOCKERFILE="./Dockerfile"
+            DOCKERFILE="${AUTOMATION_BUILD_SRC_DIR}/Dockerfile"
             if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile" ]]; then
                 DOCKERFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
             fi
@@ -94,7 +94,7 @@ for FORMAT in "${FORMATS[@]}"; do
             ;;
 
         lambda)
-            IMAGE_FILE="./dist/lambda.zip"
+            IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip"
             if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip" ]]; then
                 IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip"
             fi
@@ -113,7 +113,7 @@ for FORMAT in "${FORMATS[@]}"; do
             ;;
 
         swagger)
-            IMAGE_FILE="./dist/swagger.zip"
+            IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/swagger.zip"
 
             if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageSwagger.sh -s \
@@ -127,7 +127,7 @@ for FORMAT in "${FORMATS[@]}"; do
                 fatal "${IMAGE_FILE} missing"
             fi
 
-            DOC_FILE="./dist/apidoc.html"
+            DOC_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/apidoc.html"
 
             if [[ -f "${DOC_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageSwagger.sh -s \
@@ -140,7 +140,7 @@ for FORMAT in "${FORMATS[@]}"; do
             ;;
 
         spa)
-            IMAGE_FILE="./dist/bundle.zip"
+            IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/spa.zip"
 
             if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageSpa.sh -s \

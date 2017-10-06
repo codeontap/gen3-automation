@@ -328,22 +328,44 @@ AUTOMATION_PROVIDER_DIR="${AUTOMATION_BASE_DIR}/${AUTOMATION_PROVIDER}"
 
 case "${AUTOMATION_PROVIDER}" in
     jenkins)
-        # Determine the integrator/tenant/product/environment/segment from 
+        # Determine the aggregator/integrator/tenant/product/environment/segment from
         # the job name if not already defined or provided on the command line
-        # Only parts of the jobname starting with "cot-" or "int-" are
+        # Only parts of the jobname starting with "cot.?-" or "int.?-" are
         # considered and this prefix is removed to give the actual name.
         # "int-" denotes an integrator setup, while "cot-" denotes a tenant setup 
+        # "int-" is deprecated in favour of using the cot*- format of identifiers
+        # allowing the hierarchy to be in any order
         JOB_PATH=($(tr "/" " " <<< "${JOB_NAME}"))
         INTEGRATOR_PARTS_ARRAY=()
         TENANT_PARTS_ARRAY=()
-        INTEGRATOR_PREFIX="int-"
-        TENANT_PREFIX="cot-"
+        INTEGRATOR_RE=
+        COT_RE="^(cot.?)-(.+)"
         for PART in ${JOB_PATH[@]}; do
-            if [[ "${PART}" =~ ^${INTEGRATOR_PREFIX}* ]]; then
-                INTEGRATOR_PARTS_ARRAY+=("${PART#${INTEGRATOR_PREFIX}}")
-            fi
-            if [[ "${PART}" =~ ^${TENANT_PREFIX}* ]]; then
-                TENANT_PARTS_ARRAY+=("${PART#${TENANT_PREFIX}}")
+            [[ $(contains "${PART}" "^(int.?)-(.+)") ]] &&
+                INTEGRATOR_PARTS_ARRAY+=("${BASH_REMATCH[2]}")
+
+            if [[ $(contains "${PART}" "^(cot.?)-(.+)") ]]; then
+                case "${BASH_REMATCH[1]}" in
+                    cota)
+                        AGGREGATOR="${AGGREGATOR:-${BASH_REMATCH[1]}}"
+                        ;;
+                    coti)
+                        INTEGRATOR="${INTEGRATOR:-${BASH_REMATCH[1]}}"
+                        ;;
+                    cott)
+                        TENANT="${TENANT:-${BASH_REMATCH[1]}}"
+                        ;;
+                    cotp)
+                        PRODUCT="${PRODUCT:-${BASH_REMATCH[1]}}"
+                        ;;
+                    cote)
+                        ENVIRONMENT="${ENVIRONMENT:-${BASH_REMATCH[1]}}"
+                        ;;
+                    cots)
+                        SEGMENT="${SEGMENT:-${BASH_REMATCH[1]}}"
+                        ;;
+                esac
+                TENANT_PARTS_ARRAY+=("${BASH_REMATCH[2]}")
             fi
         done
         if [[ "${#INTEGRATOR_PARTS_ARRAY[@]}" -ne 0 ]]; then
@@ -413,17 +435,17 @@ case "${AUTOMATION_PROVIDER}" in
         AUTOMATION_BUILD_DIR="${AUTOMATION_DATA_DIR}"
         [[ -d build ]] && AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
         if [[ -n "${BUILD_PATH}" ]]; then
-            [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ]] && \
-                AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" || \
+            [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ]] &&
+                AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ||
                 fatal "Build path directory \"${BUILD_PATH}\" not found"
         fi
 
         # Build source directory
         AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"
-        [[ -d "${AUTOMATION_BUILD_DIR}/src" ]] && \
+        [[ -d "${AUTOMATION_BUILD_DIR}/src" ]] &&
             AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
 
-        [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] && \
+        [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] &&
             AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
 
         # Build devops directory

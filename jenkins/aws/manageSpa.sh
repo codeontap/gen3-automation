@@ -4,6 +4,6 @@
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Note that filename can still overridden via provided parameters
-${AUTOMATION_DIR}/manageS3Registry.sh -y "cloudfront" -f "bundle.zip" "$@"
+${AUTOMATION_DIR}/manageS3Registry.sh -y "spa" -f "bundle.zip" "$@"
 RESULT=$?
 

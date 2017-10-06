@@ -139,11 +139,11 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             ;;
 
-        cloudfront)
+        spa)
             IMAGE_FILE="./dist/bundle.zip"
 
             if [[ -f "${IMAGE_FILE}" ]]; then
-                ${AUTOMATION_DIR}/manageCloudfront.sh -s \
+                ${AUTOMATION_DIR}/manageSpa.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
                         -f "${IMAGE_FILE}"

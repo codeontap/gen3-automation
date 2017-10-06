@@ -321,7 +321,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             RESULT=$?
                             [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
-                        lambda|swagger|cloudfront)
+                        lambda|swagger|spa)
                             ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
                                 -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
@@ -448,8 +448,8 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             ${AUTOMATION_DIR}/manageSwagger.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                             RESULT=$?
                             ;;
-                        cloudfront)
-                            ${AUTOMATION_DIR}/manageCloudFront.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        spa)
+                            ${AUTOMATION_DIR}/manageSpa.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                             RESULT=$?
                             ;;
                         *)
@@ -472,8 +472,8 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     ${AUTOMATION_DIR}/manageSwagger.sh -x -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                     RESULT=$?
                                     ;;
-                                cloudfront)
-                                    ${AUTOMATION_DIR}/manageCloudFront.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                spa)
+                                    ${AUTOMATION_DIR}/manageSpa.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                     RESULT=$?
                                     ;;
                                 *)

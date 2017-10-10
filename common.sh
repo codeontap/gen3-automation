@@ -174,10 +174,14 @@ function findFile() {
     ${RESTORE_NULLGLOB}
     ${RESTORE_GLOBSTAR}
 
-    [[ $(arrayIsEmpty "MATCHES") ]] && return 1
+    for MATCH in "${MATCHES[@]}"; do
+        if [[ -f "${MATCH}" ]]; then
+            echo -n "${MATCH}"
+            return 0
+        fi
+    done
 
-    echo -n "${MATCHES[0]}"
-    return 0
+    return 1
 }
 
 

@@ -24,24 +24,25 @@ SWAGGER_SPEC_YAML_EXTENSIONS_FILE=$(findFile \
 
 # Convert yaml files to json, possibly including a separate yaml based extensions file
 if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
+    TEMP_SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.yaml"
+    cp "${SWAGGER_SPEC_YAML_FILE}" "${TEMP_SWAGGER_SPEC_YAML_FILE}"
+
     if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
         # Combine the two
-        cp "${SWAGGER_SPEC_YAML_FILE}" "${AUTOMATION_BUILD_DIR}/temp_swagger_copy.yaml"
+        cp "${TEMP_SWAGGER_SPEC_YAML_FILE}" "${AUTOMATION_BUILD_DIR}/temp_swagger_copy.yaml"
         cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${AUTOMATION_BUILD_DIR}/temp_swagger_extensions_copy.yaml"
         docker run --rm \
             -v ${AUTOMATION_BUILD_DIR}:/app/indir -v ${AUTOMATION_BUILD_DIR}:/app/outdir \
             codeontap/utilities sme merge \
             /app/indir/temp_swagger_copy.yaml \
             /app/indir/temp_swagger_extensions_copy.yaml \
-            /app/outdir/temp_swagger.yaml
-
-        # Use the combined file
-        SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.yaml"       
+            /app/outdir/$(fileName "${TEMP_SWAGGER_SPEC_YAML_FILE}")
     fi
+
     SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.json"
     # Need to use a yaml to json converter that preserves comments in YAML multi-line blocks, as
     # AWS uses these are directives in API Gateway templates
-    COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/$(fileName ${SWAGGER_SPEC_YAML_FILE})','r')), open('/app/outdir/temp_swagger.json','w'), indent=4)"
+    COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/$(fileName ${TEMP_SWAGGER_SPEC_YAML_FILE})','r')), open('/app/outdir/$(fileName ${SWAGGER_SPEC_FILE})','w'), indent=4)"
     docker run --rm \
         -v ${AUTOMATION_BUILD_DIR}:/app/indir -v ${AUTOMATION_BUILD_DIR}:/app/outdir \
         codeontap/python-utilities \

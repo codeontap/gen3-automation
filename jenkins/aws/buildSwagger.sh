@@ -22,9 +22,13 @@ SWAGGER_SPEC_YAML_EXTENSIONS_FILE=$(findFile \
                     "${AUTOMATION_BUILD_DIR}/swagger_extensions.yaml"
                     "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/swagger_extensions.yaml")
 
+# Make a local copy of the swagger json file
+TEMP_SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.json"
+[[ -f "${SWAGGER_SPEC_FILE}" ]] && cp "${SWAGGER_SPEC_FILE}" "${TEMP_SWAGGER_SPEC_FILE}"
+
 # Convert yaml files to json, possibly including a separate yaml based extensions file
+TEMP_SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.yaml"
 if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
-    TEMP_SWAGGER_SPEC_YAML_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.yaml"
     cp "${SWAGGER_SPEC_YAML_FILE}" "${TEMP_SWAGGER_SPEC_YAML_FILE}"
 
     if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
@@ -39,26 +43,25 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
             /app/outdir/$(fileName "${TEMP_SWAGGER_SPEC_YAML_FILE}")
     fi
 
-    SWAGGER_SPEC_FILE="${AUTOMATION_BUILD_DIR}/temp_swagger.json"
     # Need to use a yaml to json converter that preserves comments in YAML multi-line blocks, as
     # AWS uses these are directives in API Gateway templates
-    COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/$(fileName ${TEMP_SWAGGER_SPEC_YAML_FILE})','r')), open('/app/outdir/$(fileName ${SWAGGER_SPEC_FILE})','w'), indent=4)"
+    COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/$(fileName ${TEMP_SWAGGER_SPEC_YAML_FILE})','r')), open('/app/outdir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})','w'), indent=4)"
     docker run --rm \
         -v ${AUTOMATION_BUILD_DIR}:/app/indir -v ${AUTOMATION_BUILD_DIR}:/app/outdir \
         codeontap/python-utilities \
         -c "${COMBINE_COMMAND}"
 fi
 
-[[ ! -f "${SWAGGER_SPEC_FILE}" ]] && fatal "Can't find source swagger file"
+[[ ! -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && fatal "Can't find source swagger file"
 
 # Validate it
 # We use a few different validators until we settle on a preferred one
 VALIDATORS=( \
-"swagger       validate /app/indir/$(fileName \"${SWAGGER_SPEC_FILE}\" )" \
-"swagger-tools validate /app/indir/$(fileName \"${SWAGGER_SPEC_FILE}\" )" \
-"ajv           validate -d /app/indir/$(fileName \"${SWAGGER_SPEC_FILE}\" )-s /usr/local/lib/node_modules/swagger-schema-official/schema.json")
+"swagger       validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE} )" \
+"swagger-tools validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE} )" \
+"ajv           validate -d /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE} )-s /usr/local/lib/node_modules/swagger-schema-official/schema.json")
 for VALIDATOR in "${VALIDATORS[@]}"; do
-    docker run --rm -v $(filePath "${SWAGGER_SPEC_FILE}"):/app/indir codeontap/utilities ${VALIDATOR}
+    docker run --rm -v $(filePath "${TEMP_SWAGGER_SPEC_FILE}"):/app/indir codeontap/utilities ${VALIDATOR}
     RESULT=$?
     [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file is not valid"
 done
@@ -72,7 +75,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
 
     # Generate the swagger file
     ${GENERATION_DIR}/createExtendedSwaggerSpecification.sh \
-        -s "${SWAGGER_SPEC_FILE}" \
+        -s "${TEMP_SWAGGER_SPEC_FILE}" \
         -o "${SWAGGER_RESULT_FILE}" \
         -i "${APIGW_CONFIG}"
 
@@ -85,9 +88,9 @@ fi
 
 # Generate documentation
 docker run --rm \
-    -v $(filePath "${SWAGGER_SPEC_FILE}"):/app/indir -v ${DIST_DIR}:/app/outdir \
+    -v $(filePath "${TEMP_SWAGGER_SPEC_FILE}"):/app/indir -v ${DIST_DIR}:/app/outdir \
     codeontap/utilities swagger2aglio \
-     --input=/app/indir/$(fileName "${SWAGGER_SPEC_FILE}") --output=/app/outdir/apidoc.html  \
+     --input=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") --output=/app/outdir/apidoc.html  \
      --theme-variables slate --theme-template triple
 RESULT=$?
 [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed"

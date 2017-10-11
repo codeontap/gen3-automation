@@ -7,7 +7,6 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 # Ensure RELEASE_IDENTIFIER have been provided
 [[ -z "${RELEASE_IDENTIFIER}" ]] &&
     fatal "Job requires the identifier of the release to be accepted"
-fi
 
 # Don't forget -c ${RELEASE_TAG} -i ${RELEASE_TAG} on constructTree.sh
 

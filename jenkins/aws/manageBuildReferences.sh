@@ -358,7 +358,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
             # Ensure something to do for the current deployment unit
             if [[ "${CODE_COMMIT}" == "?" ]]; then continue; fi
             if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" != "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
-                warn "Ignoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
+                warning "Ignoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
                 continue
             fi
         
@@ -383,12 +383,12 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
             if [[ "${CODE_COMMIT}" == "?" ]]; then
                 if [[ "${CODE_TAG}" != "?" ]]; then
                     if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" != "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
-                        warn "Ignoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
+                        warning "Ignoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
                         continue
                     fi
                     if [[ ("${CODE_REPO}" == "?") ||
                             ("${CODE_PROVIDER}" == "?") ]]; then
-                        warn "Ignoring tag for the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - no code repo and/or provider defined"
+                        warning "Ignoring tag for the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - no code repo and/or provider defined"
                         continue
                     fi
                     # Determine the details of the provider hosting the code repo

@@ -109,7 +109,7 @@ function push() {
         (-z "${REPO_REMOTE}") ]] && fatalMandatory
 
     git remote show "${REPO_REMOTE}" >/dev/null 2>&1
-    RESULT=$? [[ ${RESULT} -ne 0 ]] && fatal "Remote ${REPO_REMOTE} is not initialised"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Remote ${REPO_REMOTE} is not initialised"
 
     # Ensure git knows who we are
     git config user.name  "${GIT_USER}"

@@ -37,7 +37,7 @@ if [[ "${RELEASE_MODE}" == "${RELEASE_MODE_ACCEPTANCE}" ]]; then
         -t ${RELEASE_MODE_TAG} \
         -m "${DETAIL_MESSAGE}" \
         -b ${PRODUCT_INFRASTRUCTURE_REFERENCE}
-    RESULT=$? [[ ${RESULT} -ne 0 ]] && exit
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 fi
 
 # All good

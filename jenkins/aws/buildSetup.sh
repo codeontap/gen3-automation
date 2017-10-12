@@ -111,10 +111,10 @@ if [[ -f prebuild.json ]]; then
                     RESULT=$?
                     [[ ${RESULT} -ne 0 ]] && exit
                 else
-                    warn "\"${REPO_NAME}\" repo already exists - using existing local rather than fetching again"
+                    warning "\"${REPO_NAME}\" repo already exists - using existing local rather than fetching again"
                 fi
             else
-                warn "Incorrectly formatted include repo information: ${ENTRY}"
+                warning "Incorrectly formatted include repo information: ${ENTRY}"
             fi
         else
             # No more entries to process

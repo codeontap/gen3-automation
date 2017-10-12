@@ -25,6 +25,7 @@ Usage: $(basename $0) -l REPO_LOG_NAME -m REPO_MESSAGE -d REPO_DIR
 
 where
 
+(o) -b REPO_BRANCH      is the repo branch
 (o) -c (REPO_OPERATION=${REPO_OPERATION_CLONE}) clone repo
 (m) -d REPO_DIR         is the directory containing the repo
 (o) -e GIT_EMAIL        is the repo user email
@@ -98,9 +99,7 @@ function clone() {
         (-z "${REPO_BRANCH}") ]] && fatalMandatory
 
     git clone -b "${REPO_BRANCH}" "${REPO_URL}" .
-    RESULT=$?
-    [[ ${RESULT} -ne 0 ]] &&
-        fatal "Can't clone ${REPO_LOG_NAME} repo"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't clone ${REPO_LOG_NAME} repo"
 }
 
 function push() {
@@ -110,9 +109,7 @@ function push() {
         (-z "${REPO_REMOTE}") ]] && fatalMandatory
 
     git remote show "${REPO_REMOTE}" >/dev/null 2>&1
-    RESULT=$?
-    [[ ${RESULT} -ne 0 ]] &&
-        fatal "Remote ${REPO_REMOTE} is not initialised"
+    RESULT=$? [[ ${RESULT} -ne 0 ]] && fatal "Remote ${REPO_REMOTE} is not initialised"
 
     # Ensure git knows who we are
     git config user.name  "${GIT_USER}"
@@ -125,31 +122,30 @@ function push() {
         # Commit changes
         echo -e "Committing to the ${REPO_LOG_NAME} repo..."
         git commit -m "${REPO_MESSAGE}"
-        RESULT=$?
-        [[ ${RESULT} -ne 0 ]] &&
-            fatal "Can't commit to the ${REPO_LOG_NAME} repo"
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't commit to the ${REPO_LOG_NAME} repo"
 
         REPO_PUSH_REQUIRED="true"
     fi
 
     # Tag the commit if required
     if [[ -n "${REPO_TAG}" ]]; then
-        echo -e "Adding tag \"${REPO_TAG}\" to the ${REPO_LOG_NAME} repo..."
-        git tag -a "${REPO_TAG}" -m "${REPO_MESSAGE}"
-        RESULT=$?
-        [[ ${RESULT} -ne 0 ]] &&
-            fatal "Can't tag the ${REPO_LOG_NAME} repo"
-
-        REPO_PUSH_REQUIRED="true"
+        EXISTING_TAG=$(git ls-remote --tags | grep "refs/tags/${REPO_TAG}$")
+        if [[ -n "${EXISTING_TAG}" ]]; then
+            warning "Tag ${REPO_TAG} not added to the ${REPO_LOG_NAME} repo - it is already present"
+        else
+            info "Adding tag \"${REPO_TAG}\" to the ${REPO_LOG_NAME} repo..."
+            git tag -a "${REPO_TAG}" -m "${REPO_MESSAGE}"
+            RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't tag the ${REPO_LOG_NAME} repo"
+    
+            REPO_PUSH_REQUIRED="true"
+        fi
     fi
 
     # Update upstream repo
     if [[ "${REPO_PUSH_REQUIRED}" == "true" ]]; then
         echo -e "Pushing the ${REPO_LOG_NAME} repo upstream..."
         git push --tags ${REPO_REMOTE} ${REPO_BRANCH}
-        RESULT=$?
-        [[ ${RESULT} -ne 0 ]] &&
-            fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}"
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}"
     fi
 }
 
@@ -247,9 +243,7 @@ fi
 # Ensure we are inside the repo directory
 if [[ ! -d "${REPO_DIR}" ]]; then
     mkdir -p "${REPO_DIR}"
-    RESULT=$?
-    [[ ${RESULT} -ne 0 ]] &&
-        fatal "Can't create repo directory ${REPO_DIR}"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't create repo directory ${REPO_DIR}"
 fi
 cd "${REPO_DIR}"
 

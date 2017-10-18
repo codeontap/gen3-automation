@@ -113,66 +113,136 @@ echo "PRODUCT_INFRASTRUCTURE_REFERENCE=${PRODUCT_INFRASTRUCTURE_REFERENCE}" >> $
 
 # Define the top level directory representing the account
 BASE_DIR="${AUTOMATION_DATA_DIR}/${ACCOUNT}"
+touch ${BASE_DIR}/root.json
+
+# Pull repos into a temporary directory so the contents can be examined
+BASE_DIR_TEMP="${BASE_DIR}/temp"
 
 if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
     
     # Pull in the product config repo
-    PRODUCT_DIR="${BASE_DIR}/config/${PRODUCT}"
     ${AUTOMATION_DIR}/manageRepo.sh -c -l "product config" \
         -n "${PRODUCT_CONFIG_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
-        -d "${PRODUCT_DIR}" -b "${PRODUCT_CONFIG_REFERENCE}"
-    RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && exit
-    
-    # Initialise if necessary
-    if [[ "${INIT_REPOS}" == "true" ]]; then
-        ${AUTOMATION_DIR}/manageRepo.sh -i -l "product config" \
-            -n "${PRODUCT_CONFIG_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
-            -d "${PRODUCT_DIR}"
-        RESULT=$?
-        [[ ${RESULT} -ne 0 ]] && exit
-    fi
-    
-    # Accommodate multi-product repos
-    PRODUCT_SUB_DIR="$(findDir "${PRODUCT}/product.json" "${PRODUCT_DIR}")"
-    [[ -n "${PRODUCT_SUB_DIR}" ]] &&
-        PRODUCT_DIR="${BASE_DIR}/config/products" &&
-        mv "${BASE_DIR}/config/${PRODUCT}" "${PRODUCT_DIR}"
+        -d "${BASE_DIR_TEMP}" -b "${PRODUCT_CONFIG_REFERENCE}"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
-    echo "PRODUCT_CONFIG_COMMIT=$(git -C ${PRODUCT_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
+    # The config repo may contain
+    # - config +/- infrastructure
+    # - product(s) +/- account(s)
+    if [[ -n $(findDir "${BASE_DIR_TEMP}" "infrastructure") ]]; then
+        # Mix of infrastructure and config
+        if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then
+            # Everything in one repo
+            PRODUCT_CONFIG_DIR="${BASE_DIR}/cmdb"
+        else
+            if [[ -n $(findDir "${BASE_DIR_TEMP}" "${PRODUCT}") ]]; then
+                # Multi-product repo
+                PRODUCT_CONFIG_DIR="${BASE_DIR}/products"
+            else
+                # Single product repo
+                PRODUCT_CONFIG_DIR="${BASE_DIR}/${PRODUCT}"
+            fi
+        fi
+    else
+        # Just config
+        if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then
+            # products and accounts
+            PRODUCT_CONFIG_DIR="${BASE_DIR}/config"
+        else
+            if [[ -n $(findDir "${BASE_DIR_TEMP}" "${PRODUCT}") ]]; then
+                # Multi-product repo
+                PRODUCT_CONFIG_DIR="${BASE_DIR}/config/products"
+            else
+                # Single product repo
+                PRODUCT_CONFIG_DIR="${BASE_DIR}/config/${PRODUCT}"
+            fi
+        fi
+    fi
+
+    mv "${BASE_DIR_TEMP}" "${PRODUCT_CONFIG_DIR}"
+    echo "PRODUCT_CONFIG_COMMIT=$(git -C ${PRODUCT_CONFIG_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
+
+    PRODUCT_INFRASTRUCTURE_DIR=$(findGen3ProductInfrastructureDir "${BASE_DIR}" "${PRODUCT}")
+    if [[ -z "${PRODUCT_INFRASTRUCTURE_DIR}") ]]; then
+        # Pull in the infrastructure repo
+        ${AUTOMATION_DIR}/manageRepo.sh -c -l "product infrastructure" \
+            -n "${PRODUCT_INFRASTRUCTURE_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
+            -d "${BASE_DIR_TEMP}" -b "${PRODUCT_INFRASTRUCTURE_REFERENCE}"
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+        if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then
+            # products and accounts
+            PRODUCT_INFRASTRUCTURE_DIR="${BASE_DIR}/infrastructure"
+        else
+            if [[ -n $(findDir "${BASE_DIR_TEMP}" "${PRODUCT}") ]]; then
+                # Multi-product repo
+                PRODUCT_INFRASTRUCTURE_DIR="${BASE_DIR}/infrastructure/products"
+            else
+                # Single product repo
+                PRODUCT_INFRASTRUCTURE_DIR="${BASE_DIR}/infrastructure/${PRODUCT}"
+            fi
+        fi
+        mv "${BASE_DIR_TEMP}" "${PRODUCT_INFRASTRUCTURE_DIR}"
+    fi
+
+    echo "PRODUCT_INFRASTRUCTURE_COMMIT=$(git -C ${PRODUCT_INFRASTRUCTURE_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
 fi
 
 if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
 
     # Pull in the account config repo
-    ACCOUNT_DIR="${BASE_DIR}/config/${ACCOUNT}"
-    ${AUTOMATION_DIR}/manageRepo.sh -c -l "account config" \
-        -n "${ACCOUNT_CONFIG_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
-        -d "${ACCOUNT_DIR}"
-    RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && exit
-
-    # Initialise if necessary
-    if [[ "${INIT_REPOS}" == "true" ]]; then
-        ${AUTOMATION_DIR}/manageRepo.sh -i -l "account config" \
+    ACCOUNT_CONFIG_DIR=$(findGen3AccountDir "${BASE_DIR}" "${ACCOUNT}")
+    if [[ -z "${ACCOUNT_CONFIG_DIR}") ]]; then
+        ${AUTOMATION_DIR}/manageRepo.sh -c -l "account config" \
             -n "${ACCOUNT_CONFIG_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
-            -d "${ACCOUNT_DIR}"
-        RESULT=$?
-        [[ ${RESULT} -ne 0 ]] && exit
+            -d "${BASE_DIR_TEMP}"
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+        if [[ -n $(findDir "${BASE_DIR_TEMP}" "infrastructure") ]]; then
+            # Mix of infrastructure and config
+            if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then
+                # Multi-account repo
+                ACCOUNT_CONFIG_DIR="${BASE_DIR}/accounts"
+            else
+                # Single account repo
+                ACCOUNT_CONFIG_DIR="${BASE_DIR}/${ACCOUNT}"
+            fi
+        else
+            if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then
+                # Multi-account repo
+                ACCOUNT_CONFIG_DIR="${BASE_DIR}/config/accounts"
+            else
+                # Single account repo
+                ACCOUNT_CONFIG_DIR="${BASE_DIR}/config/${ACCOUNT}"
+            fi
+        fi
+        mv "${BASE_DIR_TEMP}" "${ACCOUNT_CONFIG_DIR}"
     fi
 
-    # Accommodate multi-account repos
-    ACCOUNT_SUB_DIR="$(findDir "${ACCOUNT}/account.json" "${ACCOUNT_DIR}")"
-    [[ -n "${ACCOUNT_SUB_DIR}" ]] &&
-        ACCOUNT_DIR="${BASE_DIR}/config/accounts" &&
-        mv "${BASE_DIR}/config/${ACCOUNT}" "${ACCOUNT_DIR}"
+    ACCOUNT_INFRASTRUCTURE_DIR=$(findGen3AccountInfrastructureDir "${BASE_DIR}" "${ACCOUNT}")
+    if [[ -z "${ACCOUNT_INFRASTRUCTURE_DIR}") ]]; then
+        # Pull in the account infrastructure repo
+        ${AUTOMATION_DIR}/manageRepo.sh -c -l "account infrastructure" \
+            -n "${ACCOUNT_INFRASTRUCTURE_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
+            -d "${BASE_DIR_TEMP}"
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+        if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then
+            # Multi-account repo
+            ACCOUNT_INFRASTRUCTURE_DIR="${BASE_DIR}/infrastructure/accounts"
+        else
+            # Single account repo
+            ACCOUNT_INFRASTRUCTURE_DIR="${BASE_DIR}/infrastructure/${ACCOUNT}"
+        fi
+        mv "${BASE_DIR_TEMP}" "${ACCOUNT_INFRASTRUCTURE_DIR}"
+    fi
 fi
 
 # Pull in the default generation repo if not overridden by product or locally installed
 if [[ -z "${GENERATION_DIR}" ]]; then
     if [[ -z "${GENERATION_BASE_DIR}" ]]; then
-        GENERATION_BASE_DIR="${BASE_DIR}/config/bin"
-        PRODUCT_GENERATION_BASE_DIR="$(findDir "${PRODUCT}/bin" "${PRODUCT_DIR}")"
+        GENERATION_BASE_DIR="${BASE_DIR}/bin"
+        PRODUCT_GENERATION_BASE_DIR="$(findDir "${BASE_DIR}" "${PRODUCT}/bin" )"
         if [[ -n "${PRODUCT_GENERATION_BASE_DIR}" ]]; then
             mkdir -p "${GENERATION_BASE_DIR}"
             cp -rp "${PRODUCT_GENERATION_BASE_DIR}" "${GENERATION_BASE_DIR}"
@@ -180,8 +250,7 @@ if [[ -z "${GENERATION_DIR}" ]]; then
             ${AUTOMATION_DIR}/manageRepo.sh -c -l "generation bin" \
                 -n "${GENERATION_BIN_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
                 -d "${GENERATION_BASE_DIR}" -b "${GENERATION_BIN_REFERENCE}"
-            RESULT=$?
-            [[ ${RESULT} -ne 0 ]] && exit
+            RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
         fi
     fi
     echo "GENERATION_DIR=${GENERATION_BASE_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
@@ -190,88 +259,35 @@ fi
 # Pull in the patterns repo if not overridden by product or locally installed
 if [[ -z "${GENERATION_PATTERNS_DIR}" ]]; then
     if [[ "${INCLUDE_ALL_REPOS}" == "true" ]]; then
-        GENERATION_PATTERNS_DIR="${BASE_DIR}/config/patterns"
-        if [[ -d ${BASE_DIR}/config/${PRODUCT}/patterns ]]; then
+        GENERATION_PATTERNS_DIR="${BASE_DIR}/patterns"
+        PRODUCT_GENERATION_PATTERNS_DIR="$(findDir "${BASE_DIR}" "${PRODUCT}/patterns" )"
+        if [[ -n "${PRODUCT_GENERATION_PATTERNS_DIR}" ]]; then
             mkdir -p "${GENERATION_PATTERNS_DIR}"
-            cp -rp ${BASE_DIR}/config/${PRODUCT}/patterns "${GENERATION_PATTERNS_DIR}"
+            cp -rp "${PRODUCT_GENERATION_PATTERNS_DIR}" "${GENERATION_PATTERNS_DIR}"
         else
             ${AUTOMATION_DIR}/manageRepo.sh -c -l "generation patterns" \
                 -n "${GENERATION_PATTERNS_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
                 -d "${GENERATION_PATTERNS_DIR}" -b "${GENERATION_PATTERNS_REFERENCE}"
-            RESULT=$?
-            [[ ${RESULT} -ne 0 ]] && exit
+            RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
         fi
         echo "GENERATION_PATTERNS_DIR=${GENERATION_PATTERNS_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
     fi
 fi
 
-if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
-    
-    # Pull in the product infrastructure repo
-    PRODUCT_DIR="${BASE_DIR}/infrastructure/${PRODUCT}"
-    ${AUTOMATION_DIR}/manageRepo.sh -c -l "product infrastructure" \
-        -n "${PRODUCT_INFRASTRUCTURE_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
-        -d "${PRODUCT_DIR}" -b "${PRODUCT_INFRASTRUCTURE_REFERENCE}"
-    RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && exit
-    
-    # Initialise if necessary
-    if [[ "${INIT_REPOS}" == "true" ]]; then
-        ${AUTOMATION_DIR}/manageRepo.sh -i -l "product infrastructure" \
-            -n "${PRODUCT_INFRASTRUCTURE_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
-            -d "${PRODUCT_DIR}"
-        RESULT=$?
-        [[ ${RESULT} -ne 0 ]] && exit
-    fi
-
-    # Accommodate multi-product repos
-    PRODUCT_SUB_DIR="$(findDir "${PRODUCT}" "${PRODUCT_DIR}")"
-    [[ -n "${PRODUCT_SUB_DIR}" ]] &&
-        PRODUCT_DIR="${BASE_DIR}/infrastructure/products" &&
-        mv "${BASE_DIR}/infrastructure/${PRODUCT}" "${PRODUCT_DIR}"
-
-    echo "PRODUCT_INFRASTRUCTURE_COMMIT=$(git -C ${PRODUCT_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
-fi
-
-if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
-
-    # Pull in the account infrastructure repo
-    ACCOUNT_DIR="${BASE_DIR}/infrastructure/${ACCOUNT}"
-    ${AUTOMATION_DIR}/manageRepo.sh -c -l "account infrastructure" \
-        -n "${ACCOUNT_INFRASTRUCTURE_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
-        -d "${ACCOUNT_DIR}"
-    RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && exit
-
-    # Initialise if necessary
-    if [[ "${INIT_REPOS}" == "true" ]]; then
-        ${AUTOMATION_DIR}/manageRepo.sh -i -l "account infrastructure" \
-            -n "${ACCOUNT_INFRASTRUCTURE_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
-            -d "${ACCOUNT_DIR}"
-        RESULT=$?
-        [[ ${RESULT} -ne 0 ]] && exit
-    fi
-
-    # Accommodate multi-account repos
-    ACCOUNT_SUB_DIR="$(findDir "${ACCOUNT}" "${ACCOUNT_DIR}")"
-    [[ -n "${ACCOUNT_SUB_DIR}" ]] &&
-        ACCOUNT_DIR="${BASE_DIR}/infrastructure/accounts" &&
-        mv "${BASE_DIR}/infrastructure/${ACCOUNT}" "${ACCOUNT_DIR}"
-fi
 
 # Pull in the default generation startup repo if not overridden by product or locally installed
 if [[ -z "${GENERATION_STARTUP_DIR}" ]]; then
     if [[ "${INCLUDE_ALL_REPOS}" == "true" ]]; then
-        GENERATION_STARTUP_DIR="${BASE_DIR}/infrastructure/startup"
-        if [[ -d ${BASE_DIR}/infrastructure/${PRODUCT}/startup ]]; then
+        GENERATION_STARTUP_DIR="${BASE_DIR}/startup"
+        PRODUCT_GENERATION_STARTUP_DIR="$(findDir "${BASE_DIR}" "${PRODUCT}/startup" )"
+        if [[ -n "${PRODUCT_GENERATION_STARTUP_DIR}" ]]; then
             mkdir -p "${GENERATION_STARTUP_DIR}"
-            cp -rp ${BASE_DIR}/infrastructure/${PRODUCT}/startup "${GENERATION_STARTUP_DIR}"
+            cp -rp "${PRODUCT_GENERATION_STARTUP_DIR}" "${GENERATION_STARTUP_DIR}"
         else
             ${AUTOMATION_DIR}/manageRepo.sh -c -l "generation startup" \
                 -n "${GENERATION_STARTUP_REPO}" -v "${GENERATION_GIT_PROVIDER}" \
                 -d "${GENERATION_STARTUP_DIR}" -b "${GENERATION_STARTUP_REFERENCE}"
-            RESULT=$?
-            [[ ${RESULT} -ne 0 ]] && exit
+            RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
         fi
         echo "GENERATION_STARTUP_DIR=${GENERATION_STARTUP_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
     fi

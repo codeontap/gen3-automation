@@ -113,6 +113,7 @@ echo "PRODUCT_INFRASTRUCTURE_REFERENCE=${PRODUCT_INFRASTRUCTURE_REFERENCE}" >> $
 
 # Define the top level directory representing the account
 BASE_DIR="${AUTOMATION_DATA_DIR}/${ACCOUNT}"
+mkdir -p "${BASE_DIR}"
 touch ${BASE_DIR}/root.json
 
 # Pull repos into a temporary directory so the contents can be examined
@@ -163,7 +164,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
     echo "PRODUCT_CONFIG_COMMIT=$(git -C ${PRODUCT_CONFIG_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
 
     PRODUCT_INFRASTRUCTURE_DIR=$(findGen3ProductInfrastructureDir "${BASE_DIR}" "${PRODUCT}")
-    if [[ -z "${PRODUCT_INFRASTRUCTURE_DIR}") ]]; then
+    if [[ -z "${PRODUCT_INFRASTRUCTURE_DIR}" ]]; then
         # Pull in the infrastructure repo
         ${AUTOMATION_DIR}/manageRepo.sh -c -l "product infrastructure" \
             -n "${PRODUCT_INFRASTRUCTURE_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \

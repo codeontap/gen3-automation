@@ -356,6 +356,9 @@ case "${AUTOMATION_PROVIDER}" in
                     cott)
                         TENANT="${TENANT:-${BASH_REMATCH[1]}}"
                         ;;
+                    cotd)
+                        DOMAIN="${DOMAIN:-${BASH_REMATCH[1]}}"
+                        ;;
                     cotp)
                         PRODUCT="${PRODUCT:-${BASH_REMATCH[1]}}"
                         ;;

@@ -195,7 +195,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
 
     # Pull in the account config repo
     ACCOUNT_CONFIG_DIR=$(findGen3AccountDir "${BASE_DIR}" "${ACCOUNT}")
-    if [[ -z "${ACCOUNT_CONFIG_DIR}") ]]; then
+    if [[ -z "${ACCOUNT_CONFIG_DIR}" ]]; then
         ${AUTOMATION_DIR}/manageRepo.sh -c -l "account config" \
             -n "${ACCOUNT_CONFIG_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
             -d "${BASE_DIR_TEMP}"
@@ -224,7 +224,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
     fi
 
     ACCOUNT_INFRASTRUCTURE_DIR=$(findGen3AccountInfrastructureDir "${BASE_DIR}" "${ACCOUNT}")
-    if [[ -z "${ACCOUNT_INFRASTRUCTURE_DIR}") ]]; then
+    if [[ -z "${ACCOUNT_INFRASTRUCTURE_DIR}" ]]; then
         # Pull in the account infrastructure repo
         ${AUTOMATION_DIR}/manageRepo.sh -c -l "account infrastructure" \
             -n "${ACCOUNT_INFRASTRUCTURE_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \

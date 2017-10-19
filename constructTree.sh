@@ -160,6 +160,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
         fi
     fi
 
+    mkdir -p $(filePath "${PRODUCT_CONFIG_DIR}")
     mv "${BASE_DIR_TEMP}" "${PRODUCT_CONFIG_DIR}"
     echo "PRODUCT_CONFIG_COMMIT=$(git -C ${PRODUCT_CONFIG_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
 
@@ -183,6 +184,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
                 PRODUCT_INFRASTRUCTURE_DIR="${BASE_DIR}/infrastructure/${PRODUCT}"
             fi
         fi
+        mkdir -p $(filePath "${PRODUCT_INFRASTRUCTURE_DIR}")
         mv "${BASE_DIR_TEMP}" "${PRODUCT_INFRASTRUCTURE_DIR}"
     fi
 
@@ -217,6 +219,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
                 ACCOUNT_CONFIG_DIR="${BASE_DIR}/config/${ACCOUNT}"
             fi
         fi
+        mkdir -p $(filePath "${ACCOUNT_CONFIG_DIR}")
         mv "${BASE_DIR_TEMP}" "${ACCOUNT_CONFIG_DIR}"
     fi
 
@@ -235,6 +238,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
             # Single account repo
             ACCOUNT_INFRASTRUCTURE_DIR="${BASE_DIR}/infrastructure/${ACCOUNT}"
         fi
+        mkdir -p $(filePath "${ACCOUNT_INFRASTRUCTURE_DIR}")
         mv "${BASE_DIR_TEMP}" "${ACCOUNT_INFRASTRUCTURE_DIR}"
     fi
 fi

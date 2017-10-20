@@ -2,21 +2,21 @@
 
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
-. "${GENERATION_DIR}/common.sh"
+. "${AUTOMATION_BASE_DIR}/common.sh"
 
-# Generate the deployment template for the required deployment unit
+# Process each template level
+IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra LEVELS_REQUIRED <<< "${LEVELS}"
+for L in "${LEVELS_REQUIRED[@]}"; do
 
-# Process the deployment units
-for L in ${LEVELS}; do
-    UNITS_SOURCE="${L^^}_UNITS"
-    UNITS_ARRAY=($(IFS=', '; echo "${!UNITS_SOURCE}"))
+    UNITS_LIST="${L^^}_UNITS"
+    IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${!UNITS_LIST}"
 
-    for DEPLOYMENT_UNIT in "${UNITS_ARRAY[@]}"; do
+    for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
     
     	# Generate the template if required
     	cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
         case ${MODE} in
-            create|update)
+            update)
                 ${GENERATION_DIR}/create${L^}Template.sh -u "${DEPLOYMENT_UNIT}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] &&
                     fatal "Generation of the ${L} level template for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
@@ -24,7 +24,7 @@ for L in ${LEVELS}; do
         esac
         
         # Manage the stack
-        ${GENERATION_DIR}/${MODE}Stack.sh -l ${L} -u ${DEPLOYMENT_UNIT}
+        ${GENERATION_DIR}/${MODE}Stack.sh -l ${L,,} -u ${DEPLOYMENT_UNIT}
 	    RESULT=$? && [[ "${RESULT}" -ne 0 ]] &&
             fatal "Applying ${MODE} mode to the ${L} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
         

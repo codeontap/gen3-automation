@@ -572,7 +572,8 @@ for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
     TAG_PART="${BUILD_REFERENCE_PARTS[1]:-?}"
     FORMATS_PART="${BUILD_REFERENCE_PARTS[2]:-?}"
     COMMIT_PART="?"
-    if [[ "${#DEPLOYMENT_UNIT_ARRAY[@]}" -eq 0 ]]; then
+    if [[ ("${#DEPLOYMENT_UNIT_ARRAY[@]}" -eq 0) ||
+            ("${APPLY_TO_ALL_DEPLOYMENT_UNITS}" == "true") ]]; then
         # Processing the first deployment unit
         if [[ -n "${CODE_TAG}" ]]; then
             # Permit separate variable for tag/commit value - easier if only one repo involved

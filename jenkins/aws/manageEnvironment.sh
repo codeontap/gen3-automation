@@ -7,7 +7,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 # Generate the deployment template for the required deployment unit
 
 # Process the deployment units
-for LEVEL in segment solution; do
+for L in ${LEVELS}; do
     UNITS_SOURCE="${L^^}_UNITS"
     UNITS_ARRAY=($(IFS=', '; echo "${!UNITS_SOURCE}"))
 
@@ -17,28 +17,25 @@ for LEVEL in segment solution; do
     	cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
         case ${MODE} in
             create|update)
-                ${GENERATION_DIR}/create${LEVEL^}Template.sh -u "${DEPLOYMENT_UNIT}"
+                ${GENERATION_DIR}/create${L^}Template.sh -u "${DEPLOYMENT_UNIT}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] &&
-                    fatal "Generation of the ${LEVEL} level template for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
+                    fatal "Generation of the ${L} level template for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
 		    ;;
         esac
         
         # Manage the stack
-        ${GENERATION_DIR}/${MODE}Stack.sh -l ${LEVEL} -u ${DEPLOYMENT_UNIT}
+        ${GENERATION_DIR}/${MODE}Stack.sh -l ${L} -u ${DEPLOYMENT_UNIT}
 	    RESULT=$? && [[ "${RESULT}" -ne 0 ]] &&
-            fatal "Applying ${MODE} mode to the ${LEVEL} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
+            fatal "Applying ${MODE} mode to the ${L} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
         
 		# Update the infrastructure repo to capture any stack changes
-		if [[ "${SAVE_RESULTS}" == "true" ]]; then
-            ${AUTOMATION_DIR}/manageRepo.sh -p \
-                -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/infrastructure/${PRODUCT} \
-                -l "infrastructure" \
-                -m "Stack changes as a result of applying ${MODE} mode to the ${LEVEL} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment"
-                
-            RESULT=$?
-            [[ "${RESULT}" -ne 0 ]] &&
-                fatal "Unable to save the changes resulting from applying ${MODE} mode to the ${LEVEL} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment"
-        fi
+        ${AUTOMATION_DIR}/manageRepo.sh -p \
+            -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/infrastructure/${PRODUCT} \
+            -l "infrastructure" \
+            -m "Stack changes as a result of applying ${MODE} mode to the ${L} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment"
+            
+        RESULT=$? && [[ "${RESULT}" -ne 0 ]] &&
+            fatal "Unable to save the changes resulting from applying ${MODE} mode to the ${L} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment"
     done
 done
 

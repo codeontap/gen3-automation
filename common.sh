@@ -19,20 +19,20 @@ function save_repo() {
     -d "${directory}" \
     -l "${name}" \
     -m "${message}" \
-    "${reference+-b ${reference}" \
-    "${tag:+-t ${tag}"
+    "${reference+-b ${reference}}" \
+    "${tag:+-t ${tag}}"
 }
 
 function save_product_config() {
   local arguments=("$@")
 
-  saveRepo "${PRODUCT_DIR}" "config" "${arguments[@]}"
+  saveRepo "${PRODUCT_DIR}" config "${arguments[@]}"
 }
 
 function save_product_infrastructure() {
   local arguments=("$@")
 
-  saveRepo "${PRODUCT_INFRASTRUCTURE_DIR}" "infrastructure" "${arguments[@]}"
+  saveRepo "${PRODUCT_INFRASTRUCTURE_DIR}" infrastructure "${arguments[@]}"
 }
 
 # -- Context properties file --
@@ -43,7 +43,7 @@ function save_context_property() {
   
   [[ -n "${value}" ]] && local property_value="${value}" || local -n property_value="${value}"
 
-  echo "${name}=${property_value}" >> ${AUTOMATION_DATA_DIR}/context.properties
+  echo "${name}=${property_value}" >> "${AUTOMATION_DATA_DIR}/context.properties"
 }
 
 function define_context_property() {

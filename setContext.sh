@@ -248,20 +248,6 @@ function defineRepoSettings() {
 
 function main() {
   
-  # -- Release and Deployment modes --
-  
-  define_context_property DEPLOYMENT_MODE_UPDATE    "update"
-  define_context_property DEPLOYMENT_MODE_STOPSTART "stopstart"
-  define_context_property DEPLOYMENT_MODE_STOP      "stop"
-  define_context_property DEPLOYMENT_MODE_DEFAULT   "${DEPLOYMENT_MODE_UPDATE}"
-  
-  define_context_property RELEASE_MODE_CONTINUOUS   "continuous"
-  define_context_property RELEASE_MODE_SELECTIVE    "selective"
-  define_context_property RELEASE_MODE_ACCEPTANCE   "acceptance"
-  define_context_property RELEASE_MODE_PROMOTION    "promotion"
-  define_context_property RELEASE_MODE_HOTFIX       "hotfix"
-  define_context_property RELEASE_MODE_DEFAULT      "${RELEASE_MODE_CONTINUOUS}"
-  
   ### Automation framework details ###
   
   # First things first - what automation provider are we?
@@ -350,9 +336,23 @@ function main() {
   
   ### Core settings ###
   
+  # Release and Deployment modes
+
+  define_context_property DEPLOYMENT_MODE_UPDATE    "update"
+  define_context_property DEPLOYMENT_MODE_STOPSTART "stopstart"
+  define_context_property DEPLOYMENT_MODE_STOP      "stop"
+  define_context_property DEPLOYMENT_MODE_DEFAULT   "${DEPLOYMENT_MODE_UPDATE}"
+
+  define_context_property RELEASE_MODE_CONTINUOUS   "continuous"
+  define_context_property RELEASE_MODE_SELECTIVE    "selective"
+  define_context_property RELEASE_MODE_ACCEPTANCE   "acceptance"
+  define_context_property RELEASE_MODE_PROMOTION    "promotion"
+  define_context_property RELEASE_MODE_HOTFIX       "hotfix"
+  define_context_property RELEASE_MODE_DEFAULT      "${RELEASE_MODE_CONTINUOUS}"
+
   findAndDefineSetting "TENANT" "" "" "" "value"
   findAndDefineSetting "PRODUCT" "" "" "" "value"
-  
+
   # Default SEGMENT and ENVIRONMENT - normally they are the same
   findAndDefineSetting "SEGMENT"     "" "" "" "value" "${ENVIRONMENT}"
   findAndDefineSetting "ENVIRONMENT" "" "" "" "value" "${SEGMENT}"

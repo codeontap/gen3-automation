@@ -8,7 +8,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra LEVELS_REQUIRED <<< "${LEVELS}"
 for LEVEL in "${LEVELS_REQUIRED[@]}"; do
 
-  UNITS_LIST="REQUIRED_${LEVEL^^}_UNITS"
+  UNITS_LIST="${LEVEL^^}_UNITS_LIST"
   IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${!UNITS_LIST}"
   
   # Generate the template if required

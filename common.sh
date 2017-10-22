@@ -41,7 +41,15 @@ function save_context_property() {
   local name="$1"; shift
   local value="$1"; shift
   
-  [[ -n "${value}" ]] && local property_value="${value}" || local -n property_value="${value}"
+  if [[ -n "${value}" ]]; then
+    local property_value="${value}"
+  else
+    if [[ namedef_supported]]; then
+      local -n property_value="${value}"
+    else
+      eval "local property_value=\"\${${value}}\""
+    fi
+  fi
 
   echo "${name}=${property_value}" >> "${AUTOMATION_DATA_DIR}/context.properties"
 }

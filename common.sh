@@ -47,7 +47,7 @@ function save_context_property() {
 }
 
 function define_context_property() {
-  local name="$1^^"; shift
+  local name="${1^^}"; shift
   local value="$1"; shift
   local capitalisation="$1,,"; shift
 

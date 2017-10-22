@@ -80,15 +80,14 @@ export LEVEL="${LEVEL:-${LEVEL_DEFAULT}}"
     (-z "${DEPLOYMENT_UNIT_LIST}") ||
     (-z "${LEVEL}") ]] && fatalMandatory
 
-cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
+cd "${SEGMENT_DIR}"
 
 for CURRENT_DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST}; do
 
     # Generate the template for each deployment unit
     ${GENERATION_DIR}/createTemplate.sh -u "${CURRENT_DEPLOYMENT_UNIT}"
-    RESULT=$?
-    [[ ${RESULT} -ne 0 ]] &&
-        fatal "Generation of template for deployment unit ${CURRENT_DEPLOYMENT_UNIT} failed"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] &&
+      fatal "Generation of the ${LEVEL} level template for the ${CURRENT_DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
 done
 
 # All good

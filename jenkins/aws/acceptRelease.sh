@@ -21,22 +21,12 @@ RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
 # Verify the build information
 if [[ "${RELEASE_MODE}" == "${RELEASE_MODE_ACCEPTANCE}" ]]; then
 
-    # Record acceptance of the config repo
-    ${AUTOMATION_DIR}/manageRepo.sh -p \
-        -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT} \
-        -l "config" \
-        -t ${RELEASE_MODE_TAG} \
-        -m "${DETAIL_MESSAGE}" \
-        -b ${PRODUCT_CONFIG_REFERENCE}
+    # Record acceptance of the config
+    save_product_config "${DETAIL_MESSAGE}" "${PRODUCT_CONFIG_REFERENCE}" "${RELEASE_MODE_TAG}"
     RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
-    
-    # Record acceptance of the infrastructure repo
-    ${AUTOMATION_DIR}/manageRepo.sh -p \
-        -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/infrastructure/${PRODUCT} \
-        -l "infrastructure" \
-        -t ${RELEASE_MODE_TAG} \
-        -m "${DETAIL_MESSAGE}" \
-        -b ${PRODUCT_INFRASTRUCTURE_REFERENCE}
+
+    # Record acceptance of the infrastructure
+    save_product_infrastructure "${DETAIL_MESSAGE}" "${PRODUCT_INFRASTRUCTURE_REFERENCE}" "${RELEASE_MODE_TAG}"
     RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 fi
 

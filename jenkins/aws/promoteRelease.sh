@@ -20,15 +20,13 @@ if [[ "${RELEASE_MODE}" == "${RELEASE_MODE_PROMOTION}" ]]; then
     ${AUTOMATION_DIR}/manageRepo.sh -c -l "from product config" \
         -n "${FROM_PRODUCT_CONFIG_REPO}" -v "${FROM_PRODUCT_GIT_PROVIDER}" \
         -d "${FROM_PRODUCT_DIR}" -b "${ACCEPTANCE_TAG}"
-    RESULT=$?
-    [[ "${RESULT}" -ne 0 ]] && exit
+    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+
     FROM_SETTINGS_DIR=${FROM_PRODUCT_DIR}/appsettings/${FROM_SEGMENT}
             
     # Pull in the current build references in lower segment
-    ${AUTOMATION_DIR}/manageBuildReferences.sh -f \
-        -g ${FROM_SETTINGS_DIR}
-    RESULT=$?
-    [[ "${RESULT}" -ne 0 ]] && exit
+    ${AUTOMATION_DIR}/manageBuildReferences.sh -f -g ${FROM_SETTINGS_DIR}
+    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
 fi
 
 # All good

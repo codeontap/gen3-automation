@@ -4,12 +4,7 @@
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${GENERATION_DIR}/common.sh"
 
-DEPLOYMENT_MODE_UPDATE="update"
-DEPLOYMENT_MODE_STOP="stop"
-DEPLOYMENT_MODE_STOPSTART="stopstart"
-
 # Defaults
-DEPLOYMENT_MODE_DEFAULT="${DEPLOYMENT_MODE_UPDATE}"
 LEVEL_DEFAULT="application"
 
 function usage() {
@@ -49,7 +44,7 @@ while getopts ":hl:m:s:t:u:" opt; do
         h)
             usage
             ;;
-        t)
+        l)
             LEVEL="${OPTARG}"
             ;;
         m)
@@ -82,15 +77,14 @@ export LEVEL="${LEVEL:-${LEVEL_DEFAULT}}"
     (-z "${DEPLOYMENT_UNIT_LIST}") ||
     (-z "${LEVEL}") ]] && fatalMandatory
 
-cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
+cd "${SEGMENT_DIR}"
 
 for CURRENT_DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST}; do
 
-    if [[ "${MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT} -d; fi
-    if [[ "${MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT}; fi
-    RESULT=$?
-    [[ ${RESULT} -ne 0 ]] &&
-        fatal "Stack operation for ${CURRENT_DEPLOYMENT_UNIT} deployment unit failed"
+    if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT} -d; fi
+    if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT}; fi
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] &&
+        fatal "Applying ${DEPLOYMENT_MODE} mode to the ${LEVEL,,} level stack for the ${CURRENT_DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
 done
 
 # All good

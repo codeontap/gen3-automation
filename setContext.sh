@@ -6,20 +6,8 @@
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
-DEPLOYMENT_MODE_UPDATE="update"
-DEPLOYMENT_MODE_STOPSTART="stopstart"
-DEPLOYMENT_MODE_STOP="stop"
-RELEASE_MODE_CONTINUOUS="continuous"
-RELEASE_MODE_SELECTIVE="selective"
-RELEASE_MODE_ACCEPTANCE="acceptance"
-RELEASE_MODE_PROMOTION="promotion"
-RELEASE_MODE_HOTFIX="hotfix"
-
-# Defaults
-RELEASE_MODE_DEFAULT="${RELEASE_MODE_CONTINUOUS}"
-
 function usage() {
-    cat <<EOF
+  cat <<EOF
 
 Determine key settings for an tenant/account/product/segment
 
@@ -27,7 +15,7 @@ Usage: $(basename $0) -i INTEGRATOR -t TENANT -a ACCOUNT -p PRODUCT -e ENVIRONME
 
 where
 
-(o) -a ACCOUNT          is the tenant account name e.g. "env01"
+(o) -a ACCOUNT          is the tenant account name e.g. "nonproduction"
 (o) -d DEPLOYMENT_MODE  is the mode to be used for deployment activity
 (o) -e ENVIRONMENT      is the environment name
     -h                  shows this text
@@ -42,6 +30,7 @@ where
 DEFAULTS:
 
 RELEASE_MODE = ${RELEASE_MODE_DEFAULT}
+DEPLOYMENT_MODE = ${DEPLOYMENT_MODE_DEFAULT}
 
 NOTES:
 
@@ -50,64 +39,7 @@ NOTES:
 3. RELEASE_MODE is one of "${RELEASE_MODE_CONTINUOUS}", "${RELEASE_MODE_SELECTIVE}", "${RELEASE_MODE_ACCEPTANCE}", "${RELEASE_MODE_PROMOTION}" and "${RELEASE_MODE_HOTFIX}"
 
 EOF
-    exit
-}
-
-# Parse options
-while getopts ":a:d:e:hi:p:r:s:t:" OPT; do
-    case "${OPT}" in
-        a)
-            ACCOUNT="${OPTARG}"
-            ;;
-        d)
-            DEPLOYMENT_MODE="${OPTARG}"
-            ;;
-        e)
-            ENVIRONMENT="${OPTARG}"
-            ;;
-        h)
-            usage
-            ;;
-        i)
-            INTEGRATOR="${OPTARG}"
-            ;;
-        p)
-            PRODUCT="${OPTARG}"
-            ;;
-        r)
-            RELEASE_MODE="${OPTARG}"
-            ;;
-        s)
-            SEGMENT="${OPTARG}"
-            ;;
-        t)
-            TENANT="${OPTARG}"
-            ;;
-        \?)
-            fatalOption
-            ;;
-        :)
-            fatalOptionArgument
-            ;;
-     esac
-done
-
-function defineSetting() {
-    DV_NAME="${1^^}"
-    DV_VALUE="${2}"
-    DV_CAPITALISATION="${3,,}"
-    
-    case "${DV_CAPITALISATION}" in
-        lower)
-            DV_VALUE="${DV_VALUE,,}"
-            ;;
-        upper)
-            DV_VALUE="${DV_VALUE^^}"
-            ;;
-    esac
-    
-    declare -g ${DV_NAME}="${DV_VALUE}"
-    echo "${DV_NAME}=${DV_VALUE}" >> ${AUTOMATION_DATA_DIR}/context.properties
+  exit
 }
 
 function findAndDefineSetting() {
@@ -149,11 +81,11 @@ function findAndDefineSetting() {
 
     case "${TLNV_DECLARE}" in
         value)
-            defineSetting "${TLNV_NAME}" "${NAME_VALUE}" "lower"
+            define_context_property "${TLNV_NAME}" "${NAME_VALUE}" "lower"
             ;;
     
         name)
-            defineSetting "${TLNV_NAME}" "${NAME_VAR}" "upper"
+            define_context_property "${TLNV_NAME}" "${NAME_VAR}" "upper"
             ;;
     esac
 }
@@ -311,477 +243,426 @@ function defineRepoSettings() {
         NAME_VALUE="$(basename ${NAME_VALUE})"
     fi
 
-    defineSetting "${DRD_USE}_${DRD_SUBUSE}_${DRD_TYPE_PREFIX}REPO" "${NAME_VALUE}"
+    define_context_property "${DRD_USE}_${DRD_SUBUSE}_${DRD_TYPE_PREFIX}REPO" "${NAME_VALUE}"
 }
 
-
-### Automation framework details ###
-
-# First things first - what automation provider are we?
-if [[ -n "${JOB_NAME}" ]]; then
+function main() {
+  
+  # -- Release and Deployment modes --
+  
+  define_context_property DEPLOYMENT_MODE_UPDATE    "update"
+  define_context_property DEPLOYMENT_MODE_STOPSTART "stopstart"
+  define_context_property DEPLOYMENT_MODE_STOP      "stop"
+  define_context_property DEPLOYMENT_MODE_DEFAULT   "${DEPLOYMENT_MODE_UPDATE}"
+  
+  define_context_property RELEASE_MODE_CONTINUOUS   "continuous"
+  define_context_property RELEASE_MODE_SELECTIVE    "selective"
+  define_context_property RELEASE_MODE_ACCEPTANCE   "acceptance"
+  define_context_property RELEASE_MODE_PROMOTION    "promotion"
+  define_context_property RELEASE_MODE_HOTFIX       "hotfix"
+  define_context_property RELEASE_MODE_DEFAULT      "${RELEASE_MODE_CONTINUOUS}"
+  
+  ### Automation framework details ###
+  
+  # First things first - what automation provider are we?
+  if [[ -n "${JOB_NAME}" ]]; then
     AUTOMATION_PROVIDER="${AUTOMATION_PROVIDER:-jenkins}"
-fi
-AUTOMATION_PROVIDER="${AUTOMATION_PROVIDER,,}"
-AUTOMATION_PROVIDER_DIR="${AUTOMATION_BASE_DIR}/${AUTOMATION_PROVIDER}"
-
-
-### Context from automation provider ###
-
-case "${AUTOMATION_PROVIDER}" in
+  fi
+  AUTOMATION_PROVIDER="${AUTOMATION_PROVIDER,,}"
+  AUTOMATION_PROVIDER_DIR="${AUTOMATION_BASE_DIR}/${AUTOMATION_PROVIDER}"
+  
+  
+  ### Context from automation provider ###
+  
+  case "${AUTOMATION_PROVIDER}" in
     jenkins)
-        # Determine the aggregator/integrator/tenant/product/environment/segment from
-        # the job name if not already defined or provided on the command line
-        # Only parts of the jobname starting with "cot.?-" or "int.?-" are
-        # considered and this prefix is removed to give the actual name.
-        # "int-" denotes an integrator setup, while "cot-" denotes a tenant setup 
-        # "int-" is deprecated in favour of using the cot*- format of identifiers
-        # allowing the hierarchy to be in any order
-        JOB_PATH=($(tr "/" " " <<< "${JOB_NAME}"))
-        INTEGRATOR_PARTS_ARRAY=()
-        TENANT_PARTS_ARRAY=()
-        INTEGRATOR_RE=
-        COT_RE="^(cot.?)-(.+)"
-        for PART in ${JOB_PATH[@]}; do
-            contains "${PART}" "^(int.?)-(.+)" &&
-                INTEGRATOR_PARTS_ARRAY+=("${BASH_REMATCH[2]}")
-
-            if contains "${PART}" "^(cot.?)-(.+)"; then
-                case "${BASH_REMATCH[1]}" in
-                    cota)
-                        AGGREGATOR="${AGGREGATOR:-${BASH_REMATCH[1]}}"
-                        ;;
-                    coti)
-                        INTEGRATOR="${INTEGRATOR:-${BASH_REMATCH[1]}}"
-                        ;;
-                    cott)
-                        TENANT="${TENANT:-${BASH_REMATCH[1]}}"
-                        ;;
-                    cotd)
-                        DOMAIN="${DOMAIN:-${BASH_REMATCH[1]}}"
-                        ;;
-                    cotp)
-                        PRODUCT="${PRODUCT:-${BASH_REMATCH[1]}}"
-                        ;;
-                    cote)
-                        ENVIRONMENT="${ENVIRONMENT:-${BASH_REMATCH[1]}}"
-                        ;;
-                    cots)
-                        SEGMENT="${SEGMENT:-${BASH_REMATCH[1]}}"
-                        ;;
-                esac
-                TENANT_PARTS_ARRAY+=("${BASH_REMATCH[2]}")
-            fi
-        done
-        if [[ "${#INTEGRATOR_PARTS_ARRAY[@]}" -ne 0 ]]; then
-            INTEGRATOR_PARTS_COUNT="${#INTEGRATOR_PARTS_ARRAY[@]}"
-
-            if [[ "${INTEGRATOR_PARTS_COUNT}" -gt 4 ]]; then
-                # integrator/tenant/product/environment/segment
-                INTEGRATOR=${INTEGRATOR:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-5]}}
-                TENANT=${TENANT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-4]}}
-                PRODUCT=${PRODUCT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-3]}}
-                ENVIRONMENT=${ENVIRONMENT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-2]}}
-                SEGMENT=${SEGMENT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-1]}}
-            fi
-            if [[ "${INTEGRATOR_PARTS_COUNT}" -gt 3 ]]; then
-                # tenant/product/environment/segment
-                TENANT=${TENANT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-4]}}
-                PRODUCT=${PRODUCT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-3]}}
-                ENVIRONMENT=${ENVIRONMENT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-2]}}
-                SEGMENT=${SEGMENT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-1]}}
-            fi
-            if [[ "${INTEGRATOR_PARTS_COUNT}" -gt 2 ]]; then
-                # tenant/product/environment
-                TENANT=${TENANT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-3]}}
-                PRODUCT=${PRODUCT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-2]}}
-                ENVIRONMENT=${ENVIRONMENT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-1]}}
-            fi
-            if [[ "${INTEGRATOR_PARTS_COUNT}" -gt 1 ]]; then
-                # tenant/product
-                TENANT=${TENANT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-2]}}
-                PRODUCT=${PRODUCT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-1]}}
-            fi
-            if [[ "${INTEGRATOR_PARTS_COUNT}" -gt 0 ]]; then
-                # product
-                TENANT=${TENANT:-${INTEGRATOR_PARTS_ARRAY[${INTEGRATOR_PARTS_COUNT}-2]}}
-            fi
-        else
-            TENANT_PARTS_COUNT="${#TENANT_PARTS_ARRAY[@]}"
-
-            if [[ "${TENANT_PARTS_COUNT}" -gt 2 ]]; then
-                # product/environment/segment
-                PRODUCT=${PRODUCT:-${TENANT_PARTS_ARRAY[${TENANT_PARTS_COUNT}-3]}}
-                ENVIRONMENT=${ENVIRONMENT:-${TENANT_PARTS_ARRAY[${TENANT_PARTS_COUNT}-2]}}
-                SEGMENT=${SEGMENT:-${TENANT_PARTS_ARRAY[${TENANT_PARTS_COUNT}-1]}}
-            fi
-            if [[ "${TENANT_PARTS_COUNT}" -gt 1 ]]; then
-                # product/environment
-                PRODUCT=${PRODUCT:-${TENANT_PARTS_ARRAY[${TENANT_PARTS_COUNT}-2]}}
-                ENVIRONMENT=${ENVIRONMENT:-${TENANT_PARTS_ARRAY[${TENANT_PARTS_COUNT}-1]}}
-            fi
-            if [[ "${TENANT_PARTS_COUNT}" -gt 0 ]]; then
-                # product
-                PRODUCT=${PRODUCT:-${TENANT_PARTS_ARRAY[${TENANT_PARTS_COUNT}-1]}}
-            else
-                # Default before use of folder plugin was for product to be first token in job name
-                PRODUCT=${PRODUCT:-$(cut -d '-' -f 1 <<< "${JOB_NAME}")}
-            fi
+      # Determine the aggregator/integrator/tenant/product/environment/segment from
+      # the job name if not already defined or provided on the command line
+      # Only parts of the jobname starting with "cot.?-" are
+      # considered and this prefix is removed to give the actual name
+      JOB_PATH=($(tr "/" " " <<< "${JOB_NAME}"))
+      for PART in "${JOB_PATH[@]}"; do
+        if contains "${PART}" "^(cot.?)-(.+)"; then
+          case "${BASH_REMATCH[1]}" in
+            cota) AGGREGATOR="${AGGREGATOR:-${BASH_REMATCH[2]}}" ;;
+            coti) INTEGRATOR="${INTEGRATOR:-${BASH_REMATCH[2]}}" ;;
+            cott) TENANT="${TENANT:-${BASH_REMATCH[2}}" ;;
+            cotd) DOMAIN="${DOMAIN:-${BASH_REMATCH[2]}}" ;;
+            cotp) PRODUCT="${PRODUCT:-${BASH_REMATCH[2]}}" ;;
+            cote) ENVIRONMENT="${ENVIRONMENT:-${BASH_REMATCH[2]}}" ;;
+            cots) SEGMENT="${SEGMENT:-${BASH_REMATCH[2]}}" ;;
+          esac
         fi
+      done
 
-        # Use the user info for git commits
-        GIT_USER="${GIT_USER:-$BUILD_USER}"
-        GIT_EMAIL="${GIT_EMAIL:-$BUILD_USER_EMAIL}"
+      # Use the user info for git commits
+      GIT_USER="${GIT_USER:-$BUILD_USER}"
+      GIT_EMAIL="${GIT_EMAIL:-$BUILD_USER_EMAIL}"
 
-        # Working directory
-        AUTOMATION_DATA_DIR="${WORKSPACE}"
-        
-        # Build directory
-        AUTOMATION_BUILD_DIR="${AUTOMATION_DATA_DIR}"
-        [[ -d build ]] && AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
-        if [[ -n "${BUILD_PATH}" ]]; then
-            [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ]] &&
-                AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ||
-                fatal "Build path directory \"${BUILD_PATH}\" not found"
-        fi
+      # Working directory
+      AUTOMATION_DATA_DIR="${WORKSPACE}"
+      
+      # Build directory
+      AUTOMATION_BUILD_DIR="${AUTOMATION_DATA_DIR}"
+      [[ -d build ]] && AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/build"
+      if [[ -n "${BUILD_PATH}" ]]; then
+        [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ]] &&
+          AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ||
+          fatal "Build path directory \"${BUILD_PATH}\" not found"
+      fi
 
-        # Build source directory
-        AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"
-        [[ -d "${AUTOMATION_BUILD_DIR}/src" ]] &&
-            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
+      # Build source directory
+      AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"
+      [[ -d "${AUTOMATION_BUILD_DIR}/src" ]] &&
+        AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
 
-        [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] &&
-            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
+      [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] &&
+        AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
 
-        # Build devops directory
-        AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}"
-        if [[ -d "${AUTOMATION_BUILD_DIR}/devops" ]]; then
-            AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}/devops"
-        fi
-        if [[ -d "${AUTOMATION_BUILD_DIR}/deploy" ]]; then
-            AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}/deploy"
-        fi
+      # Build devops directory
+      AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}"
+      [[ -d "${AUTOMATION_BUILD_DIR}/devops" ]] &&
+        AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}/devops"
+      [[ -d "${AUTOMATION_BUILD_DIR}/deploy" ]] &&
+        AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}/deploy"
 
-        # Job identifier
-        AUTOMATION_JOB_IDENTIFIER="${BUILD_NUMBER}"
-        ;;
-esac
+      # Job identifier
+      AUTOMATION_JOB_IDENTIFIER="${BUILD_NUMBER}"
+      ;;
+  esac
+  
+  # Parse options
+  while getopts ":a:d:e:hi:p:r:s:t:" option; do
+    case "${options}" in
+      a) ACCOUNT="${OPTARG}" ;;
+      d) DEPLOYMENT_MODE="${OPTARG}" ;;
+      e) ENVIRONMENT="${OPTARG}" ;;
+      h) usage ;;
+      i) INTEGRATOR="${OPTARG}" ;;
+      p) PRODUCT="${OPTARG}" ;;
+      r) RELEASE_MODE="${OPTARG}" ;;
+      s) SEGMENT="${OPTARG}" ;;
+      t) TENANT="${OPTARG}" ;;
+      \?) fatalOption ;;
+      :) fatalOptionArgument ;;
+     esac
+  done
+  
+  ### Core settings ###
+  
+  findAndDefineSetting "TENANT" "" "" "" "value"
+  findAndDefineSetting "PRODUCT" "" "" "" "value"
+  
+  # Default SEGMENT and ENVIRONMENT - normally they are the same
+  findAndDefineSetting "SEGMENT"     "" "" "" "value" "${ENVIRONMENT}"
+  findAndDefineSetting "ENVIRONMENT" "" "" "" "value" "${SEGMENT}"
+  
+  # Determine the account from the product/segment combination
+  # if not already defined or provided on the command line
+  findAndDefineSetting "ACCOUNT" "ACCOUNT" "${PRODUCT}" "${SEGMENT}" "value"
+  
+  # Default account/product git provider - "github"
+  # ORG is product specific so not defaulted here
+  findAndDefineSetting "GITHUB_GIT_DNS" "" "" "" "value" "github.com"
+  
+  # Default generation framework git provider - "codeontap"
+  findAndDefineSetting "CODEONTAP_GIT_DNS" "" "" "" "value" "github.com"
+  findAndDefineSetting "CODEONTAP_GIT_ORG" "" "" "" "value" "codeontap"
+  
+  # Default who to include as the author if git updates required
+  findAndDefineSetting "GIT_USER"  "" "" "" "value" "${GIT_USER_DEFAULT:-automation}"
+  findAndDefineSetting "GIT_EMAIL" "" "" "" "value" "${GIT_EMAIL_DEFAULT}"
+  
+  # Separators
+  findAndDefineSetting "DEPLOYMENT_UNIT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" " ,"
+  findAndDefineSetting "BUILD_REFERENCE_PART_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" "!?&"
+  findAndDefineSetting "IMAGE_FORMAT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" ":;|"
+  
+  # Modes
+  findAndDefineSetting "DEPLOYMENT_MODE" "" "" "" "value" "${MODE}"
+  findAndDefineSetting "RELEASE_MODE" "" "" "" "value" "${RELEASE_MODE_CONTINUOUS}"
+  
+  ### Account details ###
+  
+  # - provider
+  findAndDefineSetting "ACCOUNT_PROVIDER" "ACCOUNT_PROVIDER" "${ACCOUNT}" "" "value" "aws"
+  AUTOMATION_DIR="${AUTOMATION_PROVIDER_DIR}/${ACCOUNT_PROVIDER}"
+  
+  # - access credentials
+  case "${ACCOUNT_PROVIDER}" in
+      aws)
+          . ${AUTOMATION_DIR}/setCredentials.sh "${ACCOUNT}"
+          save_context_property ACCOUNT_AWS_ACCESS_KEY_ID_VAR
+          save_context_property ACCOUNT_AWS_SECRET_ACCESS_KEY_VAR
+          save_context_property ACCOUNT_TEMP_AWS_ACCESS_KEY_ID
+          save_context_property ACCOUNT_TEMP_AWS_SECRET_ACCESS_KEY
+          save_context_property ACCOUNT_TEMP_AWS_SESSION_TOKEN
+          ;;
+  esac
+  
+  # - cmdb git provider
+  defineGitProviderSettings "ACCOUNT" "" "${ACCOUNT}" "" "github"
+  
+  # - cmdb repos
+  defineRepoSettings "ACCOUNT" "CONFIG"         "${ACCOUNT}" "" "${ACCOUNT}-config"
+  defineRepoSettings "ACCOUNT" "INFRASTRUCTURE" "${ACCOUNT}" "" "${ACCOUNT}-infrastructure"
+  
+  
+  ### Product details ###
+  
+  # - cmdb git provider
+  defineGitProviderSettings "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT_GIT_PROVIDER}"
+  
+  # - cmdb repos
+  defineRepoSettings "PRODUCT" "CONFIG"         "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-config"
+  defineRepoSettings "PRODUCT" "INFRASTRUCTURE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-infrastructure"                                               
+  
+  # - code git provider
+  defineGitProviderSettings "PRODUCT" "CODE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT_GIT_PROVIDER}"
+  
+  # - local registry providers
+  for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
+      defineRegistryProviderSettings "${REGISTRY_TYPE}" "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT}"
+  done
+  
+  
+  ### Generation framework details ###
+  
+  # - git provider
+  defineGitProviderSettings "GENERATION" ""  "${PRODUCT}" "${SEGMENT}" "codeontap"
+  
+  # - repos
+  defineRepoSettings "GENERATION" "BIN"      "${PRODUCT}" "${SEGMENT}" "gen3.git"
+  defineRepoSettings "GENERATION" "PATTERNS" "${PRODUCT}" "${SEGMENT}" "gen3-patterns.git"
+  defineRepoSettings "GENERATION" "STARTUP"  "${PRODUCT}" "${SEGMENT}" "gen3-startup.git"
+  
+  
+  ### Application deployment unit details ###
+  
+  # Determine the deployment unit list and optional corresponding metadata
+  DEPLOYMENT_UNIT_ARRAY=()
+  CODE_COMMIT_ARRAY=()
+  CODE_TAG_ARRAY=()
+  CODE_REPO_ARRAY=()
+  CODE_PROVIDER_ARRAY=()
+  IMAGE_FORMATS_ARRAY=()
+  IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${DEPLOYMENT_UNITS:-${DEPLOYMENT_UNIT:-${SLICES:-${SLICE}}}}"
+  for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
+      IFS="${BUILD_REFERENCE_PART_SEPARATORS}" read -ra BUILD_REFERENCE_PARTS <<< "${CURRENT_DEPLOYMENT_UNIT}"
+      DEPLOYMENT_UNIT_PART="${BUILD_REFERENCE_PARTS[0]}"
+      TAG_PART="${BUILD_REFERENCE_PARTS[1]:-?}"
+      FORMATS_PART="${BUILD_REFERENCE_PARTS[2]:-?}"
+      COMMIT_PART="?"
+      if [[ ("${#DEPLOYMENT_UNIT_ARRAY[@]}" -eq 0) ||
+              ("${APPLY_TO_ALL_DEPLOYMENT_UNITS}" == "true") ]]; then
+          # Processing the first deployment unit
+          if [[ -n "${CODE_TAG}" ]]; then
+              # Permit separate variable for tag/commit value - easier if only one repo involved
+              TAG_PART="${CODE_TAG}"
+          fi
+          if [[ (-n "${IMAGE_FORMATS}") || (-n "${IMAGE_FORMAT}") ]]; then
+              # Permit separate variable for formats value - easier if only one repo involved
+              # Allow comma and space since its a dedicated parameter - normally they are not format separators
+              IFS="${IMAGE_FORMAT_SEPARATORS}, " read -ra FORMATS <<< "${IMAGE_FORMATS:-${IMAGE_FORMAT}}"
+              FORMATS_PART=$(IFS="${IMAGE_FORMAT_SEPARATORS}"; echo "${FORMATS[*]}")
+          fi
+      fi
+          
+      if [[ "${#TAG_PART}" -eq 40 ]]; then
+          # Assume its a full commit ids - at this stage we don't accept short commit ids
+          COMMIT_PART="${TAG_PART}"
+          TAG_PART="?"
+      fi
+  
+      DEPLOYMENT_UNIT_ARRAY+=("${DEPLOYMENT_UNIT_PART,,}")
+      CODE_COMMIT_ARRAY+=("${COMMIT_PART,,}")
+      CODE_TAG_ARRAY+=("${TAG_PART}")
+      IMAGE_FORMATS_ARRAY+=("${FORMATS_PART}")
+  
+      # Determine code repo for the deployment unit - there may be none
+      CODE_DEPLOYMENT_UNIT=$(tr "-" "_" <<< "${DEPLOYMENT_UNIT_PART^^}")
+      defineRepoSettings "PRODUCT" "${CODE_DEPLOYMENT_UNIT}" "${PRODUCT}" "${CODE_DEPLOYMENT_UNIT}" "?" "CODE"
+      CODE_REPO_ARRAY+=("${NAME_VALUE}")
+      
+      # Assume all code covered by one provider for now
+      # Remaining code works off this array so easy to change in the future
+      CODE_PROVIDER_ARRAY+=("${PRODUCT_CODE_GIT_PROVIDER}")
+  done
+  
+  # Capture any provided git commit
+  case ${AUTOMATION_PROVIDER} in
+      jenkins)
+          [[ -n "${GIT_COMMIT}" ]] && CODE_COMMIT_ARRAY[0]="${GIT_COMMIT}"
+          ;;
+  esac
+  
+  # Regenerate the deployment unit list in case the first code commit/tag or format was overriden
+  UPDATED_UNITS=
+  DEPLOYMENT_UNIT_SEPARATOR=""
+  for INDEX in $( seq 0 $((${#DEPLOYMENT_UNIT_ARRAY[@]}-1)) ); do
+      UPDATED_UNITS="${UPDATED_UNITS}${DEPLOYMENT_UNIT_SEPARATOR}${DEPLOYMENT_UNIT_ARRAY[$INDEX]}"
+      if [[ "${CODE_TAG_ARRAY[$INDEX]}" != "?" ]]; then
+          UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${CODE_TAG_ARRAY[$INDEX]}"
+      else
+          if [[ "${CODE_COMMIT_ARRAY[$INDEX]}" != "?" ]]; then
+              UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${CODE_COMMIT_ARRAY[$INDEX]}"
+          fi
+      fi
+      if [[ "${IMAGE_FORMATS_ARRAY[$INDEX]}" != "?" ]]; then
+          UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${IMAGE_FORMATS_ARRAY[$INDEX]}"
+      fi
+  DEPLOYMENT_UNIT_SEPARATOR="${DEPLOYMENT_UNIT_SEPARATORS:0:1}"
+  done
+  
+  # Save for subsequent processing
+  save_context_property DEPLOYMENT_UNIT_LIST "${DEPLOYMENT_UNIT_ARRAY[@]}"
+  save_context_property CODE_COMMIT_LIST     "${CODE_COMMIT_ARRAY[@]}"
+  save_context_property CODE_TAG_LIST        "${CODE_TAG_ARRAY[@]}"
+  save_context_property CODE_REPO_LIST       "${CODE_REPO_ARRAY[@]}"
+  save_context_property CODE_PROVIDER_LIST   "${CODE_PROVIDER_ARRAY[@]}"
+  save_context_property IMAGE_FORMATS_LIST   "${IMAGE_FORMATS_ARRAY[@]}"
+  [[ -n "${UPDATED_UNITS}" ]] && save_context_property DEPLOYMENT_UNITS "${UPDATED_UNITS}"
+  
+  ### Release management ###
+   
+  # This format of checking detects if the variable is set (though possibly empty), i.e. it is
+  # defined as a parameter on the job though possibly empty
+  if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
+      
+      case "${RELEASE_MODE}" in
+          # Promotion details
+          ${RELEASE_MODE_SELECTIVE}|${RELEASE_MODE_PROMOTION})
+              findAndDefineSetting "FROM_SEGMENT" "PROMOTION_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
+              # Hard code some defaults for now
+              if [[ -z "${FROM_SEGMENT}" ]]; then
+                  case "${SEGMENT}" in
+                      staging|preproduction)
+                          FROM_SEGMENT="integration"
+                          ;;
+                      production)
+                          FROM_SEGMENT="preproduction"
+                          ;;
+                  esac
+                  defineSetting "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
+              fi
+  
+              findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${FROM_SEGMENT}" "value"
+              if [[ (-n "${FROM_SEGMENT}") &&
+                      (-n "${FROM_ACCOUNT}")]]; then
+                  defineGitProviderSettings    "FROM_ACCOUNT" "" "${FROM_ACCOUNT}" "" "github"
+                  defineGitProviderSettings    "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT_GIT_PROVIDER}"
+                  defineRepoSettings           "FROM_PRODUCT" "CONFIG" "${PRODUCT}" "${FROM_SEGMENT}" "${PRODUCT}-config"
+                  for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
+                      defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
+                  done
+              else
+                  fatal "PROMOTION segment/account not defined"
+              fi
+              ;;
+  
+          #  Hotfix details
+          ${RELEASE_MODE_HOTFIX})
+              findAndDefineSetting "FROM_SEGMENT" "HOTFIX_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
+              # Hard code some defaults for now
+              if [[ -z "${FROM_SEGMENT}" ]]; then
+                  case "${SEGMENT}" in
+                      *)
+                          FROM_SEGMENT="integration"
+                          ;;
+                  esac
+                  defineSetting "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
+              fi
+  
+              findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"
+              if [[ (-n "${FROM_SEGMENT}") &&
+                      (-n "${FROM_ACCOUNT}")]]; then
+                  for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
+                      defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
+                  done
+              else
+                  fatal "HOTFIX segment/account not defined"
+              fi
+              ;;
+      esac
+  fi
+  
+  
+  ### Tags ###
+  
+      AUTOMATION_RELEASE_IDENTIFIER="${RELEASE_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
+      AUTOMATION_DEPLOYMENT_IDENTIFIER="${DEPLOYMENT_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
+      if [[ "${AUTOMATION_RELEASE_IDENTIFIER}" =~ ^[0-9]+$ ]]; then
+          # If its just a number then add an "r" in front otherwise assume
+          # the user is deciding the naming scheme
+          AUTOMATION_RELEASE_IDENTIFIER="r${AUTOMATION_RELEASE_IDENTIFIER}"
+      fi
+      if [[ "${AUTOMATION_DEPLOYMENT_IDENTIFIER}" =~ ^[0-9]+$ ]]; then
+          # If its just a number then add an "d" in front otherwise assume
+          # the user is deciding the naming scheme
+          AUTOMATION_DEPLOYMENT_IDENTIFIER="d${AUTOMATION_DEPLOYMENT_IDENTIFIER}"
+      fi
+      defineSetting "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
+      defineSetting "DEPLOYMENT_TAG" "${AUTOMATION_DEPLOYMENT_IDENTIFIER}-${SEGMENT}"
+  
+  case "${RELEASE_MODE}" in
+      ${RELEASE_MODE_CONTINUOUS})
+          # For continuous deployment, the repo isn't tagged with a release
+          defineSetting "ACCEPTANCE_TAG" "latest"
+          ;;
+  
+      ${RELEASE_MODE_SELECTIVE})
+          defineSetting "ACCEPTANCE_TAG" "latest"
+          ;;
+  
+      ${RELEASE_MODE_ACCEPTANCE})
+          defineSetting "RELEASE_MODE_TAG" "a${RELEASE_TAG}"
+          ;;
+  
+      ${RELEASE_MODE_PROMOTION})
+          defineSetting "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${FROM_SEGMENT}"
+          defineSetting "RELEASE_MODE_TAG" "p${ACCEPTANCE_TAG}-${SEGMENT}"
+          ;;
+  
+      ${RELEASE_MODE_HOTFIX})
+          defineSetting "RELEASE_MODE_TAG" "h${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
+          defineSetting "ACCEPTANCE_TAG" "latest"
+          ;;
+  esac
+  
+  
+  ### Capture details for logging etc ###
+  
+  # Basic details for git commits/slack notification (enhanced by other scripts)
+  DETAIL_MESSAGE="product=${PRODUCT}"
+  if [[ -n "${ENVIRONMENT}" ]];               then DETAIL_MESSAGE="${DETAIL_MESSAGE}, environment=${ENVIRONMENT}"; fi
+  if [[ "${SEGMENT}" != "${ENVIRONMENT}" ]];  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, segment=${SEGMENT}"; fi
+  if [[ -n "${TIER}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, tier=${TIER}"; fi
+  if [[ -n "${COMPONENT}" ]];                 then DETAIL_MESSAGE="${DETAIL_MESSAGE}, component=${COMPONENT}"; fi
+  if [[ "${#DEPLOYMENT_UNIT_ARRAY[@]}" -ne 0 ]];        then DETAIL_MESSAGE="${DETAIL_MESSAGE}, units=${UPDATED_UNITS}"; fi
+  if [[ -n "${TASK}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, task=${TASK}"; fi
+  if [[ -n "${TASKS}" ]];                     then DETAIL_MESSAGE="${DETAIL_MESSAGE}, tasks=${TASKS}"; fi
+  if [[ -n "${GIT_USER}" ]];                  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, user=${GIT_USER}"; fi
+  if [[ -n "${DEPLOYMENT_MODE}" ]];           then DETAIL_MESSAGE="${DETAIL_MESSAGE}, mode=${DEPLOYMENT_MODE}"; fi
+  
+  save_context_property DETAIL_MESSAGE
+  
+  ### Remember automation details ###
+  
+  save_context_property AUTOMATION_BASE_DIR
+  save_context_property AUTOMATION_PROVIDER
+  save_context_property AUTOMATION_PROVIDER_DIR
+  save_context_property AUTOMATION_DIR
+  save_context_property AUTOMATION_DATA_DIR
+  save_context_property AUTOMATION_BUILD_DIR
+  save_context_property AUTOMATION_BUILD_SRC_DIR
+  save_context_property AUTOMATION_BUILD_DEVOPS_DIR
+  save_context_property AUTOMATION_JOB_IDENTIFIER
+  save_context_property AUTOMATION_RELEASE_IDENTIFIER
+  save_context_property AUTOMATION_DEPLOYMENT_IDENTIFIER
+  
+  # All good
+  RESULT=0
+}
 
-
-### Core settings ###
-
-findAndDefineSetting "TENANT" "" "" "" "value"
-findAndDefineSetting "PRODUCT" "" "" "" "value"
-
-# Default SEGMENT and ENVIRONMENT - normally they are the same
-findAndDefineSetting "SEGMENT"     "" "" "" "value" "${ENVIRONMENT}"
-findAndDefineSetting "ENVIRONMENT" "" "" "" "value" "${SEGMENT}"
-
-# Determine the account from the product/segment combination
-# if not already defined or provided on the command line
-findAndDefineSetting "ACCOUNT" "ACCOUNT" "${PRODUCT}" "${SEGMENT}" "value"
-
-# Default account/product git provider - "github"
-# ORG is product specific so not defaulted here
-findAndDefineSetting "GITHUB_GIT_DNS" "" "" "" "value" "github.com"
-
-# Default generation framework git provider - "codeontap"
-findAndDefineSetting "CODEONTAP_GIT_DNS" "" "" "" "value" "github.com"
-findAndDefineSetting "CODEONTAP_GIT_ORG" "" "" "" "value" "codeontap"
-
-# Default who to include as the author if git updates required
-findAndDefineSetting "GIT_USER"  "" "" "" "value" "${GIT_USER_DEFAULT:-automation}"
-findAndDefineSetting "GIT_EMAIL" "" "" "" "value" "${GIT_EMAIL_DEFAULT}"
-
-# Separators
-findAndDefineSetting "DEPLOYMENT_UNIT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" " ,"
-findAndDefineSetting "BUILD_REFERENCE_PART_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" "!?&"
-findAndDefineSetting "IMAGE_FORMAT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" ":;|"
-
-# Modes
-findAndDefineSetting "DEPLOYMENT_MODE" "" "" "" "value" "${MODE}"
-findAndDefineSetting "RELEASE_MODE" "" "" "" "value" "${RELEASE_MODE_DEFAULT}"
-
-### Account details ###
-
-# - provider
-findAndDefineSetting "ACCOUNT_PROVIDER" "ACCOUNT_PROVIDER" "${ACCOUNT}" "" "value" "aws"
-AUTOMATION_DIR="${AUTOMATION_PROVIDER_DIR}/${ACCOUNT_PROVIDER}"
-
-# - access credentials
-case "${ACCOUNT_PROVIDER}" in
-    aws)
-        . ${AUTOMATION_DIR}/setCredentials.sh "${ACCOUNT}"
-        echo "ACCOUNT_AWS_ACCESS_KEY_ID_VAR=${AWS_CRED_AWS_ACCESS_KEY_ID_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "ACCOUNT_AWS_SECRET_ACCESS_KEY_VAR=${AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "ACCOUNT_TEMP_AWS_ACCESS_KEY_ID=${AWS_CRED_TEMP_AWS_ACCESS_KEY_ID}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "ACCOUNT_TEMP_AWS_SECRET_ACCESS_KEY=${AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "ACCOUNT_TEMP_AWS_SESSION_TOKEN=${AWS_CRED_TEMP_AWS_SESSION_TOKEN}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        ;;
-esac
-
-# - cmdb git provider
-defineGitProviderSettings "ACCOUNT" "" "${ACCOUNT}" "" "github"
-
-# - cmdb repos
-defineRepoSettings "ACCOUNT" "CONFIG"         "${ACCOUNT}" "" "${ACCOUNT}-config"
-defineRepoSettings "ACCOUNT" "INFRASTRUCTURE" "${ACCOUNT}" "" "${ACCOUNT}-infrastructure"
-
-
-### Product details ###
-
-# - cmdb git provider
-defineGitProviderSettings "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT_GIT_PROVIDER}"
-
-# - cmdb repos
-defineRepoSettings "PRODUCT" "CONFIG"         "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-config"
-defineRepoSettings "PRODUCT" "INFRASTRUCTURE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-infrastructure"                                               
-
-# - code git provider
-defineGitProviderSettings "PRODUCT" "CODE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT_GIT_PROVIDER}"
-
-# - local registry providers
-for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
-    defineRegistryProviderSettings "${REGISTRY_TYPE}" "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT}"
-done
-
-
-### Generation framework details ###
-
-# - git provider
-defineGitProviderSettings "GENERATION" ""  "${PRODUCT}" "${SEGMENT}" "codeontap"
-
-# - repos
-defineRepoSettings "GENERATION" "BIN"      "${PRODUCT}" "${SEGMENT}" "gen3.git"
-defineRepoSettings "GENERATION" "PATTERNS" "${PRODUCT}" "${SEGMENT}" "gen3-patterns.git"
-defineRepoSettings "GENERATION" "STARTUP"  "${PRODUCT}" "${SEGMENT}" "gen3-startup.git"
-
-
-### Application deployment unit details ###
-
-# Determine the deployment unit list and optional corresponding metadata
-DEPLOYMENT_UNIT_ARRAY=()
-CODE_COMMIT_ARRAY=()
-CODE_TAG_ARRAY=()
-CODE_REPO_ARRAY=()
-CODE_PROVIDER_ARRAY=()
-IMAGE_FORMATS_ARRAY=()
-IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${DEPLOYMENT_UNITS:-${DEPLOYMENT_UNIT:-${SLICES:-${SLICE}}}}"
-for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
-    IFS="${BUILD_REFERENCE_PART_SEPARATORS}" read -ra BUILD_REFERENCE_PARTS <<< "${CURRENT_DEPLOYMENT_UNIT}"
-    DEPLOYMENT_UNIT_PART="${BUILD_REFERENCE_PARTS[0]}"
-    TAG_PART="${BUILD_REFERENCE_PARTS[1]:-?}"
-    FORMATS_PART="${BUILD_REFERENCE_PARTS[2]:-?}"
-    COMMIT_PART="?"
-    if [[ ("${#DEPLOYMENT_UNIT_ARRAY[@]}" -eq 0) ||
-            ("${APPLY_TO_ALL_DEPLOYMENT_UNITS}" == "true") ]]; then
-        # Processing the first deployment unit
-        if [[ -n "${CODE_TAG}" ]]; then
-            # Permit separate variable for tag/commit value - easier if only one repo involved
-            TAG_PART="${CODE_TAG}"
-        fi
-        if [[ (-n "${IMAGE_FORMATS}") || (-n "${IMAGE_FORMAT}") ]]; then
-            # Permit separate variable for formats value - easier if only one repo involved
-            # Allow comma and space since its a dedicated parameter - normally they are not format separators
-            IFS="${IMAGE_FORMAT_SEPARATORS}, " read -ra FORMATS <<< "${IMAGE_FORMATS:-${IMAGE_FORMAT}}"
-            FORMATS_PART=$(IFS="${IMAGE_FORMAT_SEPARATORS}"; echo "${FORMATS[*]}")
-        fi
-    fi
-        
-    if [[ "${#TAG_PART}" -eq 40 ]]; then
-        # Assume its a full commit ids - at this stage we don't accept short commit ids
-        COMMIT_PART="${TAG_PART}"
-        TAG_PART="?"
-    fi
-
-    DEPLOYMENT_UNIT_ARRAY+=("${DEPLOYMENT_UNIT_PART,,}")
-    CODE_COMMIT_ARRAY+=("${COMMIT_PART,,}")
-    CODE_TAG_ARRAY+=("${TAG_PART}")
-    IMAGE_FORMATS_ARRAY+=("${FORMATS_PART}")
-
-    # Determine code repo for the deployment unit - there may be none
-    CODE_DEPLOYMENT_UNIT=$(tr "-" "_" <<< "${DEPLOYMENT_UNIT_PART^^}")
-    defineRepoSettings "PRODUCT" "${CODE_DEPLOYMENT_UNIT}" "${PRODUCT}" "${CODE_DEPLOYMENT_UNIT}" "?" "CODE"
-    CODE_REPO_ARRAY+=("${NAME_VALUE}")
-    
-    # Assume all code covered by one provider for now
-    # Remaining code works off this array so easy to change in the future
-    CODE_PROVIDER_ARRAY+=("${PRODUCT_CODE_GIT_PROVIDER}")
-done
-
-# Capture any provided git commit
-case ${AUTOMATION_PROVIDER} in
-    jenkins)
-        [[ -n "${GIT_COMMIT}" ]] && CODE_COMMIT_ARRAY[0]="${GIT_COMMIT}"
-        ;;
-esac
-
-# Regenerate the deployment unit list in case the first code commit/tag or format was overriden
-UPDATED_UNITS=
-DEPLOYMENT_UNIT_SEPARATOR=""
-for INDEX in $( seq 0 $((${#DEPLOYMENT_UNIT_ARRAY[@]}-1)) ); do
-    UPDATED_UNITS="${UPDATED_UNITS}${DEPLOYMENT_UNIT_SEPARATOR}${DEPLOYMENT_UNIT_ARRAY[$INDEX]}"
-    if [[ "${CODE_TAG_ARRAY[$INDEX]}" != "?" ]]; then
-        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${CODE_TAG_ARRAY[$INDEX]}"
-    else
-        if [[ "${CODE_COMMIT_ARRAY[$INDEX]}" != "?" ]]; then
-            UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${CODE_COMMIT_ARRAY[$INDEX]}"
-        fi
-    fi
-    if [[ "${IMAGE_FORMATS_ARRAY[$INDEX]}" != "?" ]]; then
-        UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${IMAGE_FORMATS_ARRAY[$INDEX]}"
-    fi
-DEPLOYMENT_UNIT_SEPARATOR="${DEPLOYMENT_UNIT_SEPARATORS:0:1}"
-done
-
-# Save for subsequent processing
-echo "DEPLOYMENT_UNIT_LIST=${DEPLOYMENT_UNIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "CODE_REPO_LIST=${CODE_REPO_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "CODE_PROVIDER_LIST=${CODE_PROVIDER_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-[[ -n "${UPDATED_UNITS}" ]] && echo "DEPLOYMENT_UNITS=${UPDATED_UNITS}" >> ${AUTOMATION_DATA_DIR}/context.properties
-[[ -n "${SEGMENT}" ]] && echo "SEGMENT_APPSETTINGS_DIR=${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/appsettings/${SEGMENT}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-### Release management ###
- 
-# This format of checking detects if the variable is set (though possibly empty), i.e. it is
-# defined as a parameter on the job though possibly empty
-if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
-    
-    case "${RELEASE_MODE}" in
-        # Promotion details
-        ${RELEASE_MODE_SELECTIVE}|${RELEASE_MODE_PROMOTION})
-            findAndDefineSetting "FROM_SEGMENT" "PROMOTION_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
-            # Hard code some defaults for now
-            if [[ -z "${FROM_SEGMENT}" ]]; then
-                case "${SEGMENT}" in
-                    staging|preproduction)
-                        FROM_SEGMENT="integration"
-                        ;;
-                    production)
-                        FROM_SEGMENT="preproduction"
-                        ;;
-                esac
-                defineSetting "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
-            fi
-
-            findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${FROM_SEGMENT}" "value"
-            if [[ (-n "${FROM_SEGMENT}") &&
-                    (-n "${FROM_ACCOUNT}")]]; then
-                defineGitProviderSettings    "FROM_ACCOUNT" "" "${FROM_ACCOUNT}" "" "github"
-                defineGitProviderSettings    "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT_GIT_PROVIDER}"
-                defineRepoSettings           "FROM_PRODUCT" "CONFIG" "${PRODUCT}" "${FROM_SEGMENT}" "${PRODUCT}-config"
-                for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
-                    defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
-                done
-            else
-                fatal "PROMOTION segment/account not defined"
-            fi
-            ;;
-
-        #  Hotfix details
-        ${RELEASE_MODE_HOTFIX})
-            findAndDefineSetting "FROM_SEGMENT" "HOTFIX_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
-            # Hard code some defaults for now
-            if [[ -z "${FROM_SEGMENT}" ]]; then
-                case "${SEGMENT}" in
-                    *)
-                        FROM_SEGMENT="integration"
-                        ;;
-                esac
-                defineSetting "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
-            fi
-
-            findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"
-            if [[ (-n "${FROM_SEGMENT}") &&
-                    (-n "${FROM_ACCOUNT}")]]; then
-                for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
-                    defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
-                done
-            else
-                fatal "HOTFIX segment/account not defined"
-            fi
-            ;;
-    esac
-fi
-
-
-### Tags ###
-
-    AUTOMATION_RELEASE_IDENTIFIER="${RELEASE_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
-    AUTOMATION_DEPLOYMENT_IDENTIFIER="${DEPLOYMENT_IDENTIFIER:-${AUTOMATION_JOB_IDENTIFIER}}"
-    if [[ "${AUTOMATION_RELEASE_IDENTIFIER}" =~ ^[0-9]+$ ]]; then
-        # If its just a number then add an "r" in front otherwise assume
-        # the user is deciding the naming scheme
-        AUTOMATION_RELEASE_IDENTIFIER="r${AUTOMATION_RELEASE_IDENTIFIER}"
-    fi
-    if [[ "${AUTOMATION_DEPLOYMENT_IDENTIFIER}" =~ ^[0-9]+$ ]]; then
-        # If its just a number then add an "d" in front otherwise assume
-        # the user is deciding the naming scheme
-        AUTOMATION_DEPLOYMENT_IDENTIFIER="d${AUTOMATION_DEPLOYMENT_IDENTIFIER}"
-    fi
-    defineSetting "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
-    defineSetting "DEPLOYMENT_TAG" "${AUTOMATION_DEPLOYMENT_IDENTIFIER}-${SEGMENT}"
-
-case "${RELEASE_MODE}" in
-    ${RELEASE_MODE_CONTINUOUS})
-        # For continuous deployment, the repo isn't tagged with a release
-        defineSetting "ACCEPTANCE_TAG" "latest"
-        ;;
-
-    ${RELEASE_MODE_SELECTIVE})
-        defineSetting "ACCEPTANCE_TAG" "latest"
-        ;;
-
-    ${RELEASE_MODE_ACCEPTANCE})
-        defineSetting "RELEASE_MODE_TAG" "a${RELEASE_TAG}"
-        ;;
-
-    ${RELEASE_MODE_PROMOTION})
-        defineSetting "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${FROM_SEGMENT}"
-        defineSetting "RELEASE_MODE_TAG" "p${ACCEPTANCE_TAG}-${SEGMENT}"
-        ;;
-
-    ${RELEASE_MODE_HOTFIX})
-        defineSetting "RELEASE_MODE_TAG" "h${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
-        defineSetting "ACCEPTANCE_TAG" "latest"
-        ;;
-esac
-
-
-### Capture details for logging etc ###
-
-# Basic details for git commits/slack notification (enhanced by other scripts)
-DETAIL_MESSAGE="product=${PRODUCT}"
-if [[ -n "${ENVIRONMENT}" ]];               then DETAIL_MESSAGE="${DETAIL_MESSAGE}, environment=${ENVIRONMENT}"; fi
-if [[ "${SEGMENT}" != "${ENVIRONMENT}" ]];  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, segment=${SEGMENT}"; fi
-if [[ -n "${TIER}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, tier=${TIER}"; fi
-if [[ -n "${COMPONENT}" ]];                 then DETAIL_MESSAGE="${DETAIL_MESSAGE}, component=${COMPONENT}"; fi
-if [[ "${#DEPLOYMENT_UNIT_ARRAY[@]}" -ne 0 ]];        then DETAIL_MESSAGE="${DETAIL_MESSAGE}, units=${UPDATED_UNITS}"; fi
-if [[ -n "${TASK}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, task=${TASK}"; fi
-if [[ -n "${TASKS}" ]];                     then DETAIL_MESSAGE="${DETAIL_MESSAGE}, tasks=${TASKS}"; fi
-if [[ -n "${GIT_USER}" ]];                  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, user=${GIT_USER}"; fi
-if [[ -n "${DEPLOYMENT_MODE}" ]];           then DETAIL_MESSAGE="${DETAIL_MESSAGE}, mode=${DEPLOYMENT_MODE}"; fi
-
-echo "DETAIL_MESSAGE=${DETAIL_MESSAGE}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-
-### Remember automation details ###
-
-echo "AUTOMATION_BASE_DIR=${AUTOMATION_BASE_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_PROVIDER=${AUTOMATION_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_PROVIDER_DIR=${AUTOMATION_PROVIDER_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_DIR=${AUTOMATION_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_DATA_DIR=${AUTOMATION_DATA_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_BUILD_DIR=${AUTOMATION_BUILD_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_BUILD_SRC_DIR=${AUTOMATION_BUILD_SRC_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_BUILD_DEVOPS_DIR=${AUTOMATION_BUILD_DEVOPS_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_JOB_IDENTIFIER=${AUTOMATION_JOB_IDENTIFIER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_RELEASE_IDENTIFIER=${AUTOMATION_RELEASE_IDENTIFIER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "AUTOMATION_DEPLOYMENT_IDENTIFIER=${AUTOMATION_DEPLOYMENT_IDENTIFIER}" >> ${AUTOMATION_DATA_DIR}/context.properties
-
-
-# All good
-RESULT=0
+main "$@"
 

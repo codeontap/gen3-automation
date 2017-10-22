@@ -298,6 +298,10 @@ if [[ -z "${GENERATION_STARTUP_DIR}" ]]; then
     fi
 fi
 
-# All good
-RESULT=0
+# Examine the structure and define key directories
+findGen3Dirs "${BASE_DIR}"
+RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+# Remember directories for future steps
+save_gen3_dirs_in_context
 

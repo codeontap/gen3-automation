@@ -11,28 +11,15 @@ RESULT=$?
 
 # Create the templates
 ${AUTOMATION_DIR}/createTemplates.sh -t application -c "${RELEASE_TAG}"
-RESULT=$?
-[[ ${RESULT} -ne 0 ]] && exit
+RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
 # All ok so tag the config repo
-${AUTOMATION_DIR}/manageRepo.sh -p \
-    -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT} \
-    -l "config" \
-    -t ${RELEASE_TAG} \
-    -m "${DETAIL_MESSAGE}" \
-    -b ${PRODUCT_CONFIG_REFERENCE}
-RESULT=$?
-[[ ${RESULT} -ne 0 ]] && exit
+save_product_config "${DETAIL_MESSAGE}" "${PRODUCT_CONFIG_REFERENCE}" "${RELEASE_TAG}"
+RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
 # Commit the generated application templates
-${AUTOMATION_DIR}/manageRepo.sh -p \
-    -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/infrastructure/${PRODUCT} \
-    -l "infrastructure" \
-    -t ${RELEASE_TAG} \
-    -m "${DETAIL_MESSAGE}" \
-    -b ${PRODUCT_INFRASTRUCTURE_REFERENCE}
-RESULT=$?
-[[ ${RESULT} -ne 0 ]] && exit
+save_product_infrastructure "${DETAIL_MESSAGE}" "${PRODUCT_INFRASTRUCTURE_REFERENCE}" "${RELEASE_TAG}"
+RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
 # Record key parameters for downstream jobs
 echo "RELEASE_IDENTIFIER=${AUTOMATION_RELEASE_IDENTIFIER}" >> $AUTOMATION_DATA_DIR/chain.properties

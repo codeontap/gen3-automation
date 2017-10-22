@@ -6,22 +6,11 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Update build references
 ${AUTOMATION_DIR}/manageBuildReferences.sh -u
-RESULT=$?
-[[ ${RESULT} -ne 0 ]] && exit
+RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
-TAG_SWITCH=()
-if [[ -n "${RELEASE_MODE_TAG}" ]]; then
-    TAG_SWITCH=("-t" "${RELEASE_MODE_TAG}")
-fi
-
-${AUTOMATION_DIR}/manageRepo.sh -p \
-    -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT} \
-    -l "config" \
-    -m "${DETAIL_MESSAGE}" \
-    "${TAG_SWITCH[@]}" \
-    -b ${PRODUCT_CONFIG_REFERENCE}
-RESULT=$?
-[[ ${RESULT} -ne 0 ]] && exit
+# Save the results
+save_product_config "${DETAIL_MESSAGE}" "${PRODUCT_CONFIG_REFERENCE}" "${RELEASE_MODE_TAG}"
+RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
 if [[ (-n "${AUTODEPLOY+x}") &&
         ("$AUTODEPLOY" != "true") ]]; then

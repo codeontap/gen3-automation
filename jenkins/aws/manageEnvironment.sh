@@ -6,67 +6,38 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Process each template level
 IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra LEVELS_REQUIRED <<< "${LEVELS}"
-for L in "${LEVELS_REQUIRED[@]}"; do
+for LEVEL in "${LEVELS_REQUIRED[@]}"; do
 
-    UNITS_LIST="${L^^}_UNITS"
-    IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${!UNITS_LIST}"
+  UNITS_LIST="REQUIRED_${LEVEL^^}_UNITS"
+  IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${!UNITS_LIST}"
+  
+  # Generate the template if required
+  if [[ ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ||
+           ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOPSTART}") ]]; then
+    ${AUTOMATION_DIR}/createTemplates.sh -u "${UNITS[*]}" -l "${LEVEL}"
+    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
 
-    for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
-    
-    	# Generate the template if required
-    	cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
-        case ${MODE} in
-            update)
-                ${GENERATION_DIR}/create${L^}Template.sh -u "${DEPLOYMENT_UNIT}"
-                RESULT=$? && [[ "${RESULT}" -ne 0 ]] &&
-                    fatal "Generation of the ${L} level template for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
-		    ;;
-        esac
-        
-        # Manage the stack
-        ${GENERATION_DIR}/${MODE}Stack.sh -l ${L,,} -u ${DEPLOYMENT_UNIT}
-	    RESULT=$? && [[ "${RESULT}" -ne 0 ]] &&
-            fatal "Applying ${MODE} mode to the ${L} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
-        
-		# Update the infrastructure repo to capture any stack changes
-        ${AUTOMATION_DIR}/manageRepo.sh -p \
-            -d ${AUTOMATION_DATA_DIR}/${ACCOUNT}/infrastructure/${PRODUCT} \
-            -l "infrastructure" \
-            -m "Stack changes as a result of applying ${MODE} mode to the ${L} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment"
-            
-        RESULT=$? && [[ "${RESULT}" -ne 0 ]] &&
-            fatal "Unable to save the changes resulting from applying ${MODE} mode to the ${L} level stack for the ${DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment"
-    done
+    save_product_config \
+      "Stack changes as a result of applying ${DEPLOYMENT_MODE} mode at the ${LEVEL} level stack of the ${SEGMENT} segment for the following units (${UNITS_LIST})"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+  fi
+
+  # Manage the stacks individually in case of failure
+  for CURRENT_DEPLOYMENT_UNIT in "${UNITS}"; do
+    ${AUTOMATION_DIR}/manageStacks -u "${CURRENT_DEPLOYMENT_UNIT}" -l "${LEVEL}"
+    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+
+    save_product_infrastructure \
+      "Stack changes as a result of applying ${DEPLOYMENT_MODE} mode at the ${LEVEL} level stack of the ${SEGMENT} segment for the ${CURRENT_DEPLOYMENT_UNIT} unit"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+  done
 done
-
-# Check credentials if required
-if [[ "${CHECK_CREDENTIALS}" == "true" ]]; then
-    cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}
-    SEGMENT_OPTION=""
-    [[ -n "${SEGMENT}" ]] && SEGMENT_OPTION="-s ${SEGMENT}"
-
-    ${GENERATION_DIR}/initProductCredentials.sh -a ${ACCOUNT} -p ${PRODUCT} ${SEGMENT_OPTION}
-
-    # Update the infrastructure repo to capture any credential changes
-    cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/infrastructure/${PRODUCT}
-
-	# Ensure git knows who we are
-    git config user.name  "${GIT_USER}"
-    git config user.email "${GIT_EMAIL}"
- 
-    # Record changes
-    git add *
-    git commit -m "Credential updates for the ${SEGMENT} segment"
-    git push origin master
-	RESULT=$?
-    [[ "${RESULT}" -ne 0 ]] &&
-        fatal "Unable to save the credential updates for the ${SEGMENT} segment"
-fi
 
 # Update the code and credentials buckets if required
 if [[ "${SYNC_BUCKETS}" == "true" ]]; then
-    cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}
-    ${GENERATION_DIR}/syncAccountBuckets.sh -a ${ACCOUNT}
+  cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}
+  ${GENERATION_DIR}/syncAccountBuckets.sh -a ${ACCOUNT}
 fi
 
 

@@ -111,6 +111,8 @@ INIT_REPOS="${INIT_REPOS:-false}"
 save_context_property PRODUCT_CONFIG_REFERENCE "${PRODUCT_CONFIG_REFERENCE}"
 save_context_property PRODUCT_INFRASTRUCTURE_REFERENCE "${PRODUCT_INFRASTRUCTURE_REFERENCE}"
 
+# Record what is happening
+info "Creating the GEN3 context directory tree"
 
 # Define the top level directory representing the account
 BASE_DIR="${AUTOMATION_DATA_DIR}/${ACCOUNT}"

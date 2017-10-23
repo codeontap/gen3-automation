@@ -49,6 +49,9 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
   # Manage the stacks individually in case of failure and becuase one can depend on the 
   # output of the previous one
   for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
+    
+    # Say what we are doing
+    info "Processing ${LEVEL} level, ${CURRENT_DEPLOYMENT_UNIT} unit ..."
 
     # Generate the template if required
     if [[ ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then

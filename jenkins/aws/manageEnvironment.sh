@@ -26,7 +26,7 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
   
     fi
 
-    ${AUTOMATION_DIR}/manageStacks -u "${CURRENT_DEPLOYMENT_UNIT}" -l "${LEVEL}"
+    ${AUTOMATION_DIR}/manageStacks.sh -u "${CURRENT_DEPLOYMENT_UNIT}" -l "${LEVEL}"
     RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
     
     # All good - save the result

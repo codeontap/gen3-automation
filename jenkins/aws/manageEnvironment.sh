@@ -47,13 +47,13 @@ fi
 # Process each template level
 IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra LEVELS_REQUIRED <<< "${LEVELS}"
 for LEVEL in "${LEVELS_REQUIRED[@]}"; do
-
+echo LEVEL={${LEVEL}}
   UNITS_LIST="${LEVEL^^}_UNITS_LIST"
   IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${!UNITS_LIST}"
 
   # Manage the stacks individually in case of failure and becuase one can depend on the 
   # output of the previous one
-  for CURRENT_DEPLOYMENT_UNIT in "${UNITS}"; do
+  for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
 
     # A tag for the changes
     INFRASTRUCTURE_TAG="e${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-${LEVEL}-${CURRENT_DEPLOYMENT_UNIT}"

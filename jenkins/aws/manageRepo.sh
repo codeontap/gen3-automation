@@ -58,11 +58,10 @@ NOTES:
    an alternative to REPO_URL
 
 EOF
-    exit
 }
 
 function init() {
-    echo -e "Initialising the ${REPO_LOG_NAME} repo..."
+    info "Initialising the ${REPO_LOG_NAME} repo..."
     git status >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         # Convert directory into a repo
@@ -120,7 +119,7 @@ function push() {
 
     if [[ -n "$(git status --porcelain)" ]]; then
         # Commit changes
-        echo -e "Committing to the ${REPO_LOG_NAME} repo..."
+        info "Committing to the ${REPO_LOG_NAME} repo..."
         git commit -m "${REPO_MESSAGE}"
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't commit to the ${REPO_LOG_NAME} repo"
 
@@ -129,7 +128,7 @@ function push() {
 
     # Tag the commit if required
     if [[ -n "${REPO_TAG}" ]]; then
-        EXISTING_TAG=$(git ls-remote --tags | grep "refs/tags/${REPO_TAG}$")
+        EXISTING_TAG=$(git ls-remote --tags 2>/dev/null | grep "refs/tags/${REPO_TAG}$")
         if [[ -n "${EXISTING_TAG}" ]]; then
             warning "Tag ${REPO_TAG} not added to the ${REPO_LOG_NAME} repo - it is already present"
         else
@@ -143,7 +142,7 @@ function push() {
 
     # Update upstream repo
     if [[ "${REPO_PUSH_REQUIRED}" == "true" ]]; then
-        echo -e "Pushing the ${REPO_LOG_NAME} repo upstream..."
+        info "Pushing the ${REPO_LOG_NAME} repo upstream..."
         git push --tags ${REPO_REMOTE} ${REPO_BRANCH}
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}"
     fi
@@ -163,104 +162,74 @@ function defineGitProviderAttributes() {
     done
 }
 
-# Parse options
-while getopts ":b:cd:e:hil:m:n:pr:s:t:u:v:" opt; do
-    case $opt in
-        b)
-            REPO_BRANCH="${OPTARG}"
-            ;;
-        c)
-            REPO_OPERATION="${REPO_OPERATION_CLONE}"
-            ;;
-        d)
-            REPO_DIR="${OPTARG}"
-            ;;
-        e)
-            GIT_EMAIL="${OPTARG}"
-            ;;
-        h)
-            usage
-            ;;
-        i)
-            REPO_OPERATION="${REPO_OPERATION_INIT}"
-            ;;
-        l)
-            REPO_LOG_NAME="${OPTARG}"
-            ;;
-        m)
-            REPO_MESSAGE="${OPTARG}"
-            ;;
-        n)
-            REPO_NAME="${OPTARG}"
-            ;;
-        p)
-            REPO_OPERATION="${REPO_OPERATION_PUSH}"
-            ;;
-        r)
-            REPO_REMOTE="${OPTARG}"
-            ;;
-        s)
-            GIT_USER="${OPTARG}"
-            ;;
-        t)
-            REPO_TAG="${OPTARG}"
-            ;;
-        u)
-            REPO_URL="${OPTARG}"
-            ;;
-        v)
-            REPO_PROVIDER="${OPTARG}"
-            ;;
-        \?)
-            fatalOption
-            ;;
-        :)
-            fatalOptionArgument
-            ;;
-     esac
-done
-
-# Apply defaults
-REPO_OPERATION="${REPO_OPERATION:-$REPO_OPERATION_DEFAULT}"
-REPO_REMOTE="${REPO_REMOTE:-$REPO_REMOTE_DEFAULT}"
-REPO_BRANCH="${REPO_BRANCH:-$REPO_BRANCH_DEFAULT}"
-if [[ -z "${REPO_URL}" ]]; then
+function set_context() {
+  # Parse options
+  while getopts ":b:cd:e:hil:m:n:pr:s:t:u:v:" opt; do
+      case $opt in
+          b) REPO_BRANCH="${OPTARG}" ;;
+          c) REPO_OPERATION="${REPO_OPERATION_CLONE}" ;;
+          d) REPO_DIR="${OPTARG}" ;;
+          e) GIT_EMAIL="${OPTARG}" ;;
+          h) usage; return 1 ;;
+          i) REPO_OPERATION="${REPO_OPERATION_INIT}" ;;
+          l) REPO_LOG_NAME="${OPTARG}" ;;
+          m) REPO_MESSAGE="${OPTARG}" ;;
+          n) REPO_NAME="${OPTARG}" ;;
+          p) REPO_OPERATION="${REPO_OPERATION_PUSH}" ;;
+          r) REPO_REMOTE="${OPTARG}" ;;
+          s) GIT_USER="${OPTARG}" ;;
+          t) REPO_TAG="${OPTARG}" ;;
+          u) REPO_URL="${OPTARG}" ;;
+          v) REPO_PROVIDER="${OPTARG}" ;;
+          \?) fatalOption; return 1 ;;
+          :) fatalOptionArgument; return 1 ;;
+       esac
+  done
+  
+  # Apply defaults
+  REPO_OPERATION="${REPO_OPERATION:-$REPO_OPERATION_DEFAULT}"
+  REPO_REMOTE="${REPO_REMOTE:-$REPO_REMOTE_DEFAULT}"
+  REPO_BRANCH="${REPO_BRANCH:-$REPO_BRANCH_DEFAULT}"
+  if [[ -z "${REPO_URL}" ]]; then
     if [[ (-n "${REPO_PROVIDER}") &&
             (-n "${REPO_NAME}") ]]; then
-        defineGitProviderAttributes "${REPO_PROVIDER}" "REPO_PROVIDER"
-        if [[ -n "${!REPO_PROVIDER_CREDENTIALS_VAR}" ]]; then
-            REPO_URL="https://${!REPO_PROVIDER_CREDENTIALS_VAR}@${REPO_PROVIDER_DNS}/${REPO_PROVIDER_ORG}/${REPO_NAME}"
-        else
-            REPO_URL="https://${REPO_PROVIDER_DNS}/${REPO_PROVIDER_ORG}/${REPO_NAME}"
-        fi
+      defineGitProviderAttributes "${REPO_PROVIDER}" "REPO_PROVIDER"
+      if [[ -n "${!REPO_PROVIDER_CREDENTIALS_VAR}" ]]; then
+        REPO_URL="https://${!REPO_PROVIDER_CREDENTIALS_VAR}@${REPO_PROVIDER_DNS}/${REPO_PROVIDER_ORG}/${REPO_NAME}"
+      else
+        REPO_URL="https://${REPO_PROVIDER_DNS}/${REPO_PROVIDER_ORG}/${REPO_NAME}"
+      fi
     fi
-fi
-
-# Ensure mandatory arguments have been provided
-[[ (-z "${REPO_DIR}") ||
-    (-z "${REPO_LOG_NAME}") ]] && fatalMandatory
-
-# Ensure we are inside the repo directory
-if [[ ! -d "${REPO_DIR}" ]]; then
+  fi
+  
+  # Ensure mandatory arguments have been provided
+  [[ (-z "${REPO_DIR}") || (-z "${REPO_LOG_NAME}") ]] && fatalMandatory && return 1
+  
+  # Ensure we are inside the repo directory
+  if [[ ! -d "${REPO_DIR}" ]]; then
     mkdir -p "${REPO_DIR}"
-    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't create repo directory ${REPO_DIR}"
-fi
-cd "${REPO_DIR}"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't create repo directory ${REPO_DIR}" && return 1
+  fi
 
-# Perform the required action
-case ${REPO_OPERATION} in
-    ${REPO_OPERATION_INIT})
-        init
-        ;;
+  return 0
+}
 
-    ${REPO_OPERATION_CLONE})
-        clone
-        ;;
-        
-    ${REPO_OPERATION_PUSH})
-        push
-        ;;
-esac
+function main() {
 
-# All good
-RESULT=0
+  set_context "$@" || return 1
+
+  cd "${REPO_DIR}"
+
+  # Perform the required action
+  case ${REPO_OPERATION} in
+    ${REPO_OPERATION_INIT})  init ;;
+    ${REPO_OPERATION_CLONE}) clone  ;;
+    ${REPO_OPERATION_PUSH})  push ;;
+  esac
+  
+  # All good
+  RESULT=0
+  return 0
+}
+
+main "$@"

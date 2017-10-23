@@ -13,14 +13,17 @@ function save_repo() {
   local directory="$1"; shift
   local name="$1"; shift
   local message="$1"; shift
-  local reference="$1"; shift
-  local tag="$1"; shift
+  local reference="${1}"; shift
+  local tag="${$1}"; shift
+  local optional_arguments=()
+  [[ -n "${reference}" ]] && optional_arguments+=("-b" "${reference}")
+  [[ -n "${tag}" ]] && optional_arguments+=("-t" "${tag}")
+
   ${AUTOMATION_DIR}/manageRepo.sh -p \
     -d "${directory}" \
     -l "${name}" \
     -m "${message}" \
-    "${reference+-b ${reference}}" \
-    "${tag:+-t ${tag}}"
+    "${optional_arguments[@]}"
 }
 
 function save_product_config() {

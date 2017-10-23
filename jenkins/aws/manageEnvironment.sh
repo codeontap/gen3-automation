@@ -4,10 +4,12 @@
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
+# Remember if anything was processed
+SAVE_REQUIRED="false"
+
 # Basic security setup
 if [[ ("${SETUP_CREDENTIALS}" == "true") &&
         ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then
-  INFRASTRUCTURE_TAG="i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-segment-cmk"
 
   # First create the cmk
   ${AUTOMATION_DIR}/createTemplates.sh -l "segment" -u "cmk" -c "${INFRASTRUCTURE_TAG}"
@@ -28,13 +30,7 @@ if [[ ("${SETUP_CREDENTIALS}" == "true") &&
     RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
     popd >/dev/null
   fi
-
-  # All good - save the result
-  save_product_infrastructure \
-    "${DETAIL_MESSAGE}, level=segment, units=cmk" \
-    "${PRODUCT_INFRASTRUCTURE_REFERENCE}" \
-    "${INFRASTRUCTURE_TAG}"
-  RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+  SAVE_REQUIRED="true"
 fi
 
 # Process each template level
@@ -54,25 +50,16 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
   # output of the previous one
   for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
 
-    # A tag for the changes
-    INFRASTRUCTURE_TAG="i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-${LEVEL}-${CURRENT_DEPLOYMENT_UNIT}"
-
     # Generate the template if required
     if [[ ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then
       ${AUTOMATION_DIR}/createTemplates.sh -u "${CURRENT_DEPLOYMENT_UNIT}" -l "${LEVEL}" -c "${INFRASTRUCTURE_TAG}"
-      RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
-  
+      RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit 
     fi
 
     ${AUTOMATION_DIR}/manageStacks.sh -u "${CURRENT_DEPLOYMENT_UNIT}" -l "${LEVEL}"
     RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
-    
-    # All good - save the result
-    save_product_infrastructure \
-      "${DETAIL_MESSAGE}, level=${LEVEL}, units=${CURRENT_DEPLOYMENT_UNIT}" \
-      "${PRODUCT_INFRASTRUCTURE_REFERENCE}" \
-      "${INFRASTRUCTURE_TAG}"
-    RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+    SAVE_REQUIRED="true"
   done
 done
 
@@ -82,5 +69,12 @@ if [[ "${SYNC_BUCKETS}" == "true" ]]; then
   ${GENERATION_DIR}/syncAccountBuckets.sh -a ${ACCOUNT}
 fi
 
-
+# All good - save the result
+if [[ "${SAVE_REQUIRED}" == "true" ]]; then
+  save_product_infrastructure \
+    "${DETAIL_MESSAGE}, level=segment, units=cmk" \
+    "${PRODUCT_INFRASTRUCTURE_REFERENCE}" \
+    "i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}"
+  RESULT=$?
+fi
 

@@ -26,13 +26,13 @@ function save_repo() {
 function save_product_config() {
   local arguments=("$@")
 
-  saveRepo "${PRODUCT_DIR}" config "${arguments[@]}"
+  save_repo "${PRODUCT_DIR}" config "${arguments[@]}"
 }
 
 function save_product_infrastructure() {
   local arguments=("$@")
 
-  saveRepo "${PRODUCT_INFRASTRUCTURE_DIR}" infrastructure "${arguments[@]}"
+  save_repo "${PRODUCT_INFRASTRUCTURE_DIR}" infrastructure "${arguments[@]}"
 }
 
 # -- Context properties file --

@@ -7,6 +7,9 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 # Remember if anything was processed
 SAVE_REQUIRED="false"
 
+# Configuration reference tag
+INFRASTRUCTURE_TAG="i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}"
+
 # Basic security setup
 if [[ ("${SETUP_CREDENTIALS}" == "true") &&
         ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then
@@ -51,7 +54,7 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
   for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
     
     # Say what we are doing
-    info "Processing ${LEVEL} level, ${CURRENT_DEPLOYMENT_UNIT} unit ..."
+    info "Processing \"${LEVEL}\" level, \"${CURRENT_DEPLOYMENT_UNIT}\" unit ..."
 
     # Generate the template if required
     if [[ ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then
@@ -74,7 +77,6 @@ fi
 
 # All good - save the result
 if [[ "${SAVE_REQUIRED}" == "true" ]]; then
-  INFRASTRUCTURE_TAG="i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}"
   info "Saving changes under tag \"${INFRASTRUCTURE_TAG}\" ..."
 
   save_product_infrastructure \

@@ -74,10 +74,13 @@ fi
 
 # All good - save the result
 if [[ "${SAVE_REQUIRED}" == "true" ]]; then
+  INFRASTRUCTURE_TAG="i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}"
+  info "Saving changes under tag \"${INFRASTRUCTURE_TAG}\" ..."
+
   save_product_infrastructure \
     "${DETAIL_MESSAGE}, level=segment, units=cmk" \
     "${PRODUCT_INFRASTRUCTURE_REFERENCE}" \
-    "i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}"
+    "${INFRASTRUCTURE_TAG}"
   RESULT=$?
 fi
 

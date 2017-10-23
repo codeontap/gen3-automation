@@ -61,7 +61,7 @@ EOF
 }
 
 function init() {
-    info "Initialising the ${REPO_LOG_NAME} repo..."
+    trace "Initialising the ${REPO_LOG_NAME} repo..."
     git status >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         # Convert directory into a repo
@@ -93,7 +93,7 @@ function init() {
 }
 
 function clone() {
-    info "Cloning the ${REPO_LOG_NAME} repo and checking out the ${REPO_BRANCH} branch ..."
+    trace "Cloning the ${REPO_LOG_NAME} repo and checking out the ${REPO_BRANCH} branch ..."
     [[ (-z "${REPO_URL}") ||
         (-z "${REPO_BRANCH}") ]] && fatalMandatory
 
@@ -119,7 +119,7 @@ function push() {
 
     if [[ -n "$(git status --porcelain)" ]]; then
         # Commit changes
-        info "Committing to the ${REPO_LOG_NAME} repo..."
+        trace "Committing to the ${REPO_LOG_NAME} repo..."
         git commit -m "${REPO_MESSAGE}"
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't commit to the ${REPO_LOG_NAME} repo"
 
@@ -132,7 +132,7 @@ function push() {
         if [[ -n "${EXISTING_TAG}" ]]; then
             warning "Tag ${REPO_TAG} not added to the ${REPO_LOG_NAME} repo - it is already present"
         else
-            info "Adding tag \"${REPO_TAG}\" to the ${REPO_LOG_NAME} repo..."
+            trace "Adding tag \"${REPO_TAG}\" to the ${REPO_LOG_NAME} repo..."
             git tag -a "${REPO_TAG}" -m "${REPO_MESSAGE}"
             RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't tag the ${REPO_LOG_NAME} repo"
     
@@ -142,7 +142,7 @@ function push() {
 
     # Update upstream repo
     if [[ "${REPO_PUSH_REQUIRED}" == "true" ]]; then
-        info "Pushing the ${REPO_LOG_NAME} repo upstream..."
+        trace "Pushing the ${REPO_LOG_NAME} repo upstream..."
         git push --tags ${REPO_REMOTE} ${REPO_BRANCH}
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}"
     fi

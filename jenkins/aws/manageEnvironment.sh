@@ -54,7 +54,7 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
   for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
     
     # Say what we are doing
-    info "Processing \"${LEVEL}\" level, \"${CURRENT_DEPLOYMENT_UNIT}\" unit ..."
+    info "Processing \"${LEVEL}\" level, \"${CURRENT_DEPLOYMENT_UNIT}\" unit ...\n"
 
     # Generate the template if required
     if [[ ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then

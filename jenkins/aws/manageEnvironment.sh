@@ -5,7 +5,8 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Basic security setup
-if [[ "${SETUP_CREDENTIALS}" == "true" ]]; then
+if [[ ("${SETUP_CREDENTIALS}" == "true") &&
+        ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then
   INFRASTRUCTURE_TAG="e${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-segment-cmk"
 
   # First create the cmk

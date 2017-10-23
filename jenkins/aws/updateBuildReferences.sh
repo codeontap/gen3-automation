@@ -19,7 +19,7 @@ if [[ (-n "${AUTODEPLOY+x}") &&
 fi
 
 # Record key parameters for downstream jobs
-echo "DEPLOYMENT_UNITS=${DEPLOYMENT_UNIT_LIST}" >> ${AUTOMATION_DATA_DIR}/chain.properties
+save_chain_property DEPLOYMENT_UNITS "${DEPLOYMENT_UNIT_LIST}"
 
 # All good
 RESULT=0

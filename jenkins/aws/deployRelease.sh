@@ -10,7 +10,7 @@ RESULT=$?
 
 # Add release and deployment tags to details
 DETAIL_MESSAGE="deployment=${DEPLOYMENT_TAG}, release=${RELEASE_TAG}, ${DETAIL_MESSAGE}"
-echo "DETAIL_MESSAGE=${DETAIL_MESSAGE}" >> ${AUTOMATION_DATA_DIR}/context.properties
+save_context_property DETAIL_MESSAGE
 
 # All good
 RESULT=0

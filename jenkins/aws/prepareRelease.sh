@@ -22,7 +22,7 @@ save_product_infrastructure "${DETAIL_MESSAGE}" "${PRODUCT_INFRASTRUCTURE_REFERE
 RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
 # Record key parameters for downstream jobs
-echo "RELEASE_IDENTIFIER=${AUTOMATION_RELEASE_IDENTIFIER}" >> $AUTOMATION_DATA_DIR/chain.properties
+save_context_property RELEASE_IDENTIFIER "${AUTOMATION_RELEASE_IDENTIFIER}"
 
 # All good
 RESULT=0

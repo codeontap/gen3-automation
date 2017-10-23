@@ -392,11 +392,11 @@ function main() {
   case "${ACCOUNT_PROVIDER}" in
       aws)
           . ${AUTOMATION_DIR}/setCredentials.sh "${ACCOUNT}"
-          save_context_property ACCOUNT_AWS_ACCESS_KEY_ID_VAR
-          save_context_property ACCOUNT_AWS_SECRET_ACCESS_KEY_VAR
-          save_context_property ACCOUNT_TEMP_AWS_ACCESS_KEY_ID
-          save_context_property ACCOUNT_TEMP_AWS_SECRET_ACCESS_KEY
-          save_context_property ACCOUNT_TEMP_AWS_SESSION_TOKEN
+          save_context_property ACCOUNT_AWS_ACCESS_KEY_ID_VAR      "${AWS_CRED_AWS_ACCESS_KEY_ID_VAR}"
+          save_context_property ACCOUNT_AWS_SECRET_ACCESS_KEY_VAR  "${AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}"
+          save_context_property ACCOUNT_TEMP_AWS_ACCESS_KEY_ID     "${AWS_CRED_TEMP_AWS_ACCESS_KEY_ID}"
+          save_context_property ACCOUNT_TEMP_AWS_SECRET_ACCESS_KEY "${AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY}"
+          save_context_property ACCOUNT_TEMP_AWS_SESSION_TOKEN     "${AWS_CRED_TEMP_AWS_SESSION_TOKEN}"
           ;;
   esac
   

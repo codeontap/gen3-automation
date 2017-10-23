@@ -5,7 +5,7 @@
 # This script is designed to be sourced into other scripts
 
 . "${AUTOMATION_BASE_DIR}/utility.sh"
-[[ -n "${GENERATION_DIR}" ]] && . "${GENERATION_DIR}/contextTree.sh"
+. "${AUTOMATION_BASE_DIR}/contextTree.sh"
 
 # -- Repositories --
 

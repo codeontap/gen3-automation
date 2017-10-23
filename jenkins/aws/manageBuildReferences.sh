@@ -499,19 +499,19 @@ done
 # Capture any changes to context
 case ${REFERENCE_OPERATION} in
     ${REFERENCE_OPERATION_LIST})
-        echo "DETAIL_MESSAGE=${DETAIL_MESSAGE}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        save_context_property DETAIL_MESSAGE
         ;;
 
     ${REFERENCE_OPERATION_LISTFULL})
-        echo "DEPLOYMENT_UNIT_LIST=${DEPLOYMENT_UNIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "CODE_TAG_LIST=${CODE_TAG_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
-        echo "DETAIL_MESSAGE=${DETAIL_MESSAGE}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        save_context_property DEPLOYMENT_UNIT_LIST "${DEPLOYMENT_UNIT_ARRAY[@]}"
+        save_context_property CODE_COMMIT_LIST "${CODE_COMMIT_ARRAY[@]}"
+        save_context_property CODE_TAG_LIST "${CODE_TAG_ARRAY[@]}"
+        save_context_property IMAGE_FORMATS_LIST "${IMAGE_FORMATS_ARRAY[@]}"
+        save_context_property DETAIL_MESSAGE "${DETAIL_MESSAGE}"
         ;;
 
     ${REFERENCE_OPERATION_VERIFY})
-        echo "CODE_COMMIT_LIST=${CODE_COMMIT_ARRAY[@]}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        save_context_property CODE_COMMIT_LIST "${CODE_COMMIT_ARRAY[@]}"
         ;;
 
 esac

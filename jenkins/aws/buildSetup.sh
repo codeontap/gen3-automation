@@ -35,7 +35,7 @@ if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
         fi
     done
 
-    echo "DEPLOYMENT_UNIT_LIST=${DEPLOYMENT_UNIT_LIST}" >> ${AUTOMATION_DATA_DIR}/context.properties
+    save_context_property DEPLOYMENT_UNIT_LIST
 fi
 
 # Already set image format overrides that in the repo
@@ -43,15 +43,15 @@ IMAGE_FORMATS="${IMAGE_FORMATS:-${IMAGE_FORMAT}}"
 IMAGE_FORMATS="${IMAGE_FORMATS:-${FORMATS:-docker}}"
 IFS="${IMAGE_FORMAT_SEPARATORS}, " read -ra IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
 export IMAGE_FORMATS_LIST=$(IFS="${IMAGE_FORMAT_SEPARATORS}"; echo "${IMAGE_FORMATS_ARRAY[*]}")
-echo "IMAGE_FORMATS_LIST=${IMAGE_FORMATS_LIST}" >> ${AUTOMATION_DATA_DIR}/context.properties
+save_context_property IMAGE_FORMATS_LIST
 
 DEPLOYMENT_UNIT_ARRAY=(${DEPLOYMENT_UNIT_LIST})
 CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
 
 # Record key parameters for downstream jobs
-echo "DEPLOYMENT_UNITS=${DEPLOYMENT_UNIT_LIST}" >> $AUTOMATION_DATA_DIR/chain.properties
-echo "GIT_COMMIT=${CODE_COMMIT_ARRAY[0]}" >> $AUTOMATION_DATA_DIR/chain.properties
-echo "IMAGE_FORMATS=${IMAGE_FORMATS_LIST}" >> $AUTOMATION_DATA_DIR/chain.properties
+save_chain_property DEPLOYMENT_UNITS "${DEPLOYMENT_UNIT_LIST}"
+save_chain_property GIT_COMMIT "${CODE_COMMIT_ARRAY[0]}"
+save_chain_property IMAGE_FORMATS
 
 # Include the build information in the detail message
 ${AUTOMATION_DIR}/manageBuildReferences.sh -l

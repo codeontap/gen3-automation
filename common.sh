@@ -40,6 +40,7 @@ function save_product_infrastructure() {
 function save_context_property() {
   local name="$1"; shift
   local value="$1"; shift
+  local file="${1:-${AUTOMATION_DATA_DIR}/context.properties}}"; shift
   
   if [[ -n "${value}" ]]; then
     local property_value="${value}"
@@ -51,7 +52,14 @@ function save_context_property() {
     fi
   fi
 
-  echo "${name}=${property_value}" >> "${AUTOMATION_DATA_DIR}/context.properties"
+  echo "${name}=${property_value}" >> "${file}"
+}
+
+function save_chain_property() {
+  local name="$1"; shift
+  local value="$1"; shift
+
+  save_context_property "${name}" "${value}" "${AUTOMATION_DATA_DIR}/chain.properties"
 }
 
 function define_context_property() {

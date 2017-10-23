@@ -10,15 +10,21 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
 
   UNITS_LIST="${LEVEL^^}_UNITS_LIST"
   IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${!UNITS_LIST}"
-  
+
+  # A tag for the infrastructure changes
+  INFRASTRUCTURE_TAG="i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}"
+
   # Generate the template if required
   if [[ ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ||
            ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOPSTART}") ]]; then
-    ${AUTOMATION_DIR}/createTemplates.sh -u "${UNITS[*]}" -l "${LEVEL}"
+    ${AUTOMATION_DIR}/createTemplates.sh -u "${UNITS[*]}" -l "${LEVEL}" -c "${INFRASTRUCTURE_TAG}"
     RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
 
     save_product_config \
-      "Stack changes as a result of applying ${DEPLOYMENT_MODE} mode at the ${LEVEL} level stack of the ${SEGMENT} segment for the following units (${UNITS_LIST})"
+      "${DETAIL_MESSAGE}, detail=stack changes as a result of applying ${DEPLOYMENT_MODE} mode at the ${LEVEL} level stack of the ${SEGMENT} segment for the following units (${UNITS_LIST})" \
+      "${PRODUCT_CONFIG_REFERENCE}" \
+      "${INFRASTRUCTURE_TAG}"
+
     RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
   fi
@@ -29,7 +35,9 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
     RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
 
     save_product_infrastructure \
-      "Stack changes as a result of applying ${DEPLOYMENT_MODE} mode at the ${LEVEL} level stack of the ${SEGMENT} segment for the ${CURRENT_DEPLOYMENT_UNIT} unit"
+      "${DETAIL_MESSAGE}, detail=stack changes as a result of applying ${DEPLOYMENT_MODE} mode at the ${LEVEL} level stack of the ${SEGMENT} segment for the ${CURRENT_DEPLOYMENT_UNIT} unit" \
+      "${PRODUCT_INFRASTRUCTURE_REFERENCE}" \
+      "${INFRASTRUCTURE_TAG}-${CURRENT_DEPLOYMENT_UNIT}"
     RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
   done
 done

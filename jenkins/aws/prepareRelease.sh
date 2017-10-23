@@ -10,7 +10,7 @@ RESULT=$?
 [[ ${RESULT} -ne 0 ]] && exit
 
 # Create the templates
-${AUTOMATION_DIR}/createTemplates.sh -t application -c "${RELEASE_TAG}"
+${AUTOMATION_DIR}/createTemplates.sh -l application -c "${RELEASE_TAG}"
 RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
 # All ok so tag the config repo

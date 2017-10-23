@@ -4,6 +4,45 @@
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
+# Basic security setup
+if [[ "${SETUP_CREDENTIALS}" == "true" ]]; then
+  INFRASTRUCTURE_TAG="e${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-segment-cmk"
+
+  # First create the cmk
+  ${AUTOMATION_DIR}/createTemplates.sh -l "segment" -u "cmk" -c "${INFRASTRUCTURE_TAG}"
+  RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+
+  ${AUTOMATION_DIR}/manageStacks.sh -l "segment" -u "cmk"
+  RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+
+  # Add the SSH key if required
+  if [[ (! -f "${SEGMENT_CREDENTIALS_DIR}/aws-ssh-crt.pem") &&
+        (! -f "${SEGMENT_CREDENTIALS_DIR}/aws-ssh-prv.pem") ]]; then
+    pushd "${SEGMENT_DIR}" >/dev/null
+    ${GENERATION_DIR}/addSSH.sh
+    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+
+    # Encrypt the SSH key with the cmk
+    ${GENERATION_DIR}/manageFileCrypto.sh -e -u aws-ssh-prv.pem
+    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+    popd >/dev/null
+  fi
+
+  # All good - save the result
+  MESSAGE="${DETAIL_MESSAGE}, level=segment, units=cmk"
+  save_product_config \
+    "${MESSAGE}" \
+    "${PRODUCT_CONFIG_REFERENCE}" \
+    "${INFRASTRUCTURE_TAG}"
+  RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+  save_product_infrastructure \
+    "${MESSAGE}" \
+    "${PRODUCT_INFRASTRUCTURE_REFERENCE}" \
+    "${INFRASTRUCTURE_TAG}"
+  RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+fi
+
 # Process each template level
 IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra LEVELS_REQUIRED <<< "${LEVELS}"
 for LEVEL in "${LEVELS_REQUIRED[@]}"; do
@@ -16,7 +55,7 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
   for CURRENT_DEPLOYMENT_UNIT in "${UNITS}"; do
 
     # A tag for the changes
-    INFRASTRUCTURE_TAG="e${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-${CURRENT_DEPLOYMENT_UNIT}"
+    INFRASTRUCTURE_TAG="e${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-${LEVEL}-${CURRENT_DEPLOYMENT_UNIT}"
 
     # Generate the template if required
     if [[ ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ||

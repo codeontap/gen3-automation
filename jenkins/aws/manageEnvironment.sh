@@ -23,7 +23,7 @@ if [[ "${SETUP_CREDENTIALS}" == "true" ]]; then
     RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
 
     # Encrypt the SSH key with the cmk
-    ${GENERATION_DIR}/manageFileCrypto.sh -e -u aws-ssh-prv.pem
+    ${GENERATION_DIR}/manageFileCrypto.sh -e -f aws-ssh-prv.pem -u
     RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
     popd >/dev/null
   fi

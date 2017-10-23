@@ -7,7 +7,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 # Basic security setup
 if [[ ("${SETUP_CREDENTIALS}" == "true") &&
         ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then
-  INFRASTRUCTURE_TAG="e${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-segment-cmk"
+  INFRASTRUCTURE_TAG="i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-segment-cmk"
 
   # First create the cmk
   ${AUTOMATION_DIR}/createTemplates.sh -l "segment" -u "cmk" -c "${INFRASTRUCTURE_TAG}"
@@ -30,15 +30,8 @@ if [[ ("${SETUP_CREDENTIALS}" == "true") &&
   fi
 
   # All good - save the result
-  MESSAGE="${DETAIL_MESSAGE}, level=segment, units=cmk"
-  save_product_config \
-    "${MESSAGE}" \
-    "${PRODUCT_CONFIG_REFERENCE}" \
-    "${INFRASTRUCTURE_TAG}"
-  RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
-
   save_product_infrastructure \
-    "${MESSAGE}" \
+    "${DETAIL_MESSAGE}, level=segment, units=cmk" \
     "${PRODUCT_INFRASTRUCTURE_REFERENCE}" \
     "${INFRASTRUCTURE_TAG}"
   RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
@@ -46,20 +39,26 @@ fi
 
 # Process each template level
 IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra LEVELS_REQUIRED <<< "${LEVELS}"
+
+# Reverse the order if we are deleting
+[[ "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOP}" ]] && reverseArray LEVELS_REQUIRED
+
 for LEVEL in "${LEVELS_REQUIRED[@]}"; do
   UNITS_LIST="${LEVEL^^}_UNITS_LIST"
   IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${!UNITS_LIST}"
+
+  # Reverse the order if we are deleting
+  [[ "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOP}" ]] && reverseArray UNITS
 
   # Manage the stacks individually in case of failure and becuase one can depend on the 
   # output of the previous one
   for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
 
     # A tag for the changes
-    INFRASTRUCTURE_TAG="e${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-${LEVEL}-${CURRENT_DEPLOYMENT_UNIT}"
+    INFRASTRUCTURE_TAG="i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}-${LEVEL}-${CURRENT_DEPLOYMENT_UNIT}"
 
     # Generate the template if required
-    if [[ ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ||
-             ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOPSTART}") ]]; then
+    if [[ ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then
       ${AUTOMATION_DIR}/createTemplates.sh -u "${CURRENT_DEPLOYMENT_UNIT}" -l "${LEVEL}" -c "${INFRASTRUCTURE_TAG}"
       RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
   
@@ -69,15 +68,8 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
     RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
     
     # All good - save the result
-    MESSAGE="${DETAIL_MESSAGE}, level=${LEVEL}, units=${CURRENT_DEPLOYMENT_UNIT}"
-    save_product_config \
-      "${MESSAGE}" \
-      "${PRODUCT_CONFIG_REFERENCE}" \
-      "${INFRASTRUCTURE_TAG}"
-    RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
-
     save_product_infrastructure \
-      "${MESSAGE}" \
+      "${DETAIL_MESSAGE}, level=${LEVEL}, units=${CURRENT_DEPLOYMENT_UNIT}" \
       "${PRODUCT_INFRASTRUCTURE_REFERENCE}" \
       "${INFRASTRUCTURE_TAG}"
     RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit

@@ -40,7 +40,7 @@ function save_product_infrastructure() {
 function save_context_property() {
   local name="$1"; shift
   local value="$1"; shift
-  local file="${1:-${AUTOMATION_DATA_DIR}/context.properties}}"; shift
+  local file="${1:-${AUTOMATION_DATA_DIR}/context.properties}"; shift
   
   if [[ -n "${value}" ]]; then
     local property_value="${value}"

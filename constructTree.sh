@@ -108,8 +108,9 @@ INIT_REPOS="${INIT_REPOS:-false}"
 [[ -z "${ACCOUNT}" ]] && fatal "ACCOUNT not defined"
 
 # Save for later steps
-echo "PRODUCT_CONFIG_REFERENCE=${PRODUCT_CONFIG_REFERENCE}" >> ${AUTOMATION_DATA_DIR}/context.properties
-echo "PRODUCT_INFRASTRUCTURE_REFERENCE=${PRODUCT_INFRASTRUCTURE_REFERENCE}" >> ${AUTOMATION_DATA_DIR}/context.properties
+save_context_property PRODUCT_CONFIG_REFERENCE "${PRODUCT_CONFIG_REFERENCE}"
+save_context_property PRODUCT_INFRASTRUCTURE_REFERENCE "${PRODUCT_INFRASTRUCTURE_REFERENCE}"
+
 
 # Define the top level directory representing the account
 BASE_DIR="${AUTOMATION_DATA_DIR}/${ACCOUNT}"
@@ -162,7 +163,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
 
     mkdir -p $(filePath "${PRODUCT_CONFIG_DIR}")
     mv "${BASE_DIR_TEMP}" "${PRODUCT_CONFIG_DIR}"
-    echo "PRODUCT_CONFIG_COMMIT=$(git -C ${PRODUCT_CONFIG_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
+    save_context_property PRODUCT_CONFIG_COMMIT "$(git -C "${PRODUCT_CONFIG_DIR}" rev-parse HEAD)"
 
     PRODUCT_INFRASTRUCTURE_DIR=$(findGen3ProductInfrastructureDir "${BASE_DIR}" "${PRODUCT}")
     if [[ -z "${PRODUCT_INFRASTRUCTURE_DIR}" ]]; then
@@ -188,7 +189,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
         mv "${BASE_DIR_TEMP}" "${PRODUCT_INFRASTRUCTURE_DIR}"
     fi
 
-    echo "PRODUCT_INFRASTRUCTURE_COMMIT=$(git -C ${PRODUCT_INFRASTRUCTURE_DIR} rev-parse HEAD)" >> ${AUTOMATION_DATA_DIR}/context.properties
+    save_context_property PRODUCT_INFRASTRUCTURE_COMMIT "$(git -C "${PRODUCT_INFRASTRUCTURE_DIR}" rev-parse HEAD)"
 fi
 
 if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
@@ -258,7 +259,7 @@ if [[ -z "${GENERATION_DIR}" ]]; then
             RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
         fi
     fi
-    echo "GENERATION_DIR=${GENERATION_BASE_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
+    save_context_property GENERATION_DIR "${GENERATION_BASE_DIR}/${ACCOUNT_PROVIDER}"
 fi
 
 # Pull in the patterns repo if not overridden by product or locally installed
@@ -275,7 +276,7 @@ if [[ -z "${GENERATION_PATTERNS_DIR}" ]]; then
                 -d "${GENERATION_PATTERNS_DIR}" -b "${GENERATION_PATTERNS_REFERENCE}"
             RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
         fi
-        echo "GENERATION_PATTERNS_DIR=${GENERATION_PATTERNS_DIR}/${ACCOUNT_PROVIDER}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        save_context_property GENERATION_PATTERNS_DIR "${GENERATION_PATTERNS_DIR}/${ACCOUNT_PROVIDER}"
     fi
 fi
 
@@ -294,11 +295,12 @@ if [[ -z "${GENERATION_STARTUP_DIR}" ]]; then
                 -d "${GENERATION_STARTUP_DIR}" -b "${GENERATION_STARTUP_REFERENCE}"
             RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
         fi
-        echo "GENERATION_STARTUP_DIR=${GENERATION_STARTUP_DIR}" >> ${AUTOMATION_DATA_DIR}/context.properties
+        save_context_property GENERATION_STARTUP_DIR "${GENERATION_STARTUP_DIR}"
     fi
 fi
 
 # Examine the structure and define key directories
+
 findGen3Dirs "${BASE_DIR}"
 RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 

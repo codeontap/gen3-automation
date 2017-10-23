@@ -543,7 +543,7 @@ function main() {
                           FROM_SEGMENT="preproduction"
                           ;;
                   esac
-                  defineSetting "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
+                  define_context_property "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
               fi
   
               findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${FROM_SEGMENT}" "value"
@@ -570,7 +570,7 @@ function main() {
                           FROM_SEGMENT="integration"
                           ;;
                   esac
-                  defineSetting "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
+                  define_context_property "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
               fi
   
               findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"
@@ -601,31 +601,31 @@ function main() {
           # the user is deciding the naming scheme
           AUTOMATION_DEPLOYMENT_IDENTIFIER="d${AUTOMATION_DEPLOYMENT_IDENTIFIER}"
       fi
-      defineSetting "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
-      defineSetting "DEPLOYMENT_TAG" "${AUTOMATION_DEPLOYMENT_IDENTIFIER}-${SEGMENT}"
+      define_context_property "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
+      define_context_property "DEPLOYMENT_TAG" "${AUTOMATION_DEPLOYMENT_IDENTIFIER}-${SEGMENT}"
   
   case "${RELEASE_MODE}" in
       ${RELEASE_MODE_CONTINUOUS})
           # For continuous deployment, the repo isn't tagged with a release
-          defineSetting "ACCEPTANCE_TAG" "latest"
+          define_context_property "ACCEPTANCE_TAG" "latest"
           ;;
   
       ${RELEASE_MODE_SELECTIVE})
-          defineSetting "ACCEPTANCE_TAG" "latest"
+          define_context_property "ACCEPTANCE_TAG" "latest"
           ;;
   
       ${RELEASE_MODE_ACCEPTANCE})
-          defineSetting "RELEASE_MODE_TAG" "a${RELEASE_TAG}"
+          define_context_property "RELEASE_MODE_TAG" "a${RELEASE_TAG}"
           ;;
   
       ${RELEASE_MODE_PROMOTION})
-          defineSetting "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${FROM_SEGMENT}"
-          defineSetting "RELEASE_MODE_TAG" "p${ACCEPTANCE_TAG}-${SEGMENT}"
+          define_context_property "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${FROM_SEGMENT}"
+          define_context_property "RELEASE_MODE_TAG" "p${ACCEPTANCE_TAG}-${SEGMENT}"
           ;;
   
       ${RELEASE_MODE_HOTFIX})
-          defineSetting "RELEASE_MODE_TAG" "h${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
-          defineSetting "ACCEPTANCE_TAG" "latest"
+          define_context_property "RELEASE_MODE_TAG" "h${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}"
+          define_context_property "ACCEPTANCE_TAG" "latest"
           ;;
   esac
   

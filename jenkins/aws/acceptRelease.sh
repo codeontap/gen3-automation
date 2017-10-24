@@ -4,8 +4,6 @@
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
-RELEASE_MODE_ACCEPTANCE="acceptance"
-
 # Ensure mandatory arguments have been provided
 [[ (-z "${RELEASE_MODE}") ||
     (-z "${RELEASE_TAG}") ]] && fatalMandatory

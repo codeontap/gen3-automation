@@ -319,7 +319,7 @@ function main() {
   
   # Parse options
   while getopts ":a:d:e:hi:p:r:s:t:" option; do
-    case "${options}" in
+    case "${option}" in
       a) ACCOUNT="${OPTARG}" ;;
       d) DEPLOYMENT_MODE="${OPTARG}" ;;
       e) ENVIRONMENT="${OPTARG}" ;;

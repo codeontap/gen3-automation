@@ -49,7 +49,7 @@ function save_context_property() {
   if [[ -n "${value}" ]]; then
     local property_value="${value}"
   else
-    if [[ $(namedef_supported) ]]; then
+    if namedef_supported; then
       local -n property_value="${value}"
     else
       eval "local property_value=\"\${${name}}\""
@@ -97,4 +97,9 @@ function save_gen3_dirs_in_context() {
   done
 
   return 0
+}
+
+# -- Logging --
+function getLogLevel() {
+  return "${AUTOMATION_LOG_LEVEL}"
 }

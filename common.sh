@@ -101,5 +101,5 @@ function save_gen3_dirs_in_context() {
 
 # -- Logging --
 function getLogLevel() {
-  return "${AUTOMATION_LOG_LEVEL}"
+  echo -n "${AUTOMATION_LOG_LEVEL}"
 }

@@ -8,7 +8,7 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 SAVE_REQUIRED="false"
 
 # Configuration reference tag
-INFRASTRUCTURE_TAG="i${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}"
+INFRASTRUCTURE_TAG="env${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}"
 
 # Basic security setup
 if [[ ("${SETUP_CREDENTIALS}" == "true") &&

@@ -95,9 +95,6 @@ for FORMAT in "${FORMATS[@]}"; do
 
         lambda)
             IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip"
-            if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip" ]]; then
-                IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip"
-            fi
 
             if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageLambda.sh -s \

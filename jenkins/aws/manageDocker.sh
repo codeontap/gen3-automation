@@ -13,6 +13,8 @@ DOCKER_OPERATION_VERIFY="verify"
 DOCKER_OPERATION_TAG="tag"
 DOCKER_OPERATION_PULL="pull"
 DOCKER_OPERATION_DEFAULT="${DOCKER_OPERATION_VERIFY}"
+NUMBER_OF_DAYS_DEFAULT=90
+DRYRUN_DEFAULT=false
 
 function usage() {
     cat <<EOF
@@ -25,6 +27,7 @@ where
 
 (o) -a DOCKER_PROVIDER          is the local docker provider
 (o) -b                          perform docker build and save in local registry
+(o) -c                          perform docker registry cleanup
 (o) -d DOCKER_PRODUCT           is the product to use when defaulting DOCKER_REPO
 (o) -g DOCKER_CODE_COMMIT       to use when defaulting DOCKER_REPO
     -h                          shows this text
@@ -37,6 +40,7 @@ where
 (o) -t DOCKER_TAG               is the local tag
 (o) -u DOCKER_IMAGE_SOURCE      is the registry to pull from
 (o) -v                          verify image is present in local registry
+(o) -y (DRYRUN=true)            for a registry cleanup dryrun - show what will happen without actually deleting the repositories
 (o) -z REMOTE_DOCKER_PROVIDER   is the docker provider to pull from
 
 (m) mandatory, (o) optional, (d) deprecated
@@ -63,13 +67,16 @@ EOF
 }
 
 # Parse options
-while getopts ":a:bd:g:hki:l:pr:s:t:u:vz:" opt; do
+while getopts ":a:bd:g:hki:l:n:pr:s:t:u:vyz:" opt; do
     case $opt in
         a)
             DOCKER_PROVIDER="${OPTARG}"
             ;;
         b)
             DOCKER_OPERATION="${DOCKER_OPERATION_BUILD}"
+            ;;
+        c)
+            cleanupRegistry ${DOCKER_PROVIDER_DNS}
             ;;
         d)
             DOCKER_PRODUCT="${OPTARG}"
@@ -89,6 +96,9 @@ while getopts ":a:bd:g:hki:l:pr:s:t:u:vz:" opt; do
         l)
             DOCKER_REPO="${OPTARG}"
             ;;
+        n)
+            NUMBER_OF_DAYS="${OPTARG}"
+            ;;
         p)
             DOCKER_OPERATION="${DOCKER_OPERATION_PULL}"
             ;;
@@ -106,6 +116,9 @@ while getopts ":a:bd:g:hki:l:pr:s:t:u:vz:" opt; do
             ;;
         v)
             DOCKER_OPERATION="${DOCKER_OPERATION_VERIFY}"
+            ;;
+        y)
+            DRYRUN=true
             ;;
         z)
             REMOTE_DOCKER_PROVIDER="${OPTARG}"
@@ -202,6 +215,53 @@ function createRepository() {
     return 0
 }
 
+# Perform logic required to cleanup the registry
+# $1 = registry
+function cleanupRegistry() {
+    isAWSRegistry $1
+    if [[ $? -eq 0 ]]; then
+        REPOSITORIES=$(aws --region ${AWS_REGISTRY_REGION} ecr describe-repositories --registry-id ${AWS_REGISTRY_ID}  | jq -r '.repositories | .[] | .repositoryName')
+        COUNT=0
+        CURRENT_DATE=$(date +%s)
+        for REPOSITORY in ${REPOSITORIES[@]}; do
+            REPOSITORY_NAME=$(echo ${REPOSITORY})
+            IMAGES=$(aws --region ${AWS_REGISTRY_REGION} ecr describe-images --registry-id ${AWS_REGISTRY_ID} --filter tagStatus=TAGGED --repository-name ${REPOSITORY_NAME})
+            IMAGEDETAILS=$(echo $IMAGES | jq -c '.imageDetails | .[]')
+            DELETE_FLAG=true
+            for IMAGEDETAIL in ${IMAGEDETAILS[@]}; do
+                IMAGE_PUSHED_AT=$(echo $IMAGEDETAIL | jq -r '.imagePushedAt')
+                DATE_DIFF=$(($CURRENT_DATE - $IMAGE_PUSHED_AT))
+                DATE_DIFF_IN_DAYS=$(($DATE_DIFF/86400))
+                if [[ ${DATE_DIFF_IN_DAYS} -lt ${NUMBER_OF_DAYS} ]]; then
+                    DELETE_FLAG=false
+                    continue
+                fi
+                TAGS=$(echo $IMAGEDETAIL | jq -r '.imageTags | .[]')
+                for TAG in ${TAGS[@]}; do
+                    TAG_VALUE=$(echo ${TAG})
+                    if [[ "${TAG_VALUE}" != "latest" ]]; then
+                        info "${REPOSITORY_NAME} is a part of the release ${TAG_VALUE}"
+                        DELETE_FLAG=false
+                        continue
+                    fi
+                done
+            done
+            if [ "$DELETE_FLAG" = true ] ; then
+                info "${REPOSITORY_NAME} will be deleted"
+                if [ "$DRYRUN" = false ] ; then
+                    aws --region ${AWS_REGISTRY_REGION} ecr delete-repository --registry-id ${AWS_REGISTRY_ID} --repository-name ${REPOSITORY_NAME} --force
+                    if [[ $? -ne 0 ]]; then
+                        fatal "Registry cleanup failed"
+                        exit
+                    fi
+                fi
+                COUNT=$((${COUNT}+1))
+            fi
+        done
+        info "${COUNT} repositories delteted"
+    fi
+    return 0
+
 # Define docker provider attributes
 # $1 = provider
 # $2 = variable prefix
@@ -222,6 +282,10 @@ DOCKER_TAG="${DOCKER_TAG:-${DOCKER_TAG_DEFAULT}}"
 DOCKER_IMAGE_SOURCE="${DOCKER_IMAGE_SOURCE:-${DOCKER_IMAGE_SOURCE_DEFAULT}}"
 DOCKER_OPERATION="${DOCKER_OPERATION:-${DOCKER_OPERATION_DEFAULT}}"
 DOCKER_PRODUCT="${DOCKER_PRODUCT:-${PRODUCT}}"
+
+# Apply cleanup registry defaults
+NUMBER_OF_DAYS=${NUMBER_OF_DAYS:-${NUMBER_OF_DAYS_DEFAULT}}
+DRYRUN=${DRYRUN:-${DRYRUN_DEFAULT}}
 
 # Default local repository is based on standard image naming conventions
 if [[ (-n "${DOCKER_PRODUCT}") && 

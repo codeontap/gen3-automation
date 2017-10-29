@@ -66,7 +66,6 @@ function fatal() {
   local parts=("$@")
 
   message "Fatal" "${parts[@]}" >&2
-  exit
 }
 
 function fatalOption() {
@@ -440,6 +439,16 @@ function isBucketAccessible() {
 
   aws --region ${region} s3 ls "s3://${bucket}/${prefix}${prefix:+/}" > temp_bucket_access.txt
   return $?
+}
+
+function copyFilesFromBucket() {
+  local region="$1"; shift
+  local bucket="$1"; shift
+  local prefix="$1"; shift
+  local dir="$1"; shift
+  local optional_arguments=("$@")
+
+  aws --region ${region} s3 cp --recursive "${optional_arguments[@]}" "s3://${bucket}/${prefix}${prefix:+/}" "${dir}/" 
 }
 
 function syncFilesToBucket() {

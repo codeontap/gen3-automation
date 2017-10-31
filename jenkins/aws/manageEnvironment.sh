@@ -10,32 +10,6 @@ SAVE_REQUIRED="false"
 # Configuration reference tag
 INFRASTRUCTURE_TAG="env${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}"
 
-# Basic security setup
-if [[ ("${SETUP_CREDENTIALS}" == "true") &&
-        ("${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_UPDATE}") ]]; then
-
-  # First create the cmk
-  ${AUTOMATION_DIR}/createTemplates.sh -l "segment" -u "cmk" -c "${INFRASTRUCTURE_TAG}"
-  RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
-
-  ${AUTOMATION_DIR}/manageStacks.sh -l "segment" -u "cmk"
-  RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
-
-  # Add the SSH key if required
-  if [[ (! -f "${SEGMENT_CREDENTIALS_DIR}/aws-ssh-crt.pem") &&
-        (! -f "${SEGMENT_CREDENTIALS_DIR}/aws-ssh-prv.pem") ]]; then
-    pushd "${SEGMENT_DIR}" >/dev/null
-    ${GENERATION_DIR}/addSSH.sh
-    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
-
-    # Encrypt the SSH key with the cmk
-    ${GENERATION_DIR}/manageFileCrypto.sh -e -f aws-ssh-prv.pem -u
-    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
-    popd >/dev/null
-  fi
-  SAVE_REQUIRED="true"
-fi
-
 # Process each template level
 IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra LEVELS_REQUIRED <<< "${LEVELS}"
 

@@ -84,7 +84,7 @@ for CURRENT_DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST}; do
     if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT} -d; fi
     if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then ${GENERATION_DIR}/manageStack.sh -u ${CURRENT_DEPLOYMENT_UNIT}; fi
     RESULT=$? && [[ ${RESULT} -ne 0 ]] &&
-        fatal "Applying ${DEPLOYMENT_MODE} mode to the ${LEVEL,,} level stack for the ${CURRENT_DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed"
+        fatal "Applying ${DEPLOYMENT_MODE} mode to the ${LEVEL,,} level stack for the ${CURRENT_DEPLOYMENT_UNIT} deployment unit of the ${SEGMENT} segment failed" && exit
 done
 
 # All good

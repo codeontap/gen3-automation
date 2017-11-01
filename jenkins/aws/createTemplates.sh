@@ -64,10 +64,10 @@ while getopts ":c:hl:r:s:t:u:" opt; do
             DEPLOYMENT_UNIT_LIST="${OPTARG}"
             ;;
         \?)
-            fatalOption
+            fatalOption; exit
             ;;
         :)
-            fatalOptionArgument
+            fatalOptionArgument; exit
             ;;
      esac
 done
@@ -78,7 +78,7 @@ export LEVEL="${LEVEL:-${LEVEL_DEFAULT}}"
 # Ensure mandatory arguments have been provided
 [[ (-z "${CONFIGURATION_REFERENCE}") ||
     (-z "${DEPLOYMENT_UNIT_LIST}") ||
-    (-z "${LEVEL}") ]] && fatalMandatory
+    (-z "${LEVEL}") ]] && fatalMandatory && exit
 
 cd "${SEGMENT_DIR}"
 

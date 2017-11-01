@@ -15,7 +15,7 @@ RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 if [[ (-n "${AUTODEPLOY+x}") &&
         ("$AUTODEPLOY" != "true") ]]; then
     RESULT=2
-    fatal "AUTODEPLOY is not true, triggering exit"
+    fatal "AUTODEPLOY is not true, triggering exit" && exit
 fi
 
 # Record key parameters for downstream jobs

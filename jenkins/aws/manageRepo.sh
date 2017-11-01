@@ -68,16 +68,16 @@ function init() {
         git init .
     fi
 
-    [[ (-z "${REPO_REMOTE}") ]] && fatalMandatory
+    [[ (-z "${REPO_REMOTE}") ]] && fatalMandatory && return 1
 
     git remote show "${REPO_REMOTE}" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
-        [[ -z "${REPO_URL}" ]] && fatalMandatory
+        [[ -z "${REPO_URL}" ]] && fatalMandatory && return 1
 
         git remote add "${REPO_REMOTE}" "${REPO_URL}"
         RESULT=$?
         [[ ${RESULT} -ne 0 ]] &&
-            fatal "Can't add remote ${REPO_REMOTE} to ${REPO_LOG_NAME} repo"
+            fatal "Can't add remote ${REPO_REMOTE} to ${REPO_LOG_NAME} repo" && return 1
     fi
     
     git log -n 1 >/dev/null 2>&1
@@ -95,20 +95,20 @@ function init() {
 function clone() {
     trace "Cloning the ${REPO_LOG_NAME} repo and checking out the ${REPO_BRANCH} branch ..."
     [[ (-z "${REPO_URL}") ||
-        (-z "${REPO_BRANCH}") ]] && fatalMandatory
+        (-z "${REPO_BRANCH}") ]] && fatalMandatory && return 1
 
     git clone -b "${REPO_BRANCH}" "${REPO_URL}" .
-    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't clone ${REPO_LOG_NAME} repo"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't clone ${REPO_LOG_NAME} repo" && return 1
 }
 
 function push() {
     [[ (-z "${GIT_USER}") ||
         (-z "${GIT_EMAIL}") ||
         (-z "${REPO_MESSAGE}") ||
-        (-z "${REPO_REMOTE}") ]] && fatalMandatory
+        (-z "${REPO_REMOTE}") ]] && fatalMandatory && return 1
 
     git remote show "${REPO_REMOTE}" >/dev/null 2>&1
-    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Remote ${REPO_REMOTE} is not initialised"
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Remote ${REPO_REMOTE} is not initialised" && return 1
 
     # Ensure git knows who we are
     git config user.name  "${GIT_USER}"
@@ -121,7 +121,7 @@ function push() {
         # Commit changes
         trace "Committing to the ${REPO_LOG_NAME} repo..."
         git commit -m "${REPO_MESSAGE}"
-        RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't commit to the ${REPO_LOG_NAME} repo"
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't commit to the ${REPO_LOG_NAME} repo" && return 1
 
         REPO_PUSH_REQUIRED="true"
     fi
@@ -134,7 +134,7 @@ function push() {
         else
             trace "Adding tag \"${REPO_TAG}\" to the ${REPO_LOG_NAME} repo..."
             git tag -a "${REPO_TAG}" -m "${REPO_MESSAGE}"
-            RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't tag the ${REPO_LOG_NAME} repo"
+            RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't tag the ${REPO_LOG_NAME} repo" && return 1
     
             REPO_PUSH_REQUIRED="true"
         fi
@@ -144,7 +144,8 @@ function push() {
     if [[ "${REPO_PUSH_REQUIRED}" == "true" ]]; then
         trace "Pushing the ${REPO_LOG_NAME} repo upstream..."
         git push --tags ${REPO_REMOTE} ${REPO_BRANCH}
-        RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}"
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && \
+            fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}" && return 1
     fi
 }
 
@@ -222,9 +223,9 @@ function main() {
 
   # Perform the required action
   case ${REPO_OPERATION} in
-    ${REPO_OPERATION_INIT})  init ;;
-    ${REPO_OPERATION_CLONE}) clone  ;;
-    ${REPO_OPERATION_PUSH})  push ;;
+    ${REPO_OPERATION_INIT})  init || return $? ;;
+    ${REPO_OPERATION_CLONE}) clone || return $? ;;
+    ${REPO_OPERATION_PUSH})  push || return $? ;;
   esac
   
   # All good

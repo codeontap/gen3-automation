@@ -238,7 +238,7 @@ defineDockerProviderAttributes "${DOCKER_PROVIDER}" "DOCKER_PROVIDER"
 
 # Ensure the local repository has been determined
 [[ -z "${DOCKER_REPO}" ]] &&
-    fatal "Job requires the local repository name, or the product/deployment unit/commit"
+    fatal "Job requires the local repository name, or the product/deployment unit/commit" && exit
 
 # Apply remote registry defaults
 REMOTE_DOCKER_PROVIDER="${REMOTE_DOCKER_PROVIDER:-${PRODUCT_REMOTE_DOCKER_PROVIDER}}"
@@ -262,7 +262,7 @@ FULL_DOCKER_IMAGE="${DOCKER_PROVIDER_DNS}/${DOCKER_IMAGE}"
 # Confirm access to the local registry
 dockerLogin ${DOCKER_PROVIDER_DNS} ${DOCKER_PROVIDER} ${!DOCKER_PROVIDER_USER_VAR} ${!DOCKER_PROVIDER_PASSWORD_VAR}
 RESULT=$?
-[[ "$RESULT" -ne 0 ]] && fatal "Can't log in to ${DOCKER_PROVIDER_DNS}"
+[[ "$RESULT" -ne 0 ]] && fatal "Can't log in to ${DOCKER_PROVIDER_DNS}" && exit
 
 # Perform the required action
 case ${DOCKER_OPERATION} in
@@ -277,17 +277,17 @@ case ${DOCKER_OPERATION} in
             -f "${DOCKERFILE}" \
             "${AUTOMATION_BUILD_DIR}"
         RESULT=$?
-        [[ $RESULT -ne 0 ]] && fatal "Cannot build image ${DOCKER_IMAGE}"
+        [[ $RESULT -ne 0 ]] && fatal "Cannot build image ${DOCKER_IMAGE}" && exit
 
         createRepository ${DOCKER_PROVIDER_DNS} ${DOCKER_REPO}
         RESULT=$?
         [[ $RESULT -ne 0 ]] &&
-            fatal "Unable to create repository ${DOCKER_REPO} in the local registry"
+            fatal "Unable to create repository ${DOCKER_REPO} in the local registry" && exit
 
         docker push ${FULL_DOCKER_IMAGE}
         RESULT=$?
         [[ $RESULT -ne 0 ]] &&
-            fatal "Unable to push ${DOCKER_IMAGE} to the local registry"
+            fatal "Unable to push ${DOCKER_IMAGE} to the local registry" && exit
         ;;
 
     ${DOCKER_OPERATION_VERIFY})
@@ -353,7 +353,7 @@ case ${DOCKER_OPERATION} in
                 dockerLogin ${REMOTE_DOCKER_PROVIDER_DNS} ${REMOTE_DOCKER_PROVIDER} ${!REMOTE_DOCKER_PROVIDER_USER_VAR} ${!REMOTE_DOCKER_PROVIDER_PASSWORD_VAR}
                 RESULT=$?
                 [[ "$RESULT" -ne 0 ]] &&
-                    fatal "Can't log in to ${REMOTE_DOCKER_PROVIDER_DNS}"
+                    fatal "Can't log in to ${REMOTE_DOCKER_PROVIDER_DNS}" && exit
                 ;;
                 
             *)
@@ -390,7 +390,7 @@ case ${DOCKER_OPERATION} in
         ;;        
         
     *)
-        fatal "Unknown operation \"${DOCKER_OPERATION}\""
+        fatal "Unknown operation \"${DOCKER_OPERATION}\"" && exit
         ;;
 esac
 

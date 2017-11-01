@@ -502,13 +502,26 @@ function create_pki_credentials() {
 
   if [[ (! -f "${dir}/aws-ssh-crt.pem") &&
         (! -f "${dir}/aws-ssh-prv.pem") ]]; then
-      openssl genrsa -out "${dir}/aws-ssh-prv.pem" 2048 || return $?
-      openssl rsa -in "${dir}/aws-ssh-prv.pem" -pubout > "${dir}/aws-ssh-crt.pem" || return $?
+      openssl genrsa -out "${dir}/aws-ssh-prv.pem.plaintext" 2048 || return $?
+      openssl rsa -in "${dir}/aws-ssh-prv.pem.plaintext" -pubout > "${dir}/aws-ssh-crt.pem" || return $?
+  fi
+
+  if [[ ! -f "${dir}/.gitignore" ]]; then
+    cat << EOF > "${dir}/.gitignore"
+*.plaintext
+*.decrypted
+*.ppk
+EOF
   fi
 
   return 0
 }
 
+function delete_pki_credentials() {
+  local dir="$1"; shift
+
+  rm -f "${dir}/aws-ssh-crt*" "${dir}/aws-ssh-prv*"
+}
 # -- SSH --
 
 function update_ssh_credentials() {
@@ -523,28 +536,56 @@ function update_ssh_credentials() {
     aws --region "${region}" ec2 import-key-pair --key-name "${name}" --public-key-material "${crt_content}"; }
 }
 
+function delete_ssh_credentials() {
+  local region="$1"; shift
+  local name="$1"; shift
+
+  aws --region "${region}" ec2 describe-key-pairs --key-name "${name}" && \
+    aws --region "${region}" ec2 delete-key-pair --key-name "${name}" || return $? }
+  return 0
+}
+
 # -- OAI --
 
 function update_oai_credentials() {
   local region="$1"; shift
   local name="$1"; shift
-  local result_file="${1:-./temp_oai_list.json}"; shift
+  local result_file="${1:-./temp_update_oai.json}"; shift
 
   local oai_id=
-  local oai_canonicalid=
 
   # Check for existing identity
-  aws --region "${region}" cloudfront list-cloud-front-origin-access-identities > ./temp_oai_list.json || return $?  
+  aws --region "${region}" cloudfront list-cloud-front-origin-access-identities > ./temp_oai_list.json || return $?
   jq ".CloudFrontOriginAccessIdentityList.Items[] | select(.Comment==\"${name}\")" < ./temp_oai_list.json > "${result_file}" || return $?
   oai_id=$(jq -r ".Id" < "${result_file}") || return $?
 
   # Create if not there already
   if [[ -z "${oai_id}" ]]; then
+    set -o pipefail
     aws --region "${region}" cloudfront create-cloud-front-origin-access-identity \
-      --cloud-front-origin-access-identity-config "\"Comment\" : \"${name}\"}" > "${result_file}" || return $?
+      --cloud-front-origin-access-identity-config "{\"Comment\" : \"${name}\", \"CallerReference\" : \"${name}\"}" | jq ".CloudFrontOriginAccessIdentity" > "${result_file}" || return $?
+    set +o pipefail
   fi
 
   cat "${result_file}"
+
+  return 0
+}
+
+function delete_oai_credentials() {
+  local region="$1"; shift
+  local name="$1"; shift
+
+  local oai_id=
+
+  # Check for existing identity
+  aws --region "${region}" cloudfront list-cloud-front-origin-access-identities > ./temp_oai_list.json || return $?
+  oai_id=$(jq -r ".CloudFrontOriginAccessIdentityList.Items[] | select(.Comment==\"${name}\") | .Id") < ./temp_oai_list.json > "${result_file}" || return $?
+
+  # delete if present
+  if [[ -n "${oai_id}" ]]; then
+    aws --region "${region}" cloudfront delete-cloud-front-origin-access-identity --id "${oai_id}" || return $?
+  fi
 
   return 0
 }

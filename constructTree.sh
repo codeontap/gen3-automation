@@ -129,6 +129,10 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
         -n "${PRODUCT_CONFIG_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
         -d "${BASE_DIR_TEMP}" -b "${PRODUCT_CONFIG_REFERENCE}"
     RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+    
+    # Ensure temporary files are ignored
+    [[ (!(-f "${BASE_DIR_TEMP}/.gitignore")) || (!$(grep -q "temp_*" "${BASE_DIR_TEMP}/.gitignore")) ]] && \
+      echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
 
     # The config repo may contain
     # - config +/- infrastructure
@@ -175,6 +179,10 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
             -d "${BASE_DIR_TEMP}" -b "${PRODUCT_INFRASTRUCTURE_REFERENCE}"
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
+        # Ensure temporary files are ignored
+        [[ (!(-f "${BASE_DIR_TEMP}/.gitignore")) || (!$(grep -q "temp_*" "${BASE_DIR_TEMP}/.gitignore")) ]] && \
+          echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
+
         if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then
             # products and accounts
             PRODUCT_INFRASTRUCTURE_DIR="${BASE_DIR}/infrastructure"
@@ -203,6 +211,10 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
             -n "${ACCOUNT_CONFIG_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
             -d "${BASE_DIR_TEMP}"
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+        # Ensure temporary files are ignored
+        [[ (!(-f "${BASE_DIR_TEMP}/.gitignore")) || (!$(grep -q "temp_*" "${BASE_DIR_TEMP}/.gitignore")) ]] && \
+          echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
 
         if [[ -n $(findDir "${BASE_DIR_TEMP}" "infrastructure") ]]; then
             # Mix of infrastructure and config
@@ -233,6 +245,10 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
             -n "${ACCOUNT_INFRASTRUCTURE_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
             -d "${BASE_DIR_TEMP}"
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+        # Ensure temporary files are ignored
+        [[ (!(-f "${BASE_DIR_TEMP}/.gitignore")) || (!$(grep -q "temp_*" "${BASE_DIR_TEMP}/.gitignore")) ]] && \
+          echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
 
         if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then
             # Multi-account repo

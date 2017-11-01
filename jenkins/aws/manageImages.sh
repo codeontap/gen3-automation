@@ -52,10 +52,10 @@ while getopts ":f:g:hu:" opt; do
             DEPLOYMENT_UNIT="${OPTARG}"
             ;;
         \?)
-            fatalOption
+            fatalOption; exit
             ;;
         :)
-            fatalOptionArgument
+            fatalOptionArgument; exit
             ;;
      esac
 done
@@ -71,7 +71,7 @@ IMAGE_FORMATS="${IMAGE_FORMATS:-${IMAGE_FORMATS_ARRAY[0]}}"
 # Ensure mandatory arguments have been provided
 [[ (-z "${DEPLOYMENT_UNIT}") ||
     (-z "${CODE_COMMIT}") ||
-    (-z "${IMAGE_FORMATS}") ]] && fatalMandatory
+    (-z "${IMAGE_FORMATS}") ]] && fatalMandatory && exit
 
 IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra FORMATS <<< "${IMAGE_FORMATS}"
 
@@ -85,11 +85,9 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             if [[ -f "${DOCKERFILE}" ]]; then
                 ${AUTOMATION_DIR}/manageDocker.sh -b -s "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                RESULT=$?
-                [[ "${RESULT}" -ne 0 ]] && exit
+                RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             else
-                RESULT=1
-                fatal "Dockerfile missing"
+                RESULT=1 && fatal "Dockerfile missing" && exit
             fi
             ;;
 
@@ -101,11 +99,9 @@ for FORMAT in "${FORMATS[@]}"; do
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
                         -f "${IMAGE_FILE}"
-                RESULT=$?
-                [[ "${RESULT}" -ne 0 ]] && exit
+                RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             else
-                RESULT=1
-                fatal "${IMAGE_FILE} missing"
+                RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
             fi
             ;;
 
@@ -117,11 +113,9 @@ for FORMAT in "${FORMATS[@]}"; do
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
                         -f "${IMAGE_FILE}"
-                RESULT=$?
-                [[ "${RESULT}" -ne 0 ]] && exit
+                RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             else
-                RESULT=1
-                fatal "${IMAGE_FILE} missing"
+                RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
             fi
 
             DOC_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/apidoc.html"
@@ -131,8 +125,7 @@ for FORMAT in "${FORMATS[@]}"; do
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
                         -f "${DOC_FILE}"
-                RESULT=$?
-                [[ "${RESULT}" -ne 0 ]] && exit
+                RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             fi
             ;;
 
@@ -144,17 +137,14 @@ for FORMAT in "${FORMATS[@]}"; do
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
                         -f "${IMAGE_FILE}"
-                RESULT=$?
-                [[ "${RESULT}" -ne 0 ]]&& exit
+                RESULT=$? && [[ "${RESULT}" -ne 0 ]]&& exit
             else
-                RESULT=1
-                fatal "${IMAGE_FILE} missing"
+                RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
             fi
             ;;
 
         *)
-            RESULT=1
-            fatal "Unsupported image format \"${FORMAT}\""
+            RESULT=1 && fatal "Unsupported image format \"${FORMAT}\"" && exit
             ;;
     esac
 done

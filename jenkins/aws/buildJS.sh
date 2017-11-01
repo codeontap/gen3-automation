@@ -18,13 +18,13 @@ fi
 
 ${NODE_PACKAGE_MANAGER} install
 RESULT=$?
-[[ $RESULT -ne 0 ]] && fatal "npm install failed"
+[[ $RESULT -ne 0 ]] && fatal "npm install failed" && exit
 
 # Run bower as part of the build if required
 if [[ -f bower.json ]]; then
     bower install --allow-root
     RESULT=$?
-    [[ $RESULT -ne 0 ]] && fatal "Bower install failed"
+    [[ $RESULT -ne 0 ]] && fatal "Bower install failed" && exit
 fi
 
 # Determine required tasks
@@ -69,7 +69,7 @@ for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
         if [[ "${BUILD_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" != "${BUILD_TASKS[*]}" ]]; then
             ${BUILD_UTILITY} ${REQUIRED_TASK}
             RESULT=$?
-            [[ $RESULT -ne 0 ]] && fatal "${BUILD_UTILITY} \"${TASK}\" task failed"
+            [[ $RESULT -ne 0 ]] && fatal "${BUILD_UTILITY} \"${TASK}\" task failed"  && exit
 
             # Task complete so stop looking for build file supporting it
             break
@@ -87,7 +87,7 @@ case ${NODE_PACKAGE_MANAGER} in
         ;;
 esac
 RESULT=$?
-[[ $RESULT -ne 0 ]] && fatal "Prune failed"
+[[ $RESULT -ne 0 ]] && fatal "Prune failed" && exit
 
 # All good
 RESULT=0

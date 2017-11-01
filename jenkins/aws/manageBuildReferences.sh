@@ -202,10 +202,10 @@ while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
             VERIFICATION_TAG="${OPTARG}"            
             ;;
         \?)
-            fatalOption
+            fatalOption; exit
             ;;
         :)
-            fatalOptionArgument
+            fatalOptionArgument; exit
             ;;
      esac
 done
@@ -219,33 +219,33 @@ case ${REFERENCE_OPERATION} in
         # Add the acceptance tag on provided deployment unit list
         # Normally this would be called after list full
         [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
-            (-z "${ACCEPTANCE_TAG}") ]] && fatalMandatory
+            (-z "${ACCEPTANCE_TAG}") ]] && fatalMandatory && exit
         ;;
 
     ${REFERENCE_OPERATION_LIST})
         # Format the build details based on provided deployment unit list
-        [[ (-z "${DEPLOYMENT_UNIT_LIST}") ]] && fatalMandatory
+        [[ (-z "${DEPLOYMENT_UNIT_LIST}") ]] && fatalMandatory && exit
         ;;
 
     ${REFERENCE_OPERATION_LISTFULL})
         # Populate DEPLOYMENT_UNIT_LIST based on current appsettings
-        [[ -z "${SEGMENT_APPSETTINGS_DIR}" ]] && fatalMandatory
+        [[ -z "${SEGMENT_APPSETTINGS_DIR}" ]] && fatalMandatory && exit
         ;;
 
     ${REFERENCE_OPERATION_UPDATE})
         # Update builds based on provided deployment unit list
         [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
-            (-z "${SEGMENT_APPSETTINGS_DIR}") ]] && fatalMandatory
+            (-z "${SEGMENT_APPSETTINGS_DIR}") ]] && fatalMandatory && exit
         ;;
 
     ${REFERENCE_OPERATION_VERIFY})
         # Verify builds based on provided deployment unit list
         [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
-            (-z "${VERIFICATION_TAG}") ]] && fatalMandatory
+            (-z "${VERIFICATION_TAG}") ]] && fatalMandatory && exit
         ;;
 
     *)
-        fatal "Invalid REFERENCE_OPERATION \"${REFERENCE_OPERATION}\""
+        fatal "Invalid REFERENCE_OPERATION \"${REFERENCE_OPERATION}\"" && exit
         ;;
 esac
 
@@ -328,7 +328,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
                         *)
-                            fatal "Unknown image format \"${IMAGE_FORMAT}\""
+                            fatal "Unknown image format \"${IMAGE_FORMAT}\"" && exit
                             ;;
                     esac
                 done
@@ -399,7 +399,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     CODE_COMMIT=$(git ls-remote -t https://${!CODE_CREDENTIALS_VAR}@${CODE_DNS}/${CODE_ORG}/${CODE_REPO} \
                                     "${CODE_TAG}^{}" | cut -f 1)
                     [[ -z "${CODE_COMMIT}" ]] &&
-                        fatal "Tag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?"
+                        fatal "Tag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?" && exit
                     
                     # Fetch other info about the tag
                     # We are using a github api here to avoid having to pull in the whole repo - 
@@ -407,7 +407,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     CODE_TAG_MESSAGE=$(curl -s https://${!CODE_CREDENTIALS_VAR}@${CODE_API_DNS}/repos/${CODE_ORG}/${CODE_REPO}/git/tags/${TAG_COMMIT} | jq .message | tr -d '"')
                     [[ (-z "${CODE_TAG_MESSAGE}") || 
                         ("${CODE_TAG_MESSAGE}" == "Not Found") ]] &&
-                        fatal "Message for tag ${CODE_TAG} not found in the ${CODE_REPO} repo"
+                        fatal "Message for tag ${CODE_TAG} not found in the ${CODE_REPO} repo" && exit
                     # else
                     # TODO: Confirm commit is in remote repo - for now we'll assume its there if an image exists
                 else
@@ -453,7 +453,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             RESULT=$?
                             ;;
                         *)
-                            fatal "Unknown image format \"${IMAGE_FORMAT}\""
+                            fatal "Unknown image format \"${IMAGE_FORMAT}\"" && exit
                             ;;
                     esac
                     if [[ "${RESULT}" -ne 0 ]]; then
@@ -477,13 +477,13 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     RESULT=$?
                                     ;;
                                 *)
-                                    fatal "Unknown image format \"${IMAGE_FORMAT}\""
+                                    fatal "Unknown image format \"${IMAGE_FORMAT}\"" && exit
                                     ;;
                             esac
                             [[ "${RESULT}" -ne 0 ]] &&
-                                fatal "Unable to pull ${IMAGE_FORMAT,,} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from provider ${FROM_IMAGE_PROVIDER}. Was the build successful?"
+                                fatal "Unable to pull ${IMAGE_FORMAT,,} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" && exit
                         else
-                            fatal "${IMAGE_FORMAT^} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?"
+                            fatal "${IMAGE_FORMAT^} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?" && exit
                         fi
                     fi
                 done

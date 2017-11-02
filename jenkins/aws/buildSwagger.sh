@@ -14,12 +14,15 @@ SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 # Possible input files
 SWAGGER_SPEC_FILE=$(findFile \
                     "${AUTOMATION_BUILD_DIR}/swagger.json" \
-                    "${AUTOMATION_BUILD_DIR}/../*spec/swagger.json")
+                    "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.json")
 SWAGGER_SPEC_YAML_FILE=$(findFile \
                     "${AUTOMATION_BUILD_DIR}/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../*spec/swagger.yaml")
+                    "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.yaml")
 SWAGGER_SPEC_YAML_EXTENSIONS_FILE=$(findFile \
-                    "${AUTOMATION_BUILD_DIR}/swagger_extensions.yaml"
+                    "${AUTOMATION_BUILD_DIR}/swagger_extensions.yaml" \
+                    "${AUTOMATION_BUILD_DEVOPS_DIR}/swagger_extensions.yaml" \
                     "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/swagger_extensions.yaml")
 
 # Make a local copy of the swagger json file

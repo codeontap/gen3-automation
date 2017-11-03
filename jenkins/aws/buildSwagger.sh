@@ -72,6 +72,7 @@ done
 # Augment the swagger file if required
 APIGW_CONFIG=$(findFile \
                 "${AUTOMATION_BUILD_DIR}/apigw.json" \
+                "${AUTOMATION_BUILD_DEVOPS_DIR}/apigw.json" \
                 "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/apigw.json")
 
 if [[ -f "${APIGW_CONFIG}" ]]; then
@@ -86,7 +87,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
     [[ ! -f "${SWAGGER_RESULT_FILE}" ]] &&
         fatal "Can't find generated swagger files. Were they generated successfully?"
 else
-    zip "${SWAGGER_RESULT_FILE}" "${SWAGGER_SPEC_FILE}"
+    zip "${SWAGGER_RESULT_FILE}" "${TEMP_SWAGGER_SPEC_FILE}"
 fi
 
 # Generate documentation

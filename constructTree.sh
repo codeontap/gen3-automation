@@ -131,7 +131,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
     RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
     
     # Ensure temporary files are ignored
-    [[ (!(-f "${BASE_DIR_TEMP}/.gitignore")) || (!$(grep -q "temp_*" "${BASE_DIR_TEMP}/.gitignore")) ]] && \
+    [[ (! -f "${BASE_DIR_TEMP}/.gitignore") || ($(grep -q "temp_\*" "${BASE_DIR_TEMP}/.gitignore") -ne 0) ]] && \
       echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
 
     # The config repo may contain
@@ -180,7 +180,7 @@ if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
         # Ensure temporary files are ignored
-        [[ (!(-f "${BASE_DIR_TEMP}/.gitignore")) || (!$(grep -q "temp_*" "${BASE_DIR_TEMP}/.gitignore")) ]] && \
+        [[ (! -f "${BASE_DIR_TEMP}/.gitignore") || ($(grep -q "temp_\*" "${BASE_DIR_TEMP}/.gitignore") -ne 0) ]] && \
           echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
 
         if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then
@@ -213,7 +213,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
         # Ensure temporary files are ignored
-        [[ (!(-f "${BASE_DIR_TEMP}/.gitignore")) || (!$(grep -q "temp_*" "${BASE_DIR_TEMP}/.gitignore")) ]] && \
+        [[ (! -f "${BASE_DIR_TEMP}/.gitignore") || ($(grep -q "temp_\*" "${BASE_DIR_TEMP}/.gitignore") -ne 0) ]] && \
           echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
 
         if [[ -n $(findDir "${BASE_DIR_TEMP}" "infrastructure") ]]; then
@@ -247,7 +247,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
         # Ensure temporary files are ignored
-        [[ (!(-f "${BASE_DIR_TEMP}/.gitignore")) || (!$(grep -q "temp_*" "${BASE_DIR_TEMP}/.gitignore")) ]] && \
+        [[ (! -f "${BASE_DIR_TEMP}/.gitignore") || ($(grep -q "temp_\*" "${BASE_DIR_TEMP}/.gitignore") -ne 0) ]] && \
           echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
 
         if [[ -n $(findDir "${BASE_DIR_TEMP}" "${ACCOUNT}") ]]; then

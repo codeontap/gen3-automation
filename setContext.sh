@@ -404,8 +404,8 @@ function main() {
   defineGitProviderSettings "ACCOUNT" "" "${ACCOUNT}" "" "github"
   
   # - cmdb repos
-  defineRepoSettings "ACCOUNT" "CONFIG"         "${ACCOUNT}" "" "${ACCOUNT}-config"
-  defineRepoSettings "ACCOUNT" "INFRASTRUCTURE" "${ACCOUNT}" "" "${ACCOUNT}-infrastructure"
+  defineRepoSettings "ACCOUNT" "CONFIG"         "${ACCOUNT}" "" "accounts-cmdb"
+  defineRepoSettings "ACCOUNT" "INFRASTRUCTURE" "${ACCOUNT}" "" "accounts-cmdb"
   
   
   ### Product details ###
@@ -414,8 +414,8 @@ function main() {
   defineGitProviderSettings "PRODUCT" "" "${PRODUCT}" "${SEGMENT}" "${ACCOUNT_GIT_PROVIDER}"
   
   # - cmdb repos
-  defineRepoSettings "PRODUCT" "CONFIG"         "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-config"
-  defineRepoSettings "PRODUCT" "INFRASTRUCTURE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-infrastructure"                                               
+  defineRepoSettings "PRODUCT" "CONFIG"         "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-cmdb"
+  defineRepoSettings "PRODUCT" "INFRASTRUCTURE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT}-cmdb"
   
   # - code git provider
   defineGitProviderSettings "PRODUCT" "CODE" "${PRODUCT}" "${SEGMENT}" "${PRODUCT_GIT_PROVIDER}"

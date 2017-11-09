@@ -270,10 +270,10 @@ function main() {
       for PART in "${JOB_PATH[@]}"; do
         if contains "${PART}" "^(cot.?)-(.+)"; then
           case "${BASH_REMATCH[1]}" in
-            cotg) AGGREGATOR="${AGGREGATOR:-${BASH_REMATCH[2]}}" ;;
+            cota) AGGREGATOR="${AGGREGATOR:-${BASH_REMATCH[2]}}" ;;
             coti) INTEGRATOR="${INTEGRATOR:-${BASH_REMATCH[2]}}" ;;
             cott) TENANT="${TENANT:-${BASH_REMATCH[2}}" ;;
-            cota) AREA="${AREA:-${BASH_REMATCH[2]}}" ;;
+            cotw) WORKAREA="${WORKAREA:-${BASH_REMATCH[2]}}" ;;
             cotp) PRODUCT="${PRODUCT:-${BASH_REMATCH[2]}}" ;;
             cote) ENVIRONMENT="${ENVIRONMENT:-${BASH_REMATCH[2]}}" ;;
             cots) SEGMENT="${SEGMENT:-${BASH_REMATCH[2]}}" ;;

@@ -43,12 +43,6 @@ for LEVEL in "${LEVELS_REQUIRED[@]}"; do
   done
 done
 
-# Update the code and credentials buckets if required
-if [[ "${SYNC_BUCKETS}" == "true" ]]; then
-  cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}
-  ${GENERATION_DIR}/syncAccountBuckets.sh -a ${ACCOUNT}
-fi
-
 # All good - save the result
 if [[ "${SAVE_REQUIRED}" == "true" ]]; then
   info "Saving changes under tag \"${INFRASTRUCTURE_TAG}\" ..."

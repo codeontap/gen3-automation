@@ -374,7 +374,7 @@ function main() {
   findAndDefineSetting "GIT_EMAIL" "" "" "" "value" "${GIT_EMAIL_DEFAULT}"
   
   # Separators
-  findAndDefineSetting "DEPLOYMENT_UNIT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" " ,"
+  findAndDefineSetting "DEPLOYMENT_UNIT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" ", "
   findAndDefineSetting "BUILD_REFERENCE_PART_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" "!?&"
   findAndDefineSetting "IMAGE_FORMAT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" ":;|"
   
@@ -446,9 +446,9 @@ function main() {
   CODE_REPO_ARRAY=()
   CODE_PROVIDER_ARRAY=()
   IMAGE_FORMATS_ARRAY=()
-  IFS="${DEPLOYMENT_UNIT_SEPARATORS}" read -ra UNITS <<< "${DEPLOYMENT_UNITS:-${DEPLOYMENT_UNIT:-${SLICES:-${SLICE}}}}"
+  arrayFromList "UNITS" "${DEPLOYMENT_UNITS:-${DEPLOYMENT_UNIT:-${SLICES:-${SLICE}}}}" "${DEPLOYMENT_UNIT_SEPARATORS}"
   for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
-      IFS="${BUILD_REFERENCE_PART_SEPARATORS}" read -ra BUILD_REFERENCE_PARTS <<< "${CURRENT_DEPLOYMENT_UNIT}"
+      arrayFromList "BUILD_REFERENCE_PARTS" "${CURRENT_DEPLOYMENT_UNIT}" "${BUILD_REFERENCE_PART_SEPARATORS}"
       DEPLOYMENT_UNIT_PART="${BUILD_REFERENCE_PARTS[0]}"
       TAG_PART="${BUILD_REFERENCE_PARTS[1]:-?}"
       FORMATS_PART="${BUILD_REFERENCE_PARTS[2]:-?}"
@@ -497,22 +497,22 @@ function main() {
   esac
   
   # Regenerate the deployment unit list in case the first code commit/tag or format was overriden
-  UPDATED_UNITS=
-  DEPLOYMENT_UNIT_SEPARATOR=""
+  UPDATED_UNITS_ARRAY=()
   for INDEX in $( seq 0 $((${#DEPLOYMENT_UNIT_ARRAY[@]}-1)) ); do
-      UPDATED_UNITS="${UPDATED_UNITS}${DEPLOYMENT_UNIT_SEPARATOR}${DEPLOYMENT_UNIT_ARRAY[$INDEX]}"
+      UPDATED_UNIT=("${DEPLOYMENT_UNIT_ARRAY[$INDEX]}")
       if [[ "${CODE_TAG_ARRAY[$INDEX]}" != "?" ]]; then
-          UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${CODE_TAG_ARRAY[$INDEX]}"
+          UPDATED_UNIT+=("${CODE_TAG_ARRAY[$INDEX]}")
       else
           if [[ "${CODE_COMMIT_ARRAY[$INDEX]}" != "?" ]]; then
-              UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${CODE_COMMIT_ARRAY[$INDEX]}"
+              UPDATED_UNIT+=("${CODE_COMMIT_ARRAY[$INDEX]}")
           fi
       fi
       if [[ "${IMAGE_FORMATS_ARRAY[$INDEX]}" != "?" ]]; then
-          UPDATED_UNITS="${UPDATED_UNITS}${BUILD_REFERENCE_PART_SEPARATORS:0:1}${IMAGE_FORMATS_ARRAY[$INDEX]}"
+          UPDATED_UNIT+=("${IMAGE_FORMATS_ARRAY[$INDEX]}")
       fi
-  DEPLOYMENT_UNIT_SEPARATOR="${DEPLOYMENT_UNIT_SEPARATORS:0:1}"
+      UPDATED_UNITS_ARRAY+=("$(listFromArray "UPDATED_UNIT" "${BUILD_REFERENCE_PART_SEPARATORS}")")
   done
+  UPDATED_UNITS=$(listFromArray "UPDATED_UNITS_ARRAY" "${DEPLOYMENT_UNIT_SEPARATORS}")
   
   # Save for subsequent processing
   save_context_property DEPLOYMENT_UNIT_LIST "${DEPLOYMENT_UNIT_ARRAY[*]}"

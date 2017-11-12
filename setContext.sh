@@ -240,7 +240,7 @@ function defineRepoSettings() {
 
     # Strip off any path info for legacy compatability
     if [[ -n "${NAME_VALUE}" ]]; then
-        NAME_VALUE="$(basename ${NAME_VALUE})"
+        NAME_VALUE="$(fileName "${NAME_VALUE}")"
     fi
 
     define_context_property "${DRD_USE}_${DRD_SUBUSE}_${DRD_TYPE_PREFIX}REPO" "${NAME_VALUE}"

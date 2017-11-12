@@ -1,15 +1,10 @@
 #!/bin/bash
 
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
-trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+trap 'exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Create the templates
-${AUTOMATION_DIR}/createTemplates.sh -t application -c "${PRODUCT_CONFIG_COMMIT}"
-RESULT=$?
-[[ ${RESULT} -ne 0 ]] && exit
+${AUTOMATION_DIR}/manageUnits.sh -l "application" -a "${DEPLOYMENT_UNITS}" -r "${PRODUCT_CONFIG_COMMIT}"
 
-# Update the stacks
-${AUTOMATION_DIR}/manageStacks.sh
-RESULT=$?
 

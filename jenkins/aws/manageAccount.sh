@@ -7,7 +7,7 @@ trap 'exit 1' SIGHUP SIGINT SIGTERM
 function main() {
   TAG="acc${AUTOMATION_JOB_IDENTIFIER}-${ACCOUNT}"
 
-  ${AUTOMATION_DIR}/manageUnits -r "${TAG}" || return $?
+  ${AUTOMATION_DIR}/manageUnits.sh -r "${TAG}" || return $?
 
   # All ok so tag the config repo
   save_repo "${ACCOUNT_DIR}" "account config" \

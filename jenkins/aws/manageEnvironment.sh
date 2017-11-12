@@ -7,7 +7,7 @@ trap 'exit 1' SIGHUP SIGINT SIGTERM
 function main() {
   TAG="env${AUTOMATION_JOB_IDENTIFIER}-${PRODUCT}-${SEGMENT}"
 
-  ${AUTOMATION_DIR}/manageUnits -r "${TAG}" || return $?
+  ${AUTOMATION_DIR}/manageUnits.sh -r "${TAG}" || return $?
 
   # All ok so tag the config repo
   save_product_config "${DETAIL_MESSAGE}" "${PRODUCT_CONFIG_REFERENCE}" "${TAG}" || return $?

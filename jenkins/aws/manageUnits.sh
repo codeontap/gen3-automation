@@ -47,7 +47,7 @@ function options() {
             c) ACCOUNT_UNITS_LIST="${OPTARG}" ;;
             g) SEGMENT_UNITS_LIST="${OPTARG}" ;;
             h) usage; return 1 ;;
-            l) LEVELS="${OPTARG}" ;;
+            l) LEVELS_LIST="${OPTARG}" ;;
             m) DEPLOYMENT_MODE="${OPTARG}" ;;
             p) PRODUCT_UNIT_LIST="${OPTARG}" ;;
             s) SOLUTION_UNIT_LIST="${OPTARG}" ;;
@@ -60,7 +60,7 @@ function options() {
     
     # Apply defaults
     export DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-${DEPLOYMENT_MODE_DEFAULT}}"
-    export LEVELS="${LEVELS:-${LEVEL_DEFAULT}}"
+    export LEVELS_LIST="${LEVELS_LIST:-${LEVEL_DEFAULT}}"
     export INFRASTRUCTURE_TAG="${INFRASTRUCTURE_TAG:-env${AUTOMATION_JOB_IDENTIFIER}-${SEGMENT}}"
     
     # Ensure mandatory arguments have been provided
@@ -78,7 +78,7 @@ function main() {
   save_required="false"
   
   # Process each template level
-  arrayfromList levels_required "${LEVELS}"
+  arrayfromList levels_required "${LEVELS_LIST}"
   
   # Reverse the order if we are deleting
   [[ "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOP}" ]] && reverseArray levels_required

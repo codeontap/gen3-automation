@@ -78,7 +78,7 @@ function main() {
   for level in "${levels_required[@]}"; do
 
     # Switch to the correct directory
-    case level in 
+    case "${level}" in
       account)     cd "${ACCOUNT_DIR}"; units_list="${ACCOUNT_UNITS_LIST}" ;;
       product)     cd "${PRODUCT_DIR}"; units_list="${PRODUCT_UNITS_LIST}" ;;
       application) cd "${SEGMENT_DIR}"; units_list="${APPLICATION_UNITS_LIST}" ;;

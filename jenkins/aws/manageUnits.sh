@@ -70,7 +70,7 @@ function main() {
   options "$@" || return $?
 
   # Process each template level
-  arrayfromList levels_required "${LEVELS_LIST}"
+  arrayFromList levels_required "${LEVELS_LIST}"
   
   # Reverse the order if we are deleting
   [[ "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOP}" ]] && reverseArray levels_required

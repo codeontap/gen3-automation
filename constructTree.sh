@@ -105,7 +105,7 @@ INCLUDE_ALL_REPOS="${INCLUDE_ALL_REPOS:-false}"
 INIT_REPOS="${INIT_REPOS:-false}"
 
 # Check for required context
-[[ -z "${ACCOUNT}" ]] && fatal "ACCOUNT not defined"
+[[ -z "${ACCOUNT}" ]] && fatal "ACCOUNT not defined" && exit
 
 # Save for later steps
 save_context_property PRODUCT_CONFIG_REFERENCE "${PRODUCT_CONFIG_REFERENCE}"

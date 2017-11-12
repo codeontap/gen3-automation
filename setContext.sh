@@ -294,7 +294,7 @@ function main() {
       if [[ -n "${BUILD_PATH}" ]]; then
         [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ]] &&
           AUTOMATION_BUILD_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_PATH}" ||
-          fatal "Build path directory \"${BUILD_PATH}\" not found"
+            { fatal "Build path directory \"${BUILD_PATH}\" not found"; exit; } 
       fi
 
       # Build source directory
@@ -556,7 +556,7 @@ function main() {
                       defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
                   done
               else
-                  fatal "PROMOTION segment/account not defined"
+                  fatal "PROMOTION segment/account not defined" && exit
               fi
               ;;
   
@@ -580,7 +580,7 @@ function main() {
                       defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
                   done
               else
-                  fatal "HOTFIX segment/account not defined"
+                  fatal "HOTFIX segment/account not defined" && exit
               fi
               ;;
       esac

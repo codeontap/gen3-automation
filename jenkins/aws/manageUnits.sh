@@ -101,17 +101,17 @@ function main() {
       
       # Generate the template if required
       if [[ -n "${REFERENCE}" ]]; then
-        ${GENERATION_DIR}/createTemplate.sh -u "${unit}" -l "${level}" -c "${REFERENCE}" || return $?
+        ${GENERATION_DIR}/createTemplate.sh -l "${level}" -u "${unit}" -c "${REFERENCE}" || return $?
       fi
 
       # Manage the stack if required
       if [[ -n "${DEPLOYMENT_MODE}" ]]; then
         if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then
-            ${GENERATION_DIR}/manageStack.sh -u ${unit} -d ||
+            ${GENERATION_DIR}/manageStack.sh -d -l "${level}" -u "${unit}" ||
                 { exit_status=$?; fatal "Deletion of the ${level} level stack for the ${unit} deployment unit failed"; return "${exit_status}"; }
         fi
         if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then
-            ${GENERATION_DIR}/manageStack.sh -u ${unit} ||
+            ${GENERATION_DIR}/manageStack.sh -l "${level}" -u "${unit}" ||
                 { exit_status=$?; fatal "Create/update of the ${level} level stack for the ${unit} deployment unit failed"; return "${exit_status}"; }
         fi
       fi

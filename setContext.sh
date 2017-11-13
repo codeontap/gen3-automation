@@ -635,16 +635,18 @@ function main() {
   ### Capture details for logging etc ###
   
   # Basic details for git commits/slack notification (enhanced by other scripts)
-  DETAIL_MESSAGE="product=${PRODUCT}"
-  if [[ -n "${ENVIRONMENT}" ]];               then DETAIL_MESSAGE="${DETAIL_MESSAGE}, environment=${ENVIRONMENT}"; fi
-  if [[ "${SEGMENT}" != "${ENVIRONMENT}" ]];  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, segment=${SEGMENT}"; fi
-  if [[ -n "${TIER}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, tier=${TIER}"; fi
-  if [[ -n "${COMPONENT}" ]];                 then DETAIL_MESSAGE="${DETAIL_MESSAGE}, component=${COMPONENT}"; fi
-  if [[ "${#DEPLOYMENT_UNIT_ARRAY[@]}" -ne 0 ]];        then DETAIL_MESSAGE="${DETAIL_MESSAGE}, units=${UPDATED_UNITS}"; fi
-  if [[ -n "${TASK}" ]];                      then DETAIL_MESSAGE="${DETAIL_MESSAGE}, task=${TASK}"; fi
-  if [[ -n "${TASKS}" ]];                     then DETAIL_MESSAGE="${DETAIL_MESSAGE}, tasks=${TASKS}"; fi
-  if [[ -n "${GIT_USER}" ]];                  then DETAIL_MESSAGE="${DETAIL_MESSAGE}, user=${GIT_USER}"; fi
-  if [[ -n "${DEPLOYMENT_MODE}" ]];           then DETAIL_MESSAGE="${DETAIL_MESSAGE}, mode=${DEPLOYMENT_MODE}"; fi
+  [[ -n "${PRODUCT}" ]] &&
+    DETAIL_MESSAGE="product=${PRODUCT}" ||
+    DETAIL_MESSAGE="account=${ACCOUNT}"
+  [[ -n "${ENVIRONMENT}" ]]              && DETAIL_MESSAGE="${DETAIL_MESSAGE}, environment=${ENVIRONMENT}"
+  [[ "${SEGMENT}" != "${ENVIRONMENT}" ]] && DETAIL_MESSAGE="${DETAIL_MESSAGE}, segment=${SEGMENT}"
+  [[ -n "${TIER}" ]]                     && DETAIL_MESSAGE="${DETAIL_MESSAGE}, tier=${TIER}"
+  [[ -n "${COMPONENT}" ]]                && DETAIL_MESSAGE="${DETAIL_MESSAGE}, component=${COMPONENT}"
+  [[ "${#DEPLOYMENT_UNIT_ARRAY[@]}" -ne 0 ]] && DETAIL_MESSAGE="${DETAIL_MESSAGE}, units=${UPDATED_UNITS}"
+  [[ -n "${TASK}" ]]                     && DETAIL_MESSAGE="${DETAIL_MESSAGE}, task=${TASK}"
+  [[ -n "${TASKS}" ]]                    && DETAIL_MESSAGE="${DETAIL_MESSAGE}, tasks=${TASKS}"
+  [[ -n "${GIT_USER}" ]]                 && DETAIL_MESSAGE="${DETAIL_MESSAGE}, user=${GIT_USER}"
+  [[ -n "${DEPLOYMENT_MODE}" ]]          && DETAIL_MESSAGE="${DETAIL_MESSAGE}, mode=${DEPLOYMENT_MODE}"
   
   save_context_property DETAIL_MESSAGE
   

@@ -374,9 +374,11 @@ function main() {
   findAndDefineSetting "GIT_EMAIL" "" "" "" "value" "${GIT_EMAIL_DEFAULT}"
   
   # Separators
-  findAndDefineSetting "DEPLOYMENT_UNIT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" " ,"
+  # Be careful if changing DEPLOYMENT_UNIT_SEPARATORS as jenkins inject plugin
+  # won't honour space at the start or end of the separate character list
+  findAndDefineSetting "DEPLOYMENT_UNIT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" "; ,"
   findAndDefineSetting "BUILD_REFERENCE_PART_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" "!?&"
-  findAndDefineSetting "IMAGE_FORMAT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" ":;|"
+  findAndDefineSetting "IMAGE_FORMAT_SEPARATORS" "" "${PRODUCT}" "${SEGMENT}" "value" ":|"
   
   # Modes
   findAndDefineSetting "DEPLOYMENT_MODE" "" "" "" "value" "${MODE}"

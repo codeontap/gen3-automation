@@ -9,13 +9,13 @@ cd ${AUTOMATION_BUILD_SRC_DIR}
 
 # Is this really a python based project
 [[ ! -f requirements.txt ]] && RESULT=1 &&
-    fatal "No requirements.txt - is this really a python base repo?"
+    fatal "No requirements.txt - is this really a python base repo?" && exit
 
 # Set up the virtual build environment - keep out of source tree
 PYTHON_VERSION="${AUTOMATION_PYTHON_VERSION:+ -p } ${AUTOMATION_PYTHON_VERSION}"
 virtualenv ${PYTHON_VERSION} ${AUTOMATION_BUILD_DIR}/.venv
 RESULT=$?
-[[ ${RESULT} -ne 0 ]] && fatal "Creation of virtual build environment failed"
+[[ ${RESULT} -ne 0 ]] && fatal "Creation of virtual build environment failed" && exit
 
 . ${AUTOMATION_BUILD_DIR}/.venv/bin/activate
 
@@ -25,20 +25,20 @@ REQUIREMENTS_FILES=( requirements*.txt )
 for REQUIREMENTS_FILE in "${REQUIREMENTS_FILES[@]}"; do
     pip install -r ${REQUIREMENTS_FILE} --upgrade
     RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && fatal "Installation of requirements failed"
+    [[ ${RESULT} -ne 0 ]] && fatal "Installation of requirements failed" && exit
 done
 
 if [[ -f package.json ]]; then
     npm install --unsafe-perm
     RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && fatal "npm install failed"
+    [[ ${RESULT} -ne 0 ]] && fatal "npm install failed" && exit
 fi
 
 # Run bower as part of the build if required
 if [[ -f bower.json ]]; then
     bower install --allow-root
     RESULT=$?
-    [[ ${RESULT} -ne 0 ]] && fatal "Bower install failed"
+    [[ ${RESULT} -ne 0 ]] && fatal "Bower install failed" && exit
 fi
 
 # Run unit tests - there should always be a task even if it does nothing

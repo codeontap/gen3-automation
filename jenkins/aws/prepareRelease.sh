@@ -1,7 +1,7 @@
 #!/bin/bash
 
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
-trap 'exit 1' EXIT SIGHUP SIGINT SIGTERM
+trap 'exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 function main() {

@@ -553,7 +553,7 @@ function main() {
                       (-n "${FROM_ACCOUNT}")]]; then
                   defineGitProviderSettings    "FROM_ACCOUNT" "" "${FROM_ACCOUNT}" "" "github"
                   defineGitProviderSettings    "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT_GIT_PROVIDER}"
-                  defineRepoSettings           "FROM_PRODUCT" "CONFIG" "${PRODUCT}" "${FROM_SEGMENT}" "${PRODUCT}-config"
+                  defineRepoSettings           "FROM_PRODUCT" "CONFIG" "${PRODUCT}" "${FROM_SEGMENT}" "${PRODUCT}-cmdb"
                   for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
                       defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
                   done

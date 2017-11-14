@@ -50,12 +50,14 @@ fi
 # This is a defect in zappa 0.42, in that it doesn't allow for platforms that install
 # packages into dist-packages. Remove this patch once zappa is fixed
 if [[ -n ${VIRTUAL_ENV} ]]; then
-    SITE_PACKAGES_DIR=$(find ${VIRTUAL_ENV}/lib -name site-packages)
-    if [[ -n ${SITE_PACKAGES_DIR} ]]; then
-      if [[ $(find ${SITE_PACKAGES_DIR} -type d | wc -l) < 2 ]]; then
-        cp -rp ${SITE_PACKAGES_DIR}/../dist-packages/*  ${SITE_PACKAGES_DIR}
-      fi
-    fi
+    for lib in "lib" "lib64"; do
+        SITE_PACKAGES_DIR=$(find ${VIRTUAL_ENV}/${lib} -name site-packages)
+        if [[ -n ${SITE_PACKAGES_DIR} ]]; then
+          if [[ $(find ${SITE_PACKAGES_DIR} -type d | wc -l) < 2 ]]; then
+            cp -rp ${SITE_PACKAGES_DIR}/../dist-packages/*  ${SITE_PACKAGES_DIR}
+          fi
+        fi
+    done
 fi
 
 # Package for lambda if required

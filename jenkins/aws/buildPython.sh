@@ -62,8 +62,8 @@ function main() {
     if [[ -f "${ZAPPA_DIR}/zappa_settings.json" ]]; then
       BUILD=$(zappa package default -s ${ZAPPA_DIR}/zappa_settings.json | tail -1 | cut -d' ' -f3)
       if [[ -f ${BUILD} ]]; then
-        mkdir -p "${AUTOMATION_BUILD_DIR}/dist"
-        mv ${BUILD} "${AUTOMATION_BUILD_DIR}/dist/lambda.zip"
+        mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
+        mv ${BUILD} "${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip"
       fi
     fi
   done

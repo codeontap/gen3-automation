@@ -94,8 +94,12 @@ function main() {
     [[ "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOP}" ]] && reverseArray units
     
     # Manage the units individually as one can depend on the output of previous ones
-    for unit in "${units[@]}"; do
-    
+    for unit_build_reference in "${units[@]}"; do
+
+      # Extract the deployment unit
+      arrayFromList "build_reference_parts" "${unit_build_reference}" "${BUILD_REFERENCE_PART_SEPARATORS}"
+      unit="${build_reference_parts[0]}"
+
       # Say what we are doing
       info "Processing \"${level}\" level, \"${unit}\" unit ...\n"
       

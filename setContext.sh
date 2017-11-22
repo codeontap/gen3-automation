@@ -647,6 +647,7 @@ function main() {
   [[ -n "${TASKS}" ]]                    && DETAIL_MESSAGE="${DETAIL_MESSAGE}, tasks=${TASKS}"
   [[ -n "${GIT_USER}" ]]                 && DETAIL_MESSAGE="${DETAIL_MESSAGE}, user=${GIT_USER}"
   [[ -n "${DEPLOYMENT_MODE}" ]]          && DETAIL_MESSAGE="${DETAIL_MESSAGE}, mode=${DEPLOYMENT_MODE}"
+  [[ -n "${COMMENT}" ]]                  && DETAIL_MESSAGE="${DETAIL_MESSAGE}, comment=${COMMENT}"
   
   save_context_property DETAIL_MESSAGE
   

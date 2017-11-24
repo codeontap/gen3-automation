@@ -16,18 +16,18 @@ BUILD_DIR="$(findName "${AUTOMATION_BUILD_DIR}" )"
 
 # Possible input files
 SWAGGER_SPEC_FILE=$(findFile \
-                    "${AUTOMATION_BUILD_DIR}/swagger.json" \
                     "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/swagger.json" \
                     "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/swagger.json" \
                     "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR}/swagger.json" \
                     "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.json" \
                     "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.json" \
                     "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.json")
 SWAGGER_SPEC_YAML_FILE=$(findFile \
-                    "${AUTOMATION_BUILD_DIR}/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/swagger.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.yaml")

@@ -12,7 +12,7 @@ mkdir -p ${DIST_DIR}
 SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 
 # Determine build dir in case of multiple specs in subdirs
-BUILD_DIR="$(findName "${AUTOMATION_BUILD_DIR}" )"
+BUILD_DIR="$(fileName "${AUTOMATION_BUILD_DIR}" )"
 
 # Possible input files
 SWAGGER_SPEC_FILE=$(findFile \

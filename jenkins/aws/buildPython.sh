@@ -15,7 +15,9 @@ function main() {
   # Set up the virtual build environment
   local venv_dir="$(getTempDir "venv_XXX")"
   PYTHON_VERSION="${AUTOMATION_PYTHON_VERSION:+ -p } ${AUTOMATION_PYTHON_VERSION}"
-  virtualenv "${PYTHON_VERSION}" "${venv_dir}" ||
+
+  # Note that python version below should NOT be in quotes to ensure arguments parsed correctly
+  virtualenv ${PYTHON_VERSION} "${venv_dir}" ||
     { exit_status=$?; fatal "Creation of virtual build environment failed"; return ${exit_status}; }
   
   . ${venv_dir}/bin/activate

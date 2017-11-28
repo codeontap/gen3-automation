@@ -12,12 +12,13 @@ function main() {
   [[ ! -f requirements.txt ]] &&
     { fatal "No requirements.txt - is this really a python base repo?"; return 1; }
   
-  # Set up the virtual build environment - keep out of source tree
+  # Set up the virtual build environment
+  local venv_dir="$(getTempDir "venv_XXX")"
   PYTHON_VERSION="${AUTOMATION_PYTHON_VERSION:+ -p } ${AUTOMATION_PYTHON_VERSION}"
-  virtualenv ${PYTHON_VERSION} ${AUTOMATION_BUILD_DIR}/.venv ||
+  virtualenv "${PYTHON_VERSION}" "${venv_dir}" ||
     { exit_status=$?; fatal "Creation of virtual build environment failed"; return ${exit_status}; }
   
-  . ${AUTOMATION_BUILD_DIR}/.venv/bin/activate
+  . ${venv_dir}/bin/activate
   
   # Process requirements files
   shopt -s nullglob
@@ -73,7 +74,9 @@ function main() {
     npm prune --production ||
       { exit_status=$?; fatal "npm prune failed"; return ${exit_status}; }
   fi
-  
+
+  [[ -d "${venv_dir}" ]] && rm -rf "${venv_dir}"
+
   # All good
   return 0
 }

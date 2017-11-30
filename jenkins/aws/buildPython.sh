@@ -43,7 +43,10 @@ function main() {
   
   # Run unit tests - there should always be a task even if it does nothing
   if [[ -f manage.py ]]; then
+    info "Running tests..."
     python manage.py test || return 1
+  else
+    warning "No manage.py - no tests run"
   fi
   
   # Patch the virtual env if packages have not been installed into site-packages dir

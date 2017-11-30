@@ -43,8 +43,9 @@ function main() {
   
   # Run unit tests - there should always be a task even if it does nothing
   if [[ -f manage.py ]]; then
-    info "Running tests..."
-    python manage.py test || return 1
+    info "Running tests ..."
+    python manage.py test ||
+      { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
   else
     warning "No manage.py - no tests run"
   fi
@@ -66,6 +67,7 @@ function main() {
   # Package for lambda if required
   for ZAPPA_DIR in "${AUTOMATION_BUILD_DEVOPS_DIR}/lambda" "./"; do
     if [[ -f "${ZAPPA_DIR}/zappa_settings.json" ]]; then
+      info "Packaging for lambda ..."
       BUILD=$(zappa package default -s ${ZAPPA_DIR}/zappa_settings.json | tail -1 | cut -d' ' -f3)
       if [[ -f ${BUILD} ]]; then
         mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"

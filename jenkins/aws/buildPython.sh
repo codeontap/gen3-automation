@@ -1,7 +1,7 @@
 #!/bin/bash
 
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
-trap 'exit 1' SIGHUP SIGINT SIGTERM
+trap '  [[ -d "${venv_dir}" ]] && rm -rf "${venv_dir}"; exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 function main() {
@@ -81,7 +81,8 @@ function main() {
     npm prune --production ||
       { exit_status=$?; fatal "npm prune failed"; return ${exit_status}; }
   fi
-
+  
+  # Clean up the virtual env
   [[ -d "${venv_dir}" ]] && rm -rf "${venv_dir}"
 
   # All good

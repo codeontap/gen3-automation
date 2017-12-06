@@ -60,6 +60,8 @@ function main() {
     info "Running tests ..."
     python manage.py test ||
       { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
+#    coverage run --source=. -m pytest tests/
+#    coverage html
   else
     warning "No manage.py - no tests run"
   fi

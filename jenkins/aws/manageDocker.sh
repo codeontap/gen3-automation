@@ -274,7 +274,7 @@ case ${DOCKER_OPERATION} in
         docker build \
             -t "${FULL_DOCKER_IMAGE}" \
             -f "${DOCKERFILE}" \
-            "${AUTOMATION_BUILD_DIR}"
+            "${AUTOMATION_BUILD_SRC_DIR}"
         RESULT=$?
         [[ $RESULT -ne 0 ]] && fatal "Cannot build image ${DOCKER_IMAGE}" && exit
 

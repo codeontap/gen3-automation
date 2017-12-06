@@ -271,11 +271,17 @@ case ${DOCKER_OPERATION} in
         if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile" ]]; then
             DOCKERFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
         fi
-        docker build \
-            -t "${FULL_DOCKER_IMAGE}" \
-            -f "${DOCKERFILE}" \
-            "${AUTOMATION_BUILD_SRC_DIR}"
+
+        # Prepare the build directory - docker file must be in build context
+        DOCKER_BUILD_DIR="$(getTempDir "docker_XXX")"
+        cp -p  "${DOCKERFILE}" "${DOCKER_BUILD_DIR}"
+        cp -rp "${AUTOMATION_BUILD_SRC_DIR}" "${DOCKER_BUILD_DIR}"
+
+        # Perform the build
+        docker build -t "${FULL_DOCKER_IMAGE}" "${DOCKER_BUILD_DIR}"
         RESULT=$?
+        rm -rf "${DOCKER_BUILD_DIR}"
+
         [[ $RESULT -ne 0 ]] && fatal "Cannot build image ${DOCKER_IMAGE}" && exit
 
         createRepository ${DOCKER_PROVIDER_DNS} ${DOCKER_REPO}

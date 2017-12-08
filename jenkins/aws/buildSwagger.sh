@@ -3,7 +3,7 @@
 # Augment a swagger file with AWS API gateway integration semantics
  
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
-trap '[[ -d "${tmpdir}" ]] && rm -rf "${tmpdir}";exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
+trap '[[ (-z "${AUTOMATION_DEBUG}") && (-d "${tmpdir}") ]] && rm -rf "${tmpdir}";exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 # Define the desired result file

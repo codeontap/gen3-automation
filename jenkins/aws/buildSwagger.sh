@@ -12,7 +12,7 @@ mkdir -p ${DIST_DIR}
 SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 
 # Create a dir for some temporary files
-tmpdir="$(getTempDir "cot_bgw_XXX")"
+tmpdir="$(getTempDir "cota_sw_XXX")"
 debug "TMPDIR=${tmpdir}"
 
 # Determine build dir in case of multiple specs in subdirs

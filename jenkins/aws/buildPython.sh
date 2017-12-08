@@ -13,7 +13,7 @@ function main() {
     { fatal "No requirements.txt - is this really a python base repo?"; return 1; }
   
   # Set up the virtual build environment
-  local venv_dir="$(getTempDir "cot_venv_XXX")"
+  local venv_dir="$(getTempDir "cota_venv_XXX")"
   PYTHON_VERSION="${AUTOMATION_PYTHON_VERSION:+ -p } ${AUTOMATION_PYTHON_VERSION}"
 
   # Note that python version below should NOT be in quotes to ensure arguments parsed correctly

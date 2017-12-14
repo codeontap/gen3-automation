@@ -240,9 +240,16 @@ function findFile() {
 
 # -- Temporary file management --
 
+# OS Temporary directory
+function getOSTempRootDir() {
+  uname | grep -iq "MINGW64" &&
+    echo -n "c:/tmp" ||
+    echo -n "$(filePath $(mktemp -u -t tmp.XXXXXXXXXX))"
+}
+
 # Default implementation - can be overriden by caller
 function getTempRootDir() {
-  echo -n "${TMPDIR}"
+  getOSTempRootDir
 }
 
 function getTempDir() {
@@ -253,8 +260,8 @@ function getTempDir() {
   [[ -z "${temp_path}" ]] && temp_path="$(getTempRootDir)"
 
   [[ -n "${temp_path}" ]] &&
-    mktemp -d    "${temp_path}/${template}" ||
-    mktemp -d -t "${template}"
+    mktemp -d "${temp_path}/${template}" ||
+    mktemp -d "$(getOSTempRootDir)/${template}"
 }
 
 function getTempFile() {
@@ -313,6 +320,21 @@ function arrayFromList() {
   local separators="${1:- ,}"
 
   IFS="${separators}" read -ra array <<< "${list}"
+  if ! namedef_supported; then
+    eval "${array_name}=(\"\${array[@]}\")"
+  fi
+}
+
+function arrayFromCommand() {
+  if namedef_supported; then
+    local -n array="$1"; shift
+  else
+    local array_name="$1"; shift
+    local array=()
+  fi
+  local command="$1"; shift
+
+  readarray array < <(${command})
   if ! namedef_supported; then
     eval "${array_name}=(\"\${array[@]}\")"
   fi

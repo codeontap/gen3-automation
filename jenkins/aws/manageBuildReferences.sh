@@ -102,9 +102,9 @@ function getBuildReferenceParts() {
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done
         for ATTRIBUTE in formats; do 
-            readarray FORMAT_VALUES < <(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}")
+            readarray -t FORMAT_VALUES < <(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}")
             arrayIsEmpty FORMAT_VALUES &&
-                readarray FORMAT_VALUES < <(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}")
+                readarray -t FORMAT_VALUES < <(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}")
             ATTRIBUTE_VALUE="$(listFromArray FORMAT_VALUES "${IMAGE_FORMAT_SEPARATORS:0:1}")"
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done

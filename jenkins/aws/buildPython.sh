@@ -66,6 +66,13 @@ function main() {
     warning "No manage.py - no tests run"
   fi
   
+  # Run dockerised tests
+  if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/Dockerfile" ]]; then
+    info "Running the dockerised tests ..."
+    cd ${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/
+    ./scripts/runDockerComposeTests.sh
+  fi
+
   # Package for lambda if required
   for ZAPPA_DIR in "${AUTOMATION_BUILD_DEVOPS_DIR}/lambda" "./"; do
     if [[ -f "${ZAPPA_DIR}/zappa_settings.json" ]]; then

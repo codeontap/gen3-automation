@@ -67,10 +67,11 @@ function main() {
   fi
   
   # Run dockerised tests
-  if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/Dockerfile" ]]; then
+  if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/Dockerfile-test" ]]; then
     info "Running the dockerised tests ..."
     cd ${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/
     ./scripts/runDockerComposeTests.sh
+    cd ${AUTOMATION_BUILD_SRC_DIR}
   fi
 
   # Package for lambda if required

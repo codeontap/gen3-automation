@@ -84,6 +84,13 @@ for VALIDATOR in "${VALIDATORS[@]}"; do
     [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file is not valid"
 done
 
+#keep the orginal swagger for apidoc
+APIDOC_SWAGGER_SPEC_FILE="${tmpdir}/swagger-apidoc.json"
+cp "${TEMP_SWAGGER_SPEC_FILE}" "${APIDOC_SWAGGER_SPEC_FILE}"
+
+# Clenup definitions in swagger file
+jq -L ${AUTOMATION_DIR}/jq 'import "library" as lib; lib::walk(if type == "object" then del(.example) | del(.format) | del(.enum) | del(.readOnly) else . end)' < "${APIDOC_SWAGGER_SPEC_FILE}" >> "${TEMP_SWAGGER_SPEC_FILE}"
+
 # Augment the swagger file if required
 APIGW_CONFIG=$(findFile \
                 "${AUTOMATION_BUILD_DIR}/apigw.json" \
@@ -105,11 +112,12 @@ else
     zip "${SWAGGER_RESULT_FILE}" "${TEMP_SWAGGER_SPEC_FILE}"
 fi
 
+
 # Generate documentation
 docker run --rm \
     -v "${tmpdir}:/app/indir" -v "${DIST_DIR}:/app/outdir" \
     codeontap/utilities swagger2aglio \
-     --input=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") --output=/app/outdir/apidoc.html  \
+     --input=/app/indir/$(fileName "${APIDOC_SWAGGER_SPEC_FILE}") --output=/app/outdir/apidoc.html  \
      --theme-variables slate --theme-template triple
 RESULT=$?
 [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed"

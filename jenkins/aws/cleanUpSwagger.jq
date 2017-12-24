@@ -7,3 +7,5 @@ def walk(f):
   elif type == "array" then map( walk(f) ) | f
   else f
   end;
+  
+walk(if type == "object" then del(.example) | del(.format) | del(.enum) | del(.readOnly) else . end)

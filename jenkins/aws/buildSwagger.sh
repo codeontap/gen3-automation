@@ -84,12 +84,11 @@ for VALIDATOR in "${VALIDATORS[@]}"; do
     [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file is not valid"
 done
 
-#keep the orginal swagger for apidoc
-APIDOC_SWAGGER_SPEC_FILE="${tmpdir}/swagger-apidoc.json"
-cp "${TEMP_SWAGGER_SPEC_FILE}" "${APIDOC_SWAGGER_SPEC_FILE}"
+#a new path for a cleaned up swagger file
+CLEAN_SWAGGER_SPEC_FILE="${tmpdir}/swagger-cleaned-up.json"
 
 # Clenup definitions in swagger file
-runJQ -f "${AUTOMATION_DIR}/cleanUpSwagger.jq" < "${APIDOC_SWAGGER_SPEC_FILE}" > "${TEMP_SWAGGER_SPEC_FILE}"
+runJQ -f "${AUTOMATION_DIR}/cleanUpSwagger.jq" < "${TEMP_SWAGGER_SPEC_FILE}" > "${CLEAN_SWAGGER_SPEC_FILE}"
 
 # Augment the swagger file if required
 APIGW_CONFIG=$(findFile \
@@ -101,7 +100,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
 
     # Generate the swagger file
     ${GENERATION_DIR}/createExtendedSwaggerSpecification.sh \
-        -s "${TEMP_SWAGGER_SPEC_FILE}" \
+        -s "${CLEAN_SWAGGER_SPEC_FILE}" \
         -o "${SWAGGER_RESULT_FILE}" \
         -i "${APIGW_CONFIG}"
 
@@ -109,7 +108,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
     [[ ! -f "${SWAGGER_RESULT_FILE}" ]] &&
         fatal "Can't find generated swagger files. Were they generated successfully?"
 else
-    zip "${SWAGGER_RESULT_FILE}" "${TEMP_SWAGGER_SPEC_FILE}"
+    zip "${SWAGGER_RESULT_FILE}" "${CLEAN_SWAGGER_SPEC_FILE}"
 fi
 
 
@@ -117,7 +116,7 @@ fi
 docker run --rm \
     -v "${tmpdir}:/app/indir" -v "${DIST_DIR}:/app/outdir" \
     codeontap/utilities swagger2aglio \
-     --input=/app/indir/$(fileName "${APIDOC_SWAGGER_SPEC_FILE}") --output=/app/outdir/apidoc.html  \
+     --input=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") --output=/app/outdir/apidoc.html  \
      --theme-variables slate --theme-template triple
 RESULT=$?
 [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed"

@@ -89,9 +89,7 @@ APIDOC_SWAGGER_SPEC_FILE="${tmpdir}/swagger-apidoc.json"
 cp "${TEMP_SWAGGER_SPEC_FILE}" "${APIDOC_SWAGGER_SPEC_FILE}"
 
 # Clenup definitions in swagger file
-runJQ -f "${AUTOMATION_DIR}/cleanUpSwagger.jq" < "${APIDOC_SWAGGER_SPEC_FILE}" > "${TEMP_SWAGGER_SPEC_FILE}" || return $?
-RESULT=$?
-[[ "${RESULT}" -ne 0 ]] && fatal "Swagger file clean up failed"
+runJQ -f "${AUTOMATION_DIR}/cleanUpSwagger.jq" < "${APIDOC_SWAGGER_SPEC_FILE}" > "${TEMP_SWAGGER_SPEC_FILE}"
 
 # Augment the swagger file if required
 APIGW_CONFIG=$(findFile \

@@ -126,6 +126,17 @@ for FORMAT in "${FORMATS[@]}"; do
                         -g "${CODE_COMMIT}" \
                         -f "${DOC_FILE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+
+            else
+                DOC_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/apidoc.zip"
+                
+                if [[ -f "${DOC_FILE}" ]]; then 
+                    ${AUTOMATION_DIR}/manageSwagger.sh -s \
+                            -u "${DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -f "${DOC_FILE}"
+                    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+                fi
             fi
             ;;
 

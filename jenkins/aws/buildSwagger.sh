@@ -115,9 +115,8 @@ fi
 # Generate documentation
 docker run --rm \
     -v "${tmpdir}:/app/indir" -v "${DIST_DIR}:/app/outdir" \
-    codeontap/utilities swagger2aglio \
-     --input=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") --output=/app/outdir/apidoc.html  \
-     --theme-variables slate --theme-template triple
+    -e SWAGGER_JSON=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") \
+    codeontap/swaggerui-export
 RESULT=$?
 [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed"
 

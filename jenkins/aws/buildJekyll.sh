@@ -32,6 +32,10 @@ function main() {
     JEKYLL_ENV="production"
   fi
 
+  # Create gemlock file 
+  touch ${AUTOMATION_BUILD_SRC_DIR}/Gemfile.lock
+  chmod a+w ${AUTOMATION_BUILD_SRC_DIR}/Gemfile.lock
+
   # run Jekyll build using Docker Build image 
   info "Running Jeykyll build"
   docker run --rm \

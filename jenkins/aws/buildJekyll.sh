@@ -23,12 +23,12 @@ function main() {
   fi 
 
   # Default Timezone 
-  if [[ -z "${JEKYLL_TIMEZONE}"]]; then
+  if [[ -z "${JEKYLL_TIMEZONE}" ]]; then
     JEKYLL_TIMEZONE="Australia/Sydney"
   fi
 
   # Default build Env 
-  if [[ -z "${JEKYLL_ENV}"]]; then
+  if [[ -z "${JEKYLL_ENV}" ]]; then
     JEKYLL_ENV="production"
   fi
 

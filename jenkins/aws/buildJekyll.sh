@@ -22,13 +22,23 @@ function main() {
     JEKYLL_DEFAULT_PAGE=index.html
   fi 
 
+  # Default Timezone 
+  if [[ -z "${JEKYLL_TIMEZONE}"]]; then
+    JEKYLL_TIMEZONE="Australia/Sydney"
+  fi
+
+  # Default build Env 
+  if [[ -z "${JEKYLL_ENV}"]]; then
+    JEKYLL_ENV="production"
+  fi
+
   # run Jekyll build using Docker Build image 
   info "Running Jeykyll build"
   docker run --rm \
-    -e JEKYLL_ENV=production
-    -e TZ=Australia/Sydney
+    --env JEKYLL_ENV="${JEKYLL_ENV}" \
+    --env TZ="${JEKYLL_TIMEZONE}" \
     --volume="${AUTOMATION_BUILD_SRC_DIR}:/srv/jekyll" \
-    jekyll/builder:$JEKYLL_VERSION \
+    jekyll/builder:"${JEKYLL_VERSION}"" \
     jekyll build --verbose 
     
   # Package for spa if required

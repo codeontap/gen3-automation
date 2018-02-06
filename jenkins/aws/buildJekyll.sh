@@ -32,9 +32,12 @@ function main() {
     JEKYLL_ENV="production"
   fi
 
-  # Create gemlock file 
+  # Create Build folders for Jenkins Permissions
   touch ${AUTOMATION_BUILD_SRC_DIR}/Gemfile.lock
   chmod a+w ${AUTOMATION_BUILD_SRC_DIR}/Gemfile.lock
+
+  mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/_site
+  chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/_site
 
   # run Jekyll build using Docker Build image 
   info "Running Jeykyll build"

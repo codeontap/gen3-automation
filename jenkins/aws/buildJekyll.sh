@@ -25,9 +25,11 @@ function main() {
   # run Jekyll build using Docker Build image 
   info "Running Jeykyll build"
   docker run --rm \
+    -e JEKYLL_ENV=production
+    -e TZ=Australia/Sydney
     --volume="${AUTOMATION_BUILD_SRC_DIR}:/srv/jekyll" \
-    -it jekyll/builder:$JEKYLL_VERSION \
-    jekyll build
+    jekyll/builder:$JEKYLL_VERSION \
+    jekyll build --verbose 
     
   # Package for spa if required
   if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then

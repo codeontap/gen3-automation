@@ -38,7 +38,7 @@ function main() {
     --env JEKYLL_ENV="${JEKYLL_ENV}" \
     --env TZ="${JEKYLL_TIMEZONE}" \
     --volume="${AUTOMATION_BUILD_SRC_DIR}:/srv/jekyll" \
-    jekyll/builder:"${JEKYLL_VERSION}"" \
+    jekyll/builder:"${JEKYLL_VERSION}" \
     jekyll build --verbose 
     
   # Package for spa if required

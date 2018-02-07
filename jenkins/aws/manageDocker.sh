@@ -272,9 +272,20 @@ case ${DOCKER_OPERATION} in
             DOCKERFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
         fi
 
-        # Perform the build
-        docker build -t "${FULL_DOCKER_IMAGE}" -f "${DOCKERFILE}" "${AUTOMATION_BUILD_DIR}"
-        RESULT=$?
+        if [[ -n ${DOCKER_GITHUB_SSH_KEY_FILE} ]]; then
+            if [[ -f "${DOCKER_GITHUB_SSH_KEY_FILE}" ]]; then
+                # Perform the build
+                info "build docker image with SSH_KEY argument"
+                docker build -t "${FULL_DOCKER_IMAGE}" -f "${DOCKERFILE}" "${AUTOMATION_BUILD_DIR}" --build-arg SSH_KEY="$(cat ${DOCKER_GITHUB_SSH_KEY_FILE})"
+                RESULT=$?
+            else
+                fatal "Unable to locate github ssh key file for the docker image" && exit
+            fi
+        else
+            # Perform the build
+            docker build -t "${FULL_DOCKER_IMAGE}" -f "${DOCKERFILE}" "${AUTOMATION_BUILD_DIR}"
+            RESULT=$?
+        fi
 
         [[ $RESULT -ne 0 ]] && fatal "Cannot build image ${DOCKER_IMAGE}" && exit
 

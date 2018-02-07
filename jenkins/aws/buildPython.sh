@@ -57,8 +57,15 @@ function main() {
   
   # Run unit tests - there should always be a task even if it does nothing
   if [[ -f manage.py ]]; then
-    info "Running tests ..."
-    python manage.py test ||
+    info "Running unit tests ..."
+    TEST_ARGS=""
+    if [[ -n ${TEST_REPORTS_DIR} ]]; then
+      if [[ -n ${TEST_JUNIT_DIR} ]]; then
+        # Set --junit-xml option if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
+        TEST_ARGS+=" --junit-xml ${TEST_REPORTS_DIR}/${TEST_JUNIT_DIR}/unit-test-results.xml"
+      fi
+    fi
+    python manage.py test ${TEST_ARGS} ||
       { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
 #    coverage run --source=. -m pytest tests/
 #    coverage html
@@ -66,9 +73,9 @@ function main() {
     warning "No manage.py - no tests run"
   fi
   
-  # Run dockerised tests
+  # Run integration tests
   if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/Dockerfile-test" ]]; then
-    info "Running the dockerised tests ..."
+    info "Running integration tests ..."
     cd ${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/
     ./scripts/runDockerComposeTests.sh
     cd ${AUTOMATION_BUILD_SRC_DIR}

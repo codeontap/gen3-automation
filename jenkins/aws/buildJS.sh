@@ -69,7 +69,7 @@ for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
         if [[ "${BUILD_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" != "${BUILD_TASKS[*]}" ]]; then
             ${BUILD_UTILITY} ${REQUIRED_TASK}
             RESULT=$?
-            [[ $RESULT -ne 0 ]] && fatal "${BUILD_UTILITY} \"${TASK}\" task failed"  && exit
+            [[ $RESULT -ne 0 ]] && fatal "${BUILD_UTILITY} \"${REQUIRED_TASK}\" task failed"  && exit
 
             # Task complete so stop looking for build file supporting it
             break

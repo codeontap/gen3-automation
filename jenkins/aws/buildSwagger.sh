@@ -111,10 +111,13 @@ else
     zip "${SWAGGER_RESULT_FILE}" "${CLEAN_SWAGGER_SPEC_FILE}"
 fi
 
-
 # Generate documentation
+mkdir "${tmpdir}/swaggerUI"
+[[ -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && 
+    cp "${TEMP_SWAGGER_SPEC_FILE}" "${tmpdir}/swaggerUI/"
+
 docker run --rm \
-    -v "${tmpdir}:/app/indir" -v "${DIST_DIR}:/app/outdir" \
+    -v "${tmpdir}/swaggerUI:/app/indir" -v "${DIST_DIR}:/app/outdir" \
     -e SWAGGER_JSON=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") \
     codeontap/swaggerui-export
 RESULT=$?

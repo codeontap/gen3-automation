@@ -79,7 +79,6 @@ function main() {
     cd ${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/
     ./scripts/runDockerComposeTests.sh||
     { exit_status=$?; fatal "Integration tests failed"; return ${exit_status}; }
-    ./scripts/runDockerComposeTests.sh
     cd ${AUTOMATION_BUILD_SRC_DIR}
   fi
 

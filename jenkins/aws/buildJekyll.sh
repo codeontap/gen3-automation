@@ -51,7 +51,9 @@ function main() {
   # Package for spa if required
   if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then
     mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
-    zip -rJ "${AUTOMATION_BUILD_SRC_DIR}/dist/spa.zip" "${AUTOMATION_BUILD_SRC_DIR}/_site" 
+    
+    cd "${AUTOMATION_BUILD_SRC_DIR}/_site"
+    zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/spa.zip" * 
   fi
 
   # All good

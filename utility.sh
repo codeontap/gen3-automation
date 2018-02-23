@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Utility Functions
 #
@@ -112,11 +112,8 @@ function fatalMandatory() {
 # -- String manipulation --
 
 function join() {
-  local separators="$1"; shift
-  local parts=("$@")
-
-  local IFS="${separators}"
-  echo -n "${parts[*]}"
+  local IFS="$1"; shift
+  echo -n "$*"
 }
 
 function contains() {
@@ -319,7 +316,10 @@ function arrayFromList() {
   local list="$1"; shift
   local separators="${1:- ,}"
 
-  IFS="${separators}" read -ra array <<< "${list}"
+  # Handle situation of multi-line inputs e.g. from Jenkins multi-line string parameter plugin
+  readarray -t list_lines <<< "${list}"
+
+  IFS="${separators}" read -ra array <<< "$(join "${separators:0:1}" "${list_lines[@]}" )"
   if ! namedef_supported; then
     eval "${array_name}=(\"\${array[@]}\")"
   fi
@@ -551,7 +551,7 @@ function syncFilesToBucket() {
   
   # Copy files locally so we can synch with S3, potentially including deletes
   for file in "${syncFiles[@]}" ; do
-    if [[ -n "${file}" ]]; then
+    if [[ -f "${file}" ]]; then
       case "$(fileExtension "${file}")" in
         zip)
           unzip "${file}" -d "${tmpdir}"
@@ -687,4 +687,26 @@ function delete_oai_credentials() {
   fi
 
   return 0
+}
+
+# -- RDS -- 
+function create_snapshot() { 
+  local region="$1"; shift
+  local db_identifier="$1"; shift
+  local snapshot_suffix="$1"; shift
+  
+  db_snapshot_identifier="${db_identifier}-$(date -u +%Y-%m-%d-%H-%M-%S)"
+  if [[ -n "${snapshot_suffix}" ]]; then
+    db_snapshot_identifier="${db_snapshot_identifier}-${snapshot_suffix}"
+  fi
+
+  # Check that the database exists
+  db_info=$(aws --region "${region}" rds describe-db-instances --db-instance-identifier ${db_identifier} )
+
+  if [[ -n "${db_info}" ]]; then
+    aws --region "${region}" rds create-db-snapshot --db-snapshot-identifier "${db_snapshot_identifier}" --db-instance-identifier "${db_identifier}" > /dev/null 2>&1 || return $?
+    aws --region "${region}" rds wait db-snapshot-available --db-snapshot-identifier "${db_snapshot_identifier}"  || return $?
+    db_snapshot=$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" || return $?)
+  fi
+  echo -n "$(echo "${db_snapshot}" | jq -r '.DBSnapshots[0].DBSnapshotArn' )" 
 }

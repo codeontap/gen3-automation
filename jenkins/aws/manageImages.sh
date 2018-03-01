@@ -154,6 +154,20 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             ;;
 
+        contentnode)
+            IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/contentnode.zip"
+
+            if [[ -f "${IMAGE_FILE}" ]]; then
+                ${AUTOMATION_DIR}/manageContentNode.sh -s \
+                        -u "${DEPLOYMENT_UNIT}" \
+                        -g "${CODE_COMMIT}" \
+                        -f "${IMAGE_FILE}"
+                RESULT=$? && [[ "${RESULT}" -ne 0 ]]&& exit
+            else
+                RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
+            fi
+            ;;
+
         *)
             RESULT=1 && fatal "Unsupported image format \"${FORMAT}\"" && exit
             ;;

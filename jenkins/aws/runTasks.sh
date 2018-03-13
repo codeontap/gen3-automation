@@ -4,7 +4,11 @@
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
-cd ${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}
+[[ -d "${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}" ]] &&
+  cd "${AUTOMATION_DATA_DIR}/${ACCOUNT}/config/${PRODUCT}/solutions/${SEGMENT}"
+
+[[ -d "${AUTOMATION_DATA_DIR}/${ACCOUNT}/${PRODUCT}/config/solutions/${SEGMENT}" ]] &&
+  cd "${AUTOMATION_DATA_DIR}/${ACCOUNT}/${PRODUCT}/config/solutions/${SEGMENT}"
 
 # Build up the additional enviroment variables required
 ENVS=()

@@ -92,7 +92,7 @@ function fatalLocation() {
   local restore_nullglob=$(shopt -p nullglob)
   local restore_globstar=$(shopt -p globstar)
   shopt -u nullglob globstar
-  
+
   fatal "$(locationMessage "${parts[@]}")"
 
   ${restore_nullglob}
@@ -145,7 +145,7 @@ function fileName() {
 
 function fileBase() {
   local file="$1"; shift
-  
+
   local name="$(fileName "${file}")"
   echo "${name%.*}"
 }
@@ -198,7 +198,7 @@ function findDir() {
 
   local restore_nullglob="$(shopt -p nullglob)"
   local restore_globstar="$(shopt -p globstar)"
-  shopt -s nullglob globstar  
+  shopt -s nullglob globstar
 
   local matches=()
   for pattern in "${patterns[@]}"; do
@@ -231,6 +231,34 @@ function findFile() {
   for match in "${matches[@]}"; do
     [[ -f "${match}" ]] && echo -n "${match}" && return 0
   done
+
+  return 1
+}
+
+function findFiles() {
+
+  local restore_nullglob="$(shopt -p nullglob)"
+  local restore_globstar="$(shopt -p globstar)"
+  shopt -s nullglob globstar
+
+  # Note that any spaces in file specs must be escaped
+  local matches=($@)
+
+  ${restore_nullglob}
+  ${restore_globstar}
+
+  local file_match="false"
+
+  for match in "${matches[@]}"; do
+    if [[ -f "${match}" ]]; then
+      echo "${match}"
+      local file_match="true"
+    fi
+  done
+
+  if [[ "${file_match}" == "true" ]]; then
+    return 0
+  fi
 
   return 1
 }
@@ -393,7 +421,7 @@ function reverseArray() {
   for (( index=${#array[@]}-1 ; index>=0 ; index-- )) ; do
     result+=("${array[index]}")
   done
-  
+
   if [[ (-n "${target}") ]]; then
     if ! namedef_supported; then
       eval "${target}=(\"\${result[@]}\")"
@@ -463,7 +491,7 @@ function addToArrayHead() {
 
 function runJQ() {
   local arguments=("$@")
-  
+
   # TODO(mfl): remove once path length limitations in jq are fixed
   local tmpdir="$( getTempDir "jq_XXX" )"
   local modified_arguments=()
@@ -487,7 +515,7 @@ function runJQ() {
 function getJSONValue() {
   local file="$1"; shift
   local patterns=("$@")
-  
+
   local value=""
 
   for pattern in "${patterns[@]}"; do
@@ -504,7 +532,7 @@ function addJSONAncestorObjects() {
 
   # Reverse the order of the ancestors
   local pattern="."
-  
+
   for (( index=${#ancestors[@]}-1 ; index >= 0 ; index-- )) ; do
     pattern="{\"${ancestors[index]}\" : ${pattern} }"
   done
@@ -518,7 +546,7 @@ function isBucketAccessible() {
   local region="$1"; shift
   local bucket="$1"; shift
   local prefix="$1"; shift
-  
+
   local result_file="$( getTempFile "s3_access_XXX.txt")"
 
   aws --region ${region} s3 ls "s3://${bucket}/${prefix}${prefix:+/}" > "${result_file}"
@@ -532,7 +560,7 @@ function copyFilesFromBucket() {
   local dir="$1"; shift
   local optional_arguments=("$@")
 
-  aws --region ${region} s3 cp --recursive "${optional_arguments[@]}" "s3://${bucket}/${prefix}${prefix:+/}" "${dir}/" 
+  aws --region ${region} s3 cp --recursive "${optional_arguments[@]}" "s3://${bucket}/${prefix}${prefix:+/}" "${dir}/"
 }
 
 function syncFilesToBucket() {
@@ -547,8 +575,8 @@ function syncFilesToBucket() {
   local optional_arguments=("$@")
 
   local tmpdir="$( getTempDir "s3_sync_XXX")"
-  
-  
+
+
   # Copy files locally so we can synch with S3, potentially including deletes
   for file in "${syncFiles[@]}" ; do
     if [[ -f "${file}" ]]; then
@@ -562,7 +590,7 @@ function syncFilesToBucket() {
       esac
     fi
   done
-  
+
   # Now synch with s3
   aws --region ${region} s3 sync "${optional_arguments[@]}" "${tmpdir}/" "s3://${bucket}/${prefix}${prefix:+/}"
 }
@@ -676,7 +704,7 @@ function delete_oai_credentials() {
   # Check for existing identity
   aws --region "${region}" cloudfront list-cloud-front-origin-access-identities > "${oai_delete_file}" || return $?
   oai_id=$(jq -r ".CloudFrontOriginAccessIdentityList.Items[] | select(.Comment==\"${name}\") | .Id" < "${oai_delete_file}") || return $?
-  
+
   # delete if present
   if [[ -n "${oai_id}" ]]; then
     # Retrieve the ETag value
@@ -689,12 +717,12 @@ function delete_oai_credentials() {
   return 0
 }
 
-# -- RDS -- 
-function create_snapshot() { 
+# -- RDS --
+function create_snapshot() {
   local region="$1"; shift
   local db_identifier="$1"; shift
   local db_snapshot_identifier="$1"; shift
-  
+
   # Check that the database exists
   db_info=$(aws --region "${region}" rds describe-db-instances --db-instance-identifier ${db_identifier} )
 
@@ -703,5 +731,76 @@ function create_snapshot() {
     aws --region "${region}" rds wait db-snapshot-available --db-snapshot-identifier "${db_snapshot_identifier}"  || return $?
     db_snapshot=$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" || return $?)
   fi
-  echo -n "$(echo "${db_snapshot}" | jq -r '.DBSnapshots[0].DBSnapshotArn' )" 
+  echo -n "$(echo "${db_snapshot}" | jq -r '.DBSnapshots[0] | .DBSnapshotIdentifier + " " + .SnapshotCreateTime' )"
+}
+
+
+# -- Git Repo Management --
+function clone_git_repo() {
+  local repo_provider="$1"; shift
+  local repo_host="$1"; shift
+  local repo_path="$1"; shift
+  local repo_branch="$1"; shift
+  local local_dir="$1";
+
+  [[  (-z "${repo_provider}") ||
+      (-z "${repo_host}") ||
+      (-z "${repo_path}") ||
+      (-z "${repo_branch}") ||
+      (-z "${local_dir}") ]] && fatalMandatory && return 1
+
+  local credentials_var="${repo_provider^^}_CREDENTIALS"
+  local repo_url="https://${!credentials_var}@${repo_host}/${repo_path}"
+
+  trace "Cloning the ${repo_url} repo and checking out the ${repo_branch} branch ..."
+
+  git clone -b "${repo_branch}" "${repo_url}" "${local_dir}"
+  RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't clone ${repo_url} repo" && return 1
+
+  return 0
+}
+
+function push_git_repo() {
+  local repo_url="$1"; shift
+  local repo_branch="$1"; shift
+  local repo_remote="$1"; shift
+  local commit_message="$1"; shift
+  local git_user="$1"; shift
+  local git_email="$1";
+
+    [[ (-z "${repo_url}") ||
+        (-z "${repo_branch}") ||
+        (-z "${repo_remote}") ||
+        (-z "${commit_message}") ||
+        (-z "${git_user}") ||
+        (-z "${git_email}") ]] && fatalMandatory && return 1
+
+    git remote show "${repo_remote}" >/dev/null 2>&1
+    RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Remote ${repo_remote} is not initialised" && return 1
+
+    # Ensure git knows who we are
+    git config user.name  "${git_user}"
+    git config user.email "${git_email}"
+
+    # Add anything that has been added/modified/deleted
+    git add -A
+
+    if [[ -n "$(git status --porcelain)" ]]; then
+        # Commit changes
+        trace "Committing to the ${repo_url} repo..."
+        git commit -m "${commit_message}"
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && fatal "Can't commit to the ${repo_url} repo" && return 1
+
+        REPO_PUSH_REQUIRED="true"
+    fi
+
+    # Update upstream repo
+    if [[ "${REPO_PUSH_REQUIRED}" == "true" ]]; then
+        trace "Pushing the ${repo_url} repo upstream..."
+        git push ${repo_remote} ${repo_branch}
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && \
+            fatal "Can't push the ${repo_url} repo changes to upstream repo ${repo_remote}" && return 1
+    fi
+
+  return 0
 }

@@ -74,7 +74,7 @@ function main() {
   options "$@" || return $?
 
   # Process each account
-  arrayFromList accounts_required "${ACCOUNTS_LIST:${ACCOUNT}}"
+  arrayFromList accounts_required "${ACCOUNTS_LIST:-${ACCOUNT}}"
   arrayIsEmpty  accounts_required && warning "No account(s) to process\n"
 
   # Process each template level

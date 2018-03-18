@@ -49,6 +49,8 @@ else
                 --role-arn arn:aws:iam::${!AWS_CRED_AWS_ACCOUNT_ID_VAR}:role/${AWS_CRED_AUTOMATION_ROLE} \
                 --role-session-name "$(echo $GIT_USER | tr -cd '[[:alnum:]]' )" \
                 --output json > ${TEMP_CREDENTIAL_FILE}
+            unset AWS_ACCESS_KEY_ID
+            unset AWS_SECRET_ACCESS_KEY
             AWS_CRED_TEMP_AWS_ACCESS_KEY_ID=$(jq -r '.Credentials.AccessKeyId' < ${TEMP_CREDENTIAL_FILE})
             AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY=$(jq -r '.Credentials.SecretAccessKey' < ${TEMP_CREDENTIAL_FILE})
             AWS_CRED_TEMP_AWS_SESSION_TOKEN=$(jq -r '.Credentials.SessionToken' < ${TEMP_CREDENTIAL_FILE})

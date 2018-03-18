@@ -24,8 +24,9 @@ where
 (o) -c ACCOUNT_UNITS_LIST     is the list of account level units to process
 (o) -g SEGMENT_UNITS_LIST     is the list of segment level units to process
     -h                        shows this text
-(m) -l LEVELS_LIST            is the list of levels to consider
+(m) -l LEVELS_LIST            is the list of levels to process
 (o) -m DEPLOYMENT_MODE        is the deployment mode if stacks are to be managed
+(o) -n ACCOUNT_LIST           is the list of accounts to process
 (o) -p PRODUCT_UNITS_LIST     is the list of product level units to process
 (o) -r REFERENCE              reference to use when preparing templates
 (o) -s SOLUTION_UNITS_LIST    is the list of solution level units to process
@@ -34,6 +35,8 @@ where
 (m) mandatory, (o) optional, (d) deprecated
 
 DEFAULTS:
+
+ACCOUNT_LIST=\${ACCOUNT}
 
 NOTES:
 
@@ -45,7 +48,7 @@ EOF
 
 function options() {
     # Parse options
-    while getopts ":a:c:g:hl:m:p:r:s:u:" option; do
+    while getopts ":a:c:g:hl:m:n:p:r:s:u:" option; do
         case $option in
             a) APPLICATION_UNITS_LIST="${OPTARG}" ;;
             c) ACCOUNT_UNITS_LIST="${OPTARG}" ;;
@@ -53,6 +56,7 @@ function options() {
             h) usage; return 1 ;;
             l) LEVELS_LIST="${OPTARG}" ;;
             m) DEPLOYMENT_MODE="${OPTARG}" ;;
+            n) ACCOUNTS_LIST="${OPTARG}" ;;
             p) PRODUCT_UNITS_LIST="${OPTARG}" ;;
             r) REFERENCE="${OPTARG}" ;;
             s) SOLUTION_UNITS_LIST="${OPTARG}" ;;
@@ -69,59 +73,72 @@ function main() {
 
   options "$@" || return $?
 
+  # Process each account
+  arrayFromList accounts_required "${ACCOUNTS_LIST:${ACCOUNT}}"
+  arrayIsEmpty  accounts_required && warning "No account(s) to process\n"
+
   # Process each template level
   arrayFromList levels_required "${LEVELS_LIST}"
-  
+  arrayIsEmpty  levels_required && warning "No level(s) to process\n"
+
   # Reverse the order if we are deleting
   [[ "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOP}" ]] && reverseArray levels_required
-  
-  for level in "${levels_required[@]}"; do
 
-    # Switch to the correct directory
-    case "${level}" in
-      account)     cd "${ACCOUNT_DIR}"; units_list="${ACCOUNT_UNITS_LIST}" ;;
-      product)     cd "${PRODUCT_DIR}"; units_list="${PRODUCT_UNITS_LIST}" ;;
-      application) cd "${SEGMENT_DIR}"; units_list="${APPLICATION_UNITS_LIST}" ;;
-      solution)    cd "${SEGMENT_DIR}"; units_list="${SOLUTION_UNITS_LIST}" ;;
-      segment)     cd "${SEGMENT_DIR}"; units_list="${SEGMENT_UNITS_LIST}" ;;
-      multiple)    cd "${SEGMENT_DIR}"; units_list="${MULTIPLE_UNITS_LIST}" ;;
-      *) fatal "Unknown level ${level}"; return 1 ;;
-    esac
+  for account in "${accounts_required[@]}"; do
 
-    arrayFromList "units" "${units_list}" "${DEPLOYMENT_UNIT_SEPARATORS}"
-    
-    # Reverse the order if we are deleting
-    [[ "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOP}" ]] && reverseArray units
-    
-    # Manage the units individually as one can depend on the output of previous ones
-    for unit_build_reference in "${units[@]}"; do
+    info "Processing account ${account} ...\n"
 
-      # Extract the deployment unit
-      arrayFromList "build_reference_parts" "${unit_build_reference}" "${BUILD_REFERENCE_PART_SEPARATORS}"
-      unit="${build_reference_parts[0]}"
+    export ACCOUNT="${account}"
 
-      # Say what we are doing
-      info "Processing \"${level}\" level, \"${unit}\" unit ...\n"
-      
-      # Generate the template if required
-      if [[ -n "${REFERENCE}" ]]; then
-        ${GENERATION_DIR}/createTemplate.sh -l "${level}" -u "${unit}" -c "${REFERENCE}" || return $?
-      fi
+    for level in "${levels_required[@]}"; do
 
-      # Manage the stack if required
-      if [[ -n "${DEPLOYMENT_MODE}" ]]; then
-        if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then
-            ${GENERATION_DIR}/manageStack.sh -d -l "${level}" -u "${unit}" ||
-                { exit_status=$?; fatal "Deletion of the ${level} level stack for the ${unit} deployment unit failed"; return "${exit_status}"; }
+      # Switch to the correct directory
+      case "${level}" in
+        account)     cd "${ACCOUNT_DIR}"; units_list="${ACCOUNT_UNITS_LIST}" ;;
+        product)     cd "${PRODUCT_DIR}"; units_list="${PRODUCT_UNITS_LIST}" ;;
+        application) cd "${SEGMENT_DIR}"; units_list="${APPLICATION_UNITS_LIST}" ;;
+        solution)    cd "${SEGMENT_DIR}"; units_list="${SOLUTION_UNITS_LIST}" ;;
+        segment)     cd "${SEGMENT_DIR}"; units_list="${SEGMENT_UNITS_LIST}" ;;
+        multiple)    cd "${SEGMENT_DIR}"; units_list="${MULTIPLE_UNITS_LIST}" ;;
+        *) fatal "Unknown level ${level}"; return 1 ;;
+      esac
+
+      arrayFromList units_required "${units_list}" "${DEPLOYMENT_UNIT_SEPARATORS}"
+      arrayIsEmpty  units_required && warning "No unit(s) to process"
+
+      # Reverse the order if we are deleting
+      [[ "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOP}" ]] && reverseArray units_required
+
+      # Manage the units individually as one can depend on the output of previous ones
+      for unit_build_reference in "${units_required[@]}"; do
+
+        # Extract the deployment unit
+        arrayFromList "build_reference_parts" "${unit_build_reference}" "${BUILD_REFERENCE_PART_SEPARATORS}"
+        unit="${build_reference_parts[0]}"
+
+        # Say what we are doing
+        info "Processing \"${level}\" level, \"${unit}\" unit ...\n"
+
+        # Generate the template if required
+        if [[ -n "${REFERENCE}" ]]; then
+          ${GENERATION_DIR}/createTemplate.sh -l "${level}" -u "${unit}" -c "${REFERENCE}" || return $?
         fi
-        if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then
-            ${GENERATION_DIR}/manageStack.sh -l "${level}" -u "${unit}" ||
-                { exit_status=$?; fatal "Create/update of the ${level} level stack for the ${unit} deployment unit failed"; return "${exit_status}"; }
+
+        # Manage the stack if required
+        if [[ -n "${DEPLOYMENT_MODE}" ]]; then
+          if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then
+              ${GENERATION_DIR}/manageStack.sh -d -l "${level}" -u "${unit}" ||
+                  { exit_status=$?; fatal "Deletion of the ${level} level stack for the ${unit} deployment unit failed"; return "${exit_status}"; }
+          fi
+          if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_STOP}"   ]]; then
+              ${GENERATION_DIR}/manageStack.sh -l "${level}" -u "${unit}" ||
+                  { exit_status=$?; fatal "Create/update of the ${level} level stack for the ${unit} deployment unit failed"; return "${exit_status}"; }
+          fi
         fi
-      fi
+      done
     done
   done
-  
+
   return 0
 }
 

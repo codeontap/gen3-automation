@@ -5,7 +5,9 @@ trap 'exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 function main() {
-  TAG="acc${AUTOMATION_JOB_IDENTIFIER}-${ACCOUNT}"
+  [[-n ACCOUNTS_LIST]] &&
+    TAG="acc${AUTOMATION_JOB_IDENTIFIER}-multiple-accounts" ||
+    TAG="acc${AUTOMATION_JOB_IDENTIFIER}-${ACCOUNT}"
 
   ${AUTOMATION_DIR}/manageUnits.sh -r "${TAG}" || return $?
 

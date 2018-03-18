@@ -31,6 +31,7 @@ DEFAULTS:
 
 RELEASE_MODE = ${RELEASE_MODE_DEFAULT}
 DEPLOYMENT_MODE = ${DEPLOYMENT_MODE_DEFAULT}
+ACCOUNT=\${ACCOUNT_LIST[0]}
 
 NOTES:
 
@@ -359,7 +360,8 @@ function main() {
   
   # Determine the account from the product/segment combination
   # if not already defined or provided on the command line
-  findAndDefineSetting "ACCOUNT" "ACCOUNT" "${PRODUCT}" "${SEGMENT}" "value"
+  arrayFromList accounts_list "${ACCOUNTS_LIST}"
+  findAndDefineSetting "ACCOUNT" "ACCOUNT" "${PRODUCT}" "${SEGMENT}" "value" "${accounts_list[0]}"
   
   # Default account/product git provider - "github"
   # ORG is product specific so not defaulted here

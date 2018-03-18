@@ -93,7 +93,7 @@ function main() {
     fi
   fi
   
-  if contains" $REQUIRED_TASKS " " swagger "; then
+  if contains " $REQUIRED_TASKS " " swagger "; then
     # Generate swagger documents
     if [[ -f manage.py ]]; then
       info "Generate swagger documents ..."
@@ -104,7 +104,7 @@ function main() {
     fi
   fi
 
-  if contains" $REQUIRED_TASKS " " build "; then
+  if contains " $REQUIRED_TASKS " " build "; then
     # Package for lambda if required
     for ZAPPA_DIR in "${AUTOMATION_BUILD_DEVOPS_DIR}/lambda" "./"; do
       if [[ -f "${ZAPPA_DIR}/zappa_settings.json" ]]; then

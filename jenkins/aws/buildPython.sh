@@ -66,14 +66,19 @@ function main() {
     # Run unit tests - there should always be a task even if it does nothing
     if [[ -f manage.py ]]; then
       info "Running unit tests ..."
-      TEST_ARGS=""
+      MANAGE_OPTIONS=""
       if [[ -n ${TEST_REPORTS_DIR} ]]; then
         if [[ -n ${TEST_JUNIT_DIR} ]]; then
           # Set --junit-xml option if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
-          TEST_ARGS+=" --junit-xml ${TEST_REPORTS_DIR}/${TEST_JUNIT_DIR}/unit-test-results.xml"
+          MANAGE_OPTIONS+=" --junit-xml ${TEST_REPORTS_DIR}/${TEST_JUNIT_DIR}/unit-test-results.xml"
         fi
       fi
-      python manage.py test ${TEST_ARGS} ||
+      
+      if [[ -n ${UNIT_OPTIONS} ]]; then
+        MANAGE_OPTIONS+=" --settings=${UNIT_OPTIONS}"
+      fi
+      
+      python manage.py test ${MANAGE_OPTIONS} ||
         { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
   #    coverage run --source=. -m pytest tests/
   #    coverage html
@@ -87,7 +92,7 @@ function main() {
     if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/Dockerfile-test" ]]; then
       info "Running integration tests ..."
       cd ${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/
-      ./scripts/runDockerComposeTests.sh||
+      ./scripts/runDockerComposeTests.sh ||
       { exit_status=$?; fatal "Integration tests failed"; return ${exit_status}; }
       cd ${AUTOMATION_BUILD_SRC_DIR}
     fi
@@ -97,7 +102,13 @@ function main() {
     # Generate swagger documents
     if [[ -f manage.py ]]; then
       info "Generate swagger documents ..."
-      python manage.py swagger ||
+      
+      MANAGE_OPTIONS=""
+      if [[ -n ${SWAGGER_OPTIONS} ]]; then
+        MANAGE_OPTIONS+=" --settings=${SWAGGER_OPTIONS}"
+      fi
+      
+      python manage.py swagger ${MANAGE_OPTIONS} ||
         { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
     else
       warning "No manage.py"

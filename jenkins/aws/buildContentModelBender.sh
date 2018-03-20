@@ -12,7 +12,7 @@ function main() {
   mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/dist
   chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/dist
 
-  # run Jekyll build using Docker Build image 
+  # run Model Bender build using Docker Build image 
   info "Running ModelBender build"
   docker run --rm \
     --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/_tmp" \
@@ -20,7 +20,7 @@ function main() {
     codeontap/modelbender:latest \
     enterprise --indir=indir
 
-  # packge for content node
+  # package for content node
   if [[ -d "${AUTOMATION_BUILD_SRC_DIR}" ]]; then
     mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
     

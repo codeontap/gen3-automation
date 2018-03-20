@@ -29,7 +29,7 @@ function main() {
     . ${venv_dir}/bin/activate
 
     # Pin pip if required
-    [[ -n "${AUTOMATION_PIP_VERSION"}" ]] && pip install "pip==${AUTOMATION_PIP_VERSION}"
+    [[ -n "${AUTOMATION_PIP_VERSION}" ]] && pip install "pip==${AUTOMATION_PIP_VERSION}"
 
     # Process requirements files
     shopt -s nullglob

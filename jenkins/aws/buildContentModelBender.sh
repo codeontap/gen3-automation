@@ -15,8 +15,8 @@ function main() {
   # run Model Bender build using Docker Build image 
   info "Running ModelBender build..."
   docker run --rm \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/work/outdir" \
     --volume="${AUTOMATION_BUILD_SRC_DIR}:/work/indir" \
+    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/work/outdir" \
     codeontap/modelbender:latest \
     enterprise --indir=indir --outdir=outdir
 

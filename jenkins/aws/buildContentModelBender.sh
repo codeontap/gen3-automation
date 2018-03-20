@@ -13,12 +13,12 @@ function main() {
   chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/outdir
 
   # run Model Bender build using Docker Build image 
-  info "Running ModelBender build"
+  info "Running ModelBender build..."
   docker run --rm \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/_tmp" \
+    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/work/outdir" \
     --volume="${AUTOMATION_BUILD_SRC_DIR}:/work/indir" \
     codeontap/modelbender:latest \
-    enterprise --indir=indir
+    enterprise --indir=indir --outdir=outdir
 
   mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
   

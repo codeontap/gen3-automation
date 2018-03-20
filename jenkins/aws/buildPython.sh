@@ -7,17 +7,17 @@ trap '[[ (-z "${AUTOMATION_DEBUG}") && (-d "${venv_dir}") ]] && rm -rf "${venv_d
 function main() {
   # Make sure we are in the build source directory
   cd ${AUTOMATION_BUILD_SRC_DIR}
-  
+
   # Determine required tasks
   # test is always required
-  [[ -n "${BUILD_TASKS}" ]] && REQUIRED_TASKS="${BUILD_TASKS}" || REQUIRED_TASKS=( "build unit" )
-  
+  [[ -n "${BUILD_TASKS}" ]] && REQUIRED_TASKS=( ${BUILD_TASKS} ) || REQUIRED_TASKS=( "build" "unit" )
+
   # virtual environment is needed not only for build, but for unit and swagger tasks
-  if contains "$REQUIRED_TASKS" "build" || contains "$REQUIRED_TASKS" "unit" || contains "$REQUIRED_TASKS" "swagger"; then
+  if inArray "REQUIRED_TASKS" "build|unit|swagger"; then
     # Is this really a python based project
     [[ ! -f requirements.txt ]] &&
       { fatal "No requirements.txt - is this really a python base repo?"; return 1; }
-    
+
     # Set up the virtual build environment
     venv_dir="$(getTempDir "cota_venv_XXX")"
     PYTHON_VERSION="${AUTOMATION_PYTHON_VERSION:+ -p } ${AUTOMATION_PYTHON_VERSION}"
@@ -25,9 +25,12 @@ function main() {
     # Note that python version below should NOT be in quotes to ensure arguments parsed correctly
     virtualenv ${PYTHON_VERSION} "${venv_dir}" ||
       { exit_status=$?; fatal "Creation of virtual build environment failed"; return ${exit_status}; }
-    
+
     . ${venv_dir}/bin/activate
-    
+
+    # Pin pip if required
+    [[ -n "${PIP_VERSION"}" ]] && pip install "pip==${PIP_VERSION}"
+
     # Process requirements files
     shopt -s nullglob
     REQUIREMENTS_FILES=( requirements*.txt )
@@ -35,7 +38,7 @@ function main() {
       pip install -r ${REQUIREMENTS_FILE} --upgrade ||
       { exit_status=$?; fatal "Installation of requirements failed"; return ${exit_status}; }
     done
-    
+
     # Patch the virtual env if packages have not been installed into site-packages dir
     # This is a defect in zappa 0.42, in that it doesn't allow for platforms that install
     # packages into dist-packages. Remove this patch once zappa is fixed
@@ -49,20 +52,20 @@ function main() {
         fi
       done
     fi
-    
+
     if [[ -f package.json ]]; then
       npm install --unsafe-perm ||
         { exit_status=$?; fatal "npm install failed"; return ${exit_status}; }
     fi
-    
+
     # Run bower as part of the build if required
     if [[ -f bower.json ]]; then
       bower install --allow-root ||
         { exit_status=$?; fatal "Bower install failed"; return ${exit_status}; }
     fi
   fi
-  
-  if contains "$REQUIRED_TASKS" "unit"; then
+
+  if inArray "REQUIRED_TASKS" "unit"; then
     # Run unit tests - there should always be a task even if it does nothing
     if [[ -f manage.py ]]; then
       info "Running unit tests ..."
@@ -73,19 +76,19 @@ function main() {
           MANAGE_OPTIONS+=" --junit-xml ${TEST_REPORTS_DIR}/${TEST_JUNIT_DIR}/unit-test-results.xml"
         fi
       fi
-      
+
       if [[ -n ${UNIT_OPTIONS} ]]; then
-        MANAGE_OPTIONS+=" --settings=${UNIT_OPTIONS}"
+        MANAGE_OPTIONS+=" ${UNIT_OPTIONS}"
       fi
-      
+
       python manage.py test ${MANAGE_OPTIONS} ||
         { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
     else
       warning "No manage.py - no tests run"
     fi
   fi
-  
-  if contains "$REQUIRED_TASKS" "integration"; then
+
+  if inArray "REQUIRED_TASKS" "integration"; then
     # Run integration tests
     if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/Dockerfile-test" ]]; then
       info "Running integration tests ..."
@@ -95,17 +98,17 @@ function main() {
       cd ${AUTOMATION_BUILD_SRC_DIR}
     fi
   fi
-  
-  if contains "$REQUIRED_TASKS" "swagger"; then
+
+  if inArray "REQUIRED_TASKS" "swagger"; then
     # Generate swagger documents
     if [[ -f manage.py ]]; then
       info "Generate swagger documents ..."
-      
+
       MANAGE_OPTIONS=""
       if [[ -n ${SWAGGER_OPTIONS} ]]; then
-        MANAGE_OPTIONS+=" --settings=${SWAGGER_OPTIONS}"
+        MANAGE_OPTIONS+=" ${SWAGGER_OPTIONS}"
       fi
-      
+
       python manage.py swagger ${MANAGE_OPTIONS} ||
         { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
     else
@@ -113,7 +116,7 @@ function main() {
     fi
   fi
 
-  if contains "$REQUIRED_TASKS" "build"; then
+  if inArray "REQUIRED_TASKS" "build"; then
     # Package for lambda if required
     for ZAPPA_DIR in "${AUTOMATION_BUILD_DEVOPS_DIR}/lambda" "./"; do
       if [[ -f "${ZAPPA_DIR}/zappa_settings.json" ]]; then
@@ -129,17 +132,17 @@ function main() {
     done
   fi
 
-  if contains "$REQUIRED_TASKS" "build" || contains "$REQUIRED_TASKS" "unit" || contains "$REQUIRED_TASKS" "swagger"; then
+  if inArray "REQUIRED_TASKS" "build|unit|swagger"; then
     # Clean up
     if [[ -f package.json ]]; then
       npm prune --production ||
         { exit_status=$?; fatal "npm prune failed"; return ${exit_status}; }
     fi
-    
+
     # Clean up the virtual env
     [[ -d "${venv_dir}" ]] && rm -rf "${venv_dir}"
   fi
-  
+
   # All good
   return 0
 }

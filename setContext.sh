@@ -306,6 +306,9 @@ function main() {
       [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] &&
         AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
 
+      [[ -d "${AUTOMATION_BUILD_DIR}/content" ]] &&
+        AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/content"
+
       # Build devops directory
       AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}"
       [[ -d "${AUTOMATION_BUILD_DIR}/devops" ]] &&

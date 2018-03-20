@@ -9,8 +9,8 @@ function main() {
   cd ${AUTOMATION_BUILD_SRC_DIR}
   
   # Create Build folders for Jenkins Permissions
-  mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/dist
-  chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/dist
+  mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/outdir
+  chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/outdir
 
   # run Model Bender build using Docker Build image 
   info "Running ModelBender build"
@@ -20,14 +20,10 @@ function main() {
     codeontap/modelbender:latest \
     enterprise --indir=indir
 
-  # package for content node
-  if [[ -d "${AUTOMATION_BUILD_SRC_DIR}" ]]; then
-    mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
-    
-    cd "${AUTOMATION_BUILD_SRC_DIR}/outdir"
-    zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/contentnode.zip" * 
-
-  fi
+  mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
+  
+  cd "${AUTOMATION_BUILD_SRC_DIR}/outdir"
+  zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/contentnode.zip" * 
 
   # All good
   return 0

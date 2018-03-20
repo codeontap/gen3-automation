@@ -13,7 +13,7 @@ function main() {
   [[ -n "${BUILD_TASKS}" ]] && REQUIRED_TASKS="${BUILD_TASKS}" || REQUIRED_TASKS=( "build unit" )
   
   # virtual environment is needed not only for build, but for unit and swagger tasks
-  if contains " $REQUIRED_TASKS " " build " || contains " $REQUIRED_TASKS " " unit " || contains " $REQUIRED_TASKS " " swagger "; then
+  if contains "$REQUIRED_TASKS" "build" || contains "$REQUIRED_TASKS" "unit" || contains "$REQUIRED_TASKS" "swagger"; then
     # Is this really a python based project
     [[ ! -f requirements.txt ]] &&
       { fatal "No requirements.txt - is this really a python base repo?"; return 1; }
@@ -62,7 +62,7 @@ function main() {
     fi
   fi
   
-  if contains " $REQUIRED_TASKS " " unit "; then
+  if contains "$REQUIRED_TASKS" "unit"; then
     # Run unit tests - there should always be a task even if it does nothing
     if [[ -f manage.py ]]; then
       info "Running unit tests ..."
@@ -80,14 +80,12 @@ function main() {
       
       python manage.py test ${MANAGE_OPTIONS} ||
         { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
-  #    coverage run --source=. -m pytest tests/
-  #    coverage html
     else
       warning "No manage.py - no tests run"
     fi
   fi
   
-  if contains " $REQUIRED_TASKS " " integration "; then
+  if contains "$REQUIRED_TASKS" "integration"; then
     # Run integration tests
     if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker-test/Dockerfile-test" ]]; then
       info "Running integration tests ..."
@@ -98,7 +96,7 @@ function main() {
     fi
   fi
   
-  if contains " $REQUIRED_TASKS " " swagger "; then
+  if contains "$REQUIRED_TASKS" "swagger"; then
     # Generate swagger documents
     if [[ -f manage.py ]]; then
       info "Generate swagger documents ..."
@@ -115,7 +113,7 @@ function main() {
     fi
   fi
 
-  if contains " $REQUIRED_TASKS " " build "; then
+  if contains "$REQUIRED_TASKS" "build"; then
     # Package for lambda if required
     for ZAPPA_DIR in "${AUTOMATION_BUILD_DEVOPS_DIR}/lambda" "./"; do
       if [[ -f "${ZAPPA_DIR}/zappa_settings.json" ]]; then
@@ -131,7 +129,7 @@ function main() {
     done
   fi
 
-  if contains " $REQUIRED_TASKS " " build " || contains " $REQUIRED_TASKS " " unit " || contains " $REQUIRED_TASKS " " swagger "; then
+  if contains "$REQUIRED_TASKS" "build" || contains "$REQUIRED_TASKS" "unit" || contains "$REQUIRED_TASKS" "swagger"; then
     # Clean up
     if [[ -f package.json ]]; then
       npm prune --production ||

@@ -148,6 +148,13 @@ function main() {
           fi
         fi
       done
+      
+      # Update blueprint if a stack is being managed
+      # - Currently the blueprint only generates a segment level blueprint
+      if [[ "${level}" != "account" && "${level}" != "product" ]]
+          info "Generating deployment blueprint... \n"
+          ${GENERATION_DIR}/createTemplate.sh -l blueprint || return $?
+      fi
     done
   done
 

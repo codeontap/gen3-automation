@@ -32,8 +32,8 @@ function main() {
 
     local BLUEPRINT_DESTINATION_DIR="${BLUEPRINT_CONSOLIDATION_DIR}/blueprints/${TENANT}/${PRODUCT}/${ENVIRONMENT}/${SEGMENT}/"
 
-    info "blueprint repo ${BLUEPRINT_CONSOLIDATION_REPO}"
-
+    info "blueprint repo ${BLUEPRINT_DESTINATION_DIR}"
+    
     if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" ]]; then 
 
         if [[ ! -d "${BLUEPRINT_DESTINATION_DIR}" ]]; then 

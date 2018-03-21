@@ -29,7 +29,7 @@ function main() {
 
     if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" ]]; then 
 
-        if [[ ! -d "${BLUEPRINT_DESTINATION_DIR}" ]]        
+        if [[ ! -d "${BLUEPRINT_DESTINATION_DIR}" ]]; then 
             mkdir "${BLUEPRINT_DESTINATION_DIR}"
         fi 
 

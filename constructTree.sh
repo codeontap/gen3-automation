@@ -261,12 +261,10 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         mv "${BASE_DIR_TEMP}" "${ACCOUNT_INFRASTRUCTURE_DIR}"
     fi
 
-    TENANT_INFRASTRUCTURE_DIR=$(findGen3TenantInfrastructureDir "${BASE_DIR}" "${TENANT}")
+    TENANT_INFRASTRUCTURE_DIR=$(findGen3TenantInfrastructureDir "${AUTOMATION_DATA_DIR}" "${TENANT}")
     if [[ -z "${TENANT_INFRASTRUCTURE_DIR}" ]]; then
 
-        [[ (! -f "${BASE_DIR_TEMP}/.gitignore") || ($(grep -q "temp_\*" "${BASE_DIR_TEMP}/.gitignore") -ne 0) ]] && \
-          echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
-
+        TENANT_INFRASTRUCTURE_DIR="${AUTOMATION_DATA_DIR}/${TENANT}"
         mkdir -p $(filePath "${TENANT_INFRASTRUCTURE_DIR}")
         mv "${BASE_DIR_TEMP}" "${TENANT_INFRASTRUCTURE_DIR}"
     fi 

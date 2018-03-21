@@ -18,22 +18,29 @@ function main() {
     BLUEPRINT_CONSOLIDATION_TEMP="${AUTOMATION_BUILD_SRC_DIR}/blueprints"
     BLUEPRINT_CONSOLIDATION_DIR="${BLUEPRINT_CONSOLIDATION_TEMP}/${BLUEPRINT_CONSOLIDATION_PREFIX}"
 
-    BLUEPRINT_DESTINATION_FILE="${BLUEPRINT_CONSOLIDATION_DIR}/blueprints/${TENANT}/${PRODUCT}/${ENVIRONMENT}/${SOLUTION}/${SEGMENT}/blueprint.json"
+    BLUEPRINT_DESTINATION_DIR="${BLUEPRINT_CONSOLIDATION_DIR}/blueprints/${TENANT}/${PRODUCT}/${ENVIRONMENT}/${SOLUTION}/${SEGMENT}/"
 
     ${AUTOMATION_DIR}/manageRepo.sh -c -l "blueprint consolidation" \
     -n "${BLUEPRINT_CONSOLIDATION_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
     -d "${BLUEPRINT_CONSOLIDATION_TEMP}" 
 
+    info "blueprint destination ${BLUEPRINT_DESTINATION_DIR}"
+    info "blueprint repo ${BLUEPRINT_CONSOLIDATION_REPO}"
+
     if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" ]]; then 
 
+        if [[ ! -d "${BLUEPRINT_DESTINATION_DIR}" ]]        
+            mkdir "${BLUEPRINT_DESTINATION_DIR}"
+        fi 
+
         echo "Adding Blueprint to Tenant Infrastructure..."
-        cp "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" "${BLUEPRINT_DESTINATION_FILE}"
+        cp "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" "${BLUEPRINT_DESTINATION_DIR}/blueprint.json"
     
     else
 
-        if [[ -f "${BLUEPRINT_DESTINATION_FILE}" ]]; then 
+        if [[ -f "${BLUEPRINT_DESTINATION_DIR}/blueprint.json" ]]; then 
             echo "Removing Blueprint from Tenant Infrastructure..."
-            rm "${BLUEPRINT_DESTINATION_FILE}"
+            rm "${BLUEPRINT_DESTINATION_DIR}/blueprint.json"
         fi 
     fi
 

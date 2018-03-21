@@ -26,7 +26,7 @@ function main() {
 
     else 
     
-        BLUEPRINT_CONSOLIDATION_DIR = "${TENANT_INFRASTRUCTURE_DIR}/cot"
+        BLUEPRINT_CONSOLIDATION_DIR="${TENANT_INFRASTRUCTURE_DIR}/cot"
     
     fi
 

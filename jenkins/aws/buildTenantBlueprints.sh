@@ -11,21 +11,27 @@ function main() {
     # Make sure we are in the build source directory
     cd ${AUTOMATION_BUILD_SRC_DIR}
 
-    # By default store consolidated blueprints in the tenant infrastructure directory
-    BLUEPRINT_CONSOLIDATION_PREFIX="${INFRADOCS_DIR:-${TENANT_INFRASTRUCTURE_DIR}/cot}"
-    BLUEPRINT_CONSOLIDATION_REPO="${INFRADOCS_REPO:-${ACCOUNT_INFRASTRUCTURE_REPO}}"
+    # If an Infradocs repo has been setup then clone it, otherwise use the Tenant Infrastructure directory
+    if [[ -n "${INFRADOCS_REPO}" ]]; then
 
-    BLUEPRINT_CONSOLIDATION_TEMP="${AUTOMATION_BUILD_SRC_DIR}/blueprints"
-    BLUEPRINT_CONSOLIDATION_DIR="${BLUEPRINT_CONSOLIDATION_TEMP}/${BLUEPRINT_CONSOLIDATION_PREFIX}"
+        BLUEPRINT_CONSOLIDATION_DIR="${AUTOMATION_BUILD_SRC_DIR}/repo"
+
+        ${AUTOMATION_DIR}/manageRepo.sh -c -l "blueprint consolidation" \
+            -n "${BLUEPRINT_CONSOLIDATION_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
+            -d "${BLUEPRINT_CONSOLIDATION_DIR}" 
+    
+        if [[ -n "${INFRADOCS_PREFIX}" ]]; then
+            BLUEPRINT_CONSOLIDATION_DIR="${AUTOMATION_BUILD_SRC_DIR}/repo/${INFRADOCS_PREFIX}"
+        fi 
+
+    else 
+    
+        BLUEPRINT_CONSOLIDATION_DIR = "${TENANT_INFRASTRUCTURE_DIR}/cot"
+    
+    fi
 
     BLUEPRINT_DESTINATION_DIR="${BLUEPRINT_CONSOLIDATION_DIR}/blueprints/${TENANT}/${PRODUCT}/${ENVIRONMENT}/${SEGMENT}/"
 
-    ${AUTOMATION_DIR}/manageRepo.sh -c -l "blueprint consolidation" \
-    -n "${BLUEPRINT_CONSOLIDATION_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
-    -d "${BLUEPRINT_CONSOLIDATION_TEMP}" 
-
-    info "tenant infrastructure ${TENANT_INFRASTRUCTURE_DIR}"
-    info "blueprint destination ${BLUEPRINT_DESTINATION_DIR}"
     info "blueprint repo ${BLUEPRINT_CONSOLIDATION_REPO}"
 
     if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" ]]; then 

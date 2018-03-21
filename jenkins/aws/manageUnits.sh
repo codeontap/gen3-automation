@@ -146,14 +146,15 @@ function main() {
               ${GENERATION_DIR}/manageStack.sh -l "${level}" -u "${unit}" ||
                   { exit_status=$?; fatal "Create/update of the ${level} level stack for the ${unit} deployment unit failed"; return "${exit_status}"; }
           fi
-
-          # Update blueprint if a stack is being managed
-          if [[ "${level}" != "account" && "${level}" != "product" ]]
-              info "Generating deployment blueprint... \n"
-              ${GENERATION_DIR}/createTemplate.sh -l blueprint || return $?
-          fi
         fi
       done
+      
+      # Update blueprint if a stack is being managed
+      # - Currently the blueprint only generates a segment level blueprint
+      if [[ "${level}" != "account" && "${level}" != "product" ]]
+          info "Generating deployment blueprint... \n"
+          ${GENERATION_DIR}/createTemplate.sh -l blueprint || return $?
+      fi
     done
   done
 

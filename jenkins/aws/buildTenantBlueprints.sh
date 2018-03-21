@@ -22,9 +22,9 @@ function main() {
 
     ${AUTOMATION_DIR}/manageRepo.sh -c -l "blueprint consolidation" \
     -n "${BLUEPRINT_CONSOLIDATION_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
-    -d "${BLUEPRINT_CONSOLIDATION_TEMP}"
+    -d "${BLUEPRINT_CONSOLIDATION_TEMP}" 
 
-    if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json"]]; then 
+    if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" ]]; then 
 
         echo "Adding Blueprint to Tenant Infrastructure..."
         cp "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" "${BLUEPRINT_DESTINATION_FILE}"
@@ -38,7 +38,10 @@ function main() {
     fi
 
     DETAIL_MESSAGE="${DETAIL_MESSAGE}, blueprint consolidation"
-    save_repo "${BLUEPRINT_CONSOLIDATION_DIR}" "blueprint consolidation" "${DETAIL_MESSAGE}"  || return $?
+    ${AUTOMATION_DIR}/manageRepo.sh -p \
+        -d "${BLUEPRINT_CONSOLIDATION_DIR}" \
+        -l "blueprint consolidation" \
+        -m "${DETAIL_MESSAGE}" 
 
   # All good
   return 0

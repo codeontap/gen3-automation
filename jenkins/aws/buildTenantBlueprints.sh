@@ -38,6 +38,9 @@ function main() {
     info "blueprint destination ${BLUEPRINT_DESTINATION_DIR}"
     info "blueprint repo ${BLUEPRINT_CONSOLIDATION_REPO}"
 
+    info "blueprint destination ${BLUEPRINT_DESTINATION_DIR}"
+    info "blueprint repo ${BLUEPRINT_CONSOLIDATION_REPO}"
+
     if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" ]]; then 
 
         if [[ ! -d "${BLUEPRINT_DESTINATION_DIR}" ]]; then 

@@ -261,7 +261,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         mv "${BASE_DIR_TEMP}" "${ACCOUNT_INFRASTRUCTURE_DIR}"
     fi
 
-    TENANT_INFRASTRUCTURE_DIR=$(findGen3TenantInfrastructureDir "${BASE_DIR}" "${TENANT}")
+    TENANT_INFRASTRUCTURE_DIR=$(findGen3TenantInfrastructureDir "${AUTOMATION_DATA_DIR}" "${TENANT}")
     if [[ -z "${TENANT_INFRASTRUCTURE_DIR}" ]]; then
 
         TENANT_INFRASTRUCTURE_DIR="${BASE_DIR}/${TENANT}"

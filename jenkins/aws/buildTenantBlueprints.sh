@@ -4,6 +4,9 @@
 trap '[[ (-z "${AUTOMATION_DEBUG}") ; exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
+# Usage - This script should be called from the directory where a generated blueprint is stored.
+# This would ideally be tirggered using a git hook from an automation server
+
 function main() {
     # Make sure we are in the build source directory
     cd ${AUTOMATION_BUILD_SRC_DIR}

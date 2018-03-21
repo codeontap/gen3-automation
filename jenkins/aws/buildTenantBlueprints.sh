@@ -34,6 +34,7 @@ function main() {
 
     info "blueprint repo ${BLUEPRINT_CONSOLIDATION_REPO}"
 
+    info "tenant infrastructure ${TENANT_INFRASTRUCTURE_DIR}"
     info "blueprint destination ${BLUEPRINT_DESTINATION_DIR}"
     info "blueprint repo ${BLUEPRINT_CONSOLIDATION_REPO}"
 

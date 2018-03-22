@@ -30,7 +30,8 @@ function main() {
     
     fi
 
-    local BLUEPRINT_DESTINATION_DIR="${BLUEPRINT_CONSOLIDATION_DIR}/blueprints/${TENANT}/${PRODUCT}/${ENVIRONMENT}/${SEGMENT}/"
+    local BLUEPRINT_DESTINATION_DIR="${BLUEPRINT_CONSOLIDATION_DIR}/blueprints"
+    local BLUEPRINT_DESTINATION_FILE= "${BLUEPRINT_DESTINATION_DIR}/${TENANT}-${PRODUCT}-${ENVIRONMENT}-${SEGMENT}-blueprint.json"
 
     info "blueprint repo ${BLUEPRINT_DESTINATION_DIR}"
     
@@ -41,13 +42,13 @@ function main() {
         fi 
 
         echo "Adding Blueprint to Tenant Infrastructure..."
-        cp "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" "${BLUEPRINT_DESTINATION_DIR}/blueprint.json"
+        cp "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" "${BLUEPRINT_DESTINATION_FILE}"
     
     else
 
-        if [[ -f "${BLUEPRINT_DESTINATION_DIR}/blueprint.json" ]]; then 
+        if [[ -f "${BLUEPRINT_DESTINATION_FILE}" ]]; then 
             echo "Removing Blueprint from Tenant Infrastructure..."
-            rm "${BLUEPRINT_DESTINATION_DIR}/blueprint.json"
+            rm "${BLUEPRINT_DESTINATION_FILE}"
         fi 
     fi
 

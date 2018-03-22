@@ -8,7 +8,7 @@ trap '[[ (-z "${AUTOMATION_DEBUG}") ; exit 1' SIGHUP SIGINT SIGTERM
 # This would ideally be tirggered using a git hook from an automation server
 
 function main() {
-    if [[ -z AUTOMATION_REGISTRY_REPO ]]; then
+    if [[ -z "${AUTOMATION_REGISTRY_REPO}" ]]; then
         fatal "No automation registry available"
         return 255
     fi

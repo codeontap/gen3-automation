@@ -8,33 +8,29 @@ trap '[[ (-z "${AUTOMATION_DEBUG}") ; exit 1' SIGHUP SIGINT SIGTERM
 # This would ideally be tirggered using a git hook from an automation server
 
 function main() {
+    if [[ -z "${AUTOMATION_REGISTRY_REPO}" ]]; then
+        fatal "No automation registry available"
+        return 255
+    fi
+
     # Make sure we are in the build source directory
     cd ${AUTOMATION_BUILD_SRC_DIR}
 
-    # If an Infradocs repo has been setup then clone it, otherwise use the Tenant Infrastructure directory
-    if [[ -n "${INFRADOCS_REPO}" ]]; then
+    local BLUEPRINT_CONSOLIDATION_DIR="${AUTOMATION_BUILD_SRC_DIR}/registry"
 
-        local BLUEPRINT_CONSOLIDATION_DIR="${AUTOMATION_BUILD_SRC_DIR}/repo"
+    ${AUTOMATION_DIR}/manageRepo.sh -c -l "blueprint consolidation" \
+        -n "${AUTOMATION_REGISTRY_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
+        -d "${BLUEPRINT_CONSOLIDATION_DIR}" 
 
-        ${AUTOMATION_DIR}/manageRepo.sh -c -l "blueprint consolidation" \
-            -n "${BLUEPRINT_CONSOLIDATION_REPO}" -v "${ACCOUNT_GIT_PROVIDER}" \
-            -d "${BLUEPRINT_CONSOLIDATION_DIR}" 
-    
-        if [[ -n "${INFRADOCS_PREFIX}" ]]; then
-            local BLUEPRINT_CONSOLIDATION_DIR="${AUTOMATION_BUILD_SRC_DIR}/repo/${INFRADOCS_PREFIX}"
-        fi 
-
-    else 
-    
-        local BLUEPRINT_CONSOLIDATION_DIR="${TENANT_INFRASTRUCTURE_DIR}/cot"
-    
-    fi
+    if [[ -n "${INFRADOCS_PREFIX}" ]]; then
+        local BLUEPRINT_CONSOLIDATION_DIR="${AUTOMATION_BUILD_SRC_DIR}/registry/"
+    fi 
 
     local BLUEPRINT_DESTINATION_DIR="${BLUEPRINT_CONSOLIDATION_DIR}/blueprints"
     local BLUEPRINT_DESTINATION_FILE="${BLUEPRINT_DESTINATION_DIR}/${TENANT}-${PRODUCT}-${ENVIRONMENT}-${SEGMENT}-blueprint.json"
 
     info "blueprint repo ${BLUEPRINT_DESTINATION_DIR}"
-    
+
     if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/blueprint.json" ]]; then 
 
         if [[ ! -d "${BLUEPRINT_DESTINATION_DIR}" ]]; then 

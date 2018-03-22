@@ -40,11 +40,10 @@ function main() {
   docker run --rm \
     --env JEKYLL_ENV="${JEKYLL_ENV}" \
     --env TZ="${JEKYLL_TIMEZONE}" \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}:/indir"
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/_site:/outdir"
-    codeontap/infradocs:"${INFRADOCS_VERSION}" \
-    jekyll build --verbose 
-    
+    --volume="${AUTOMATION_BUILD_SRC_DIR}:/indir" \
+    --volume="${AUTOMATION_BUILD_SRC_DIR}/_site:/outdir" \
+    codeontap/infradocs:"${INFRADOCS_VERSION}" 
+
   # Package for spa if required
   if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then
     mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"

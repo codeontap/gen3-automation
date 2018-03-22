@@ -142,6 +142,11 @@ function push() {
 
     # Update upstream repo
     if [[ "${REPO_PUSH_REQUIRED}" == "true" ]]; then
+        trace "Rebasing ${REPO_LOG_NAME} in case of changes..."
+        git rebase ${REPO_REMOTE} ${REPO_BRANCH}
+        RESULT=$? && [[ ${RESULT} -ne 0 ]] && \
+            fatal "Can't rebase the ${REPO_LOG_NAME} repo from upstream ${REPO_REMOTE}" && return 1
+
         trace "Pushing the ${REPO_LOG_NAME} repo upstream..."
         git push --tags ${REPO_REMOTE} ${REPO_BRANCH}
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && \

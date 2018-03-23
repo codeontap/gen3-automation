@@ -108,9 +108,20 @@ function main() {
       if [[ -n ${SWAGGER_OPTIONS} ]]; then
         MANAGE_OPTIONS+=" ${SWAGGER_OPTIONS}"
       fi
-
-      python manage.py swagger ${MANAGE_OPTIONS} ||
-        { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
+      if [[ -n ${COMPONENT_INSTANCES} ]]; then
+      # Iterate component instance list if it is specified. Case for the projects with different API channels.
+      # COMPONENT_INSTANCE must be environment variable
+        for COMPONENT_INSTANCE in ${COMPONENT_INSTANCES}; do
+            # spec directory is on the same level with the build directory 
+            SWAGGER_TARGET_FILE="${AUTOMATION_BUILD_DIR}"/../spec/${COMPONENT_INSTANCE}/swagger.yaml
+            COMPONENT_INSTANCE=${COMPONENT_INSTANCE} python manage.py swagger ${SWAGGER_TARGET_FILE} ${MANAGE_OPTIONS} ||
+              { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
+        done
+      else
+        python manage.py swagger ${MANAGE_OPTIONS} ||
+          { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
+      fi
+      save_product_code "swagger documents generated based on ${GIT_COMMIT}"
     else
       warning "No manage.py"
     fi

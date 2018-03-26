@@ -532,66 +532,61 @@ function main() {
   
   ### Release management ###
    
-  # This format of checking detects if the variable is set (though possibly empty), i.e. it is
-  # defined as a parameter on the job though possibly empty
-  if [[ -n "${RELEASE_IDENTIFIER+x}" ]]; then
-      
-      case "${RELEASE_MODE}" in
-          # Promotion details
-          ${RELEASE_MODE_SELECTIVE}|${RELEASE_MODE_PROMOTION})
-              findAndDefineSetting "FROM_SEGMENT" "PROMOTION_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
-              # Hard code some defaults for now
-              if [[ -z "${FROM_SEGMENT}" ]]; then
-                  case "${SEGMENT}" in
-                      staging|preproduction)
-                          FROM_SEGMENT="integration"
-                          ;;
-                      production)
-                          FROM_SEGMENT="preproduction"
-                          ;;
-                  esac
-                  define_context_property "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
-              fi
-  
-              findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${FROM_SEGMENT}" "value"
-              if [[ (-n "${FROM_SEGMENT}") &&
-                      (-n "${FROM_ACCOUNT}")]]; then
-                  defineGitProviderSettings    "FROM_ACCOUNT" "" "${FROM_ACCOUNT}" "" "github"
-                  defineGitProviderSettings    "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT_GIT_PROVIDER}"
-                  defineRepoSettings           "FROM_PRODUCT" "CONFIG" "${PRODUCT}" "${FROM_SEGMENT}" "${PRODUCT}-cmdb"
-                  for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
-                      defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
-                  done
-              else
-                  fatal "PROMOTION segment/account not defined" && exit
-              fi
-              ;;
-  
-          #  Hotfix details
-          ${RELEASE_MODE_HOTFIX})
-              findAndDefineSetting "FROM_SEGMENT" "HOTFIX_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
-              # Hard code some defaults for now
-              if [[ -z "${FROM_SEGMENT}" ]]; then
-                  case "${SEGMENT}" in
-                      *)
-                          FROM_SEGMENT="integration"
-                          ;;
-                  esac
-                  define_context_property "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
-              fi
-  
-              findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"
-              if [[ (-n "${FROM_SEGMENT}") &&
-                      (-n "${FROM_ACCOUNT}")]]; then
-                  for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
-                      defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
-                  done
-              else
-                  fatal "HOTFIX segment/account not defined" && exit
-              fi
-              ;;
-      esac
-  fi
+  case "${RELEASE_MODE}" in
+      # Promotion details
+      ${RELEASE_MODE_SELECTIVE}|${RELEASE_MODE_PROMOTION})
+          findAndDefineSetting "FROM_SEGMENT" "PROMOTION_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
+          # Hard code some defaults for now
+          if [[ -z "${FROM_SEGMENT}" ]]; then
+              case "${SEGMENT}" in
+                  staging|preproduction)
+                      FROM_SEGMENT="integration"
+                      ;;
+                  production)
+                      FROM_SEGMENT="preproduction"
+                      ;;
+              esac
+              define_context_property "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
+          fi
+
+          findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${FROM_SEGMENT}" "value"
+          if [[ (-n "${FROM_SEGMENT}") &&
+                  (-n "${FROM_ACCOUNT}")]]; then
+              defineGitProviderSettings    "FROM_ACCOUNT" "" "${FROM_ACCOUNT}" "" "github"
+              defineGitProviderSettings    "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT_GIT_PROVIDER}"
+              defineRepoSettings           "FROM_PRODUCT" "CONFIG" "${PRODUCT}" "${FROM_SEGMENT}" "${PRODUCT}-cmdb"
+              for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
+                  defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
+              done
+          else
+              fatal "PROMOTION segment/account not defined" && exit
+          fi
+          ;;
+
+      #  Hotfix details
+      ${RELEASE_MODE_HOTFIX})
+          findAndDefineSetting "FROM_SEGMENT" "HOTFIX_FROM_SEGMENT" "${PRODUCT}" "${SEGMENT}" "value"
+          # Hard code some defaults for now
+          if [[ -z "${FROM_SEGMENT}" ]]; then
+              case "${SEGMENT}" in
+                  *)
+                      FROM_SEGMENT="integration"
+                      ;;
+              esac
+              define_context_property "FROM_SEGMENT" "${FROM_SEGMENT}" "lower"
+          fi
+
+          findAndDefineSetting "FROM_ACCOUNT" "ACCOUNT" "${PRODUCT}" "${HOTFIX_FROM_SEGMENT}" "value"
+          if [[ (-n "${FROM_SEGMENT}") &&
+                  (-n "${FROM_ACCOUNT}")]]; then
+              for REGISTRY_TYPE in "${REGISTRY_TYPES[@]}"; do
+                  defineRegistryProviderSettings "${REGISTRY_TYPE}" "FROM_PRODUCT" "" "${PRODUCT}" "${FROM_SEGMENT}" "${FROM_ACCOUNT}"
+              done
+          else
+              fatal "HOTFIX segment/account not defined" && exit
+          fi
+          ;;
+  esac
   
   
   ### Tags ###

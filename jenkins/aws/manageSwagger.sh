@@ -5,6 +5,5 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 
 # Note that filename can still overridden via provided parameters
 ${AUTOMATION_DIR}/manageS3Registry.sh -x -y "swagger" -f "swagger.zip" "$@"
-
 RESULT=$?
 

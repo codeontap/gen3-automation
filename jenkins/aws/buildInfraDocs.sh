@@ -48,7 +48,8 @@ function main() {
   if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then
     
     # Allow access to all files that have been generated so they can be cleaned up. 
-    chmod -R a+rwx "${AUTOMATION_BUILD_SRC_DIR}/_site/"
+    chmod a+rwx  "${AUTOMATION_BUILD_SRC_DIR}/_site"
+    chmod -R a+rwx  "${AUTOMATION_BUILD_SRC_DIR}/_site/"
 
     mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
     

@@ -9,26 +9,26 @@ function main() {
   cd ${AUTOMATION_BUILD_SRC_DIR}
   
   # Create Build folders for Jenkins Permissions
-  mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/outdir
-  chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/outdir
+  mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/stage
+  chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/stage
 
   # run Model Bender build using Docker Build image 
   info "Running ModelBender enterprise tasks..."
   docker run --rm \
     --volume="${AUTOMATION_BUILD_SRC_DIR}:/work/indir" \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/work/outdir" \
+    --volume="${AUTOMATION_BUILD_SRC_DIR}/stage:/work/outdir" \
     codeontap/modelbender:latest \
     enterprise --indir=indir --outdir=outdir
 
   info "Rendering ModelBender content..."
   docker run --rm \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/work/indir" \
+    --volume="${AUTOMATION_BUILD_SRC_DIR}/stage:/work/indir" \
     codeontap/modelbender:latest \
     render --indir=indir
 
   mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
   
-  cd "${AUTOMATION_BUILD_SRC_DIR}/outdir"
+  cd "${AUTOMATION_BUILD_SRC_DIR}/stage"
   zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/contentnode.zip" * 
 
   # All good

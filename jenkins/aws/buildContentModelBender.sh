@@ -12,9 +12,6 @@ function main() {
   mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/stage
   chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/stage
 
-  mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/outdir
-  chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/outdir
-
   # run Model Bender build using Docker Build image 
   info "Running ModelBender enterprise tasks..."
   docker run --rm \
@@ -26,13 +23,12 @@ function main() {
   info "Rendering ModelBender content..."
   docker run --rm \
     --volume="${AUTOMATION_BUILD_SRC_DIR}/stage:/work/indir" \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/work/outdir" \
     codeontap/modelbender:latest \
-    render --indir=indir --outdir=outdir
+    render --indir=indir
 
   mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
   
-  cd "${AUTOMATION_BUILD_SRC_DIR}/outdir"
+  cd "${AUTOMATION_BUILD_SRC_DIR}/stage"
   zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/contentnode.zip" * 
 
   # All good

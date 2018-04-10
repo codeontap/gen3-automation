@@ -9,9 +9,6 @@ function main() {
   cd ${AUTOMATION_BUILD_SRC_DIR}
   
   # Create Build folders for Jenkins Permissions
-  mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/stage
-  chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/stage
-
   mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/outdir
   chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/outdir
 
@@ -25,10 +22,9 @@ function main() {
 
   info "Rendering ModelBender content..."
   docker run --rm \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/stage:/work/indir" \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/work/outdir" \
+    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/work/indir" \
     codeontap/modelbender:latest \
-    render --indir=indir --outdir=outdir
+    render --indir=indir
 
   mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
   

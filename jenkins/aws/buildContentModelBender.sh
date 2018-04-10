@@ -16,7 +16,7 @@ function main() {
   info "Running ModelBender enterprise tasks..."
   docker run --rm \
     --volume="${AUTOMATION_BUILD_SRC_DIR}:/work/indir" \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/stage:/work/outdir" \
+    --volume="${AUTOMATION_BUILD_SRC_DIR}/outdir:/work/outdir" \
     codeontap/modelbender:latest \
     enterprise --indir=indir --outdir=outdir
 

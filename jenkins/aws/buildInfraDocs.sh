@@ -4,6 +4,8 @@
 trap '[[ (-z "${AUTOMATION_DEBUG}") ; exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
+tmpdir="$(getTempDir "cota_inf_XXX")"
+
 function main() {
   # Make sure we are in the build source directory
   cd ${AUTOMATION_BUILD_SRC_DIR}
@@ -32,8 +34,7 @@ function main() {
   touch ${AUTOMATION_BUILD_SRC_DIR}/Gemfile.lock
   chmod a+w ${AUTOMATION_BUILD_SRC_DIR}/Gemfile.lock
 
-  mkdir -p ${AUTOMATION_BUILD_SRC_DIR}/_site
-  chmod a+rwx ${AUTOMATION_BUILD_SRC_DIR}/_site
+  mkdir -p ${tmpdir}/_site
 
   # run Jekyll build using Docker Build image 
   info "Running Jeykyll build"
@@ -41,19 +42,15 @@ function main() {
     --env JEKYLL_ENV="${JEKYLL_ENV}" \
     --env TZ="${JEKYLL_TIMEZONE}" \
     --volume="${AUTOMATION_BUILD_SRC_DIR}:/indir" \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}/_site:/outdir" \
+    --volume="${tmpdir}/_site:/outdir" \
     codeontap/infradocs:"${INFRADOCS_VERSION}" 
 
   # Package for spa if required
-  if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then
+  if [[ -f "${tmpdir}/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then
     
-    # Allow access to all files that have been generated so they can be cleaned up. 
-    chmod a+rwx  "${AUTOMATION_BUILD_SRC_DIR}/_site"
-    chmod -R a+rwx  "${AUTOMATION_BUILD_SRC_DIR}/_site/"
-
     mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
     
-    cd "${AUTOMATION_BUILD_SRC_DIR}/_site"
+    cd "${tmpdir}/_site"
     zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/spa.zip" * 
     
   else 

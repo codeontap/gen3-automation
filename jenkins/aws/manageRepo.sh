@@ -149,8 +149,15 @@ function push() {
 
         trace "Pushing the ${REPO_LOG_NAME} repo upstream..."
         git push --tags ${REPO_REMOTE} ${REPO_BRANCH}
+        # If push failed HEAD might be detached. Create a temp branch and merge it to the target to fix it.
         RESULT=$? && [[ ${RESULT} -ne 0 ]] && \
-            fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}" && return 1
+            git branch temp-${REPO_BRANCH} && \
+            git checkout ${REPO_BRANCH} && \
+            git merge temp-${REPO_BRANCH} && \
+            git branch -D temp-${REPO_BRANCH} && \
+            git push --tags ${REPO_REMOTE} ${REPO_BRANCH} && \
+            RESULT=$? && [[ ${RESULT} -ne 0 ]] && \
+                fatal "Can't push the ${REPO_LOG_NAME} repo changes to upstream repo ${REPO_REMOTE}" && return 1
     fi
 }
 

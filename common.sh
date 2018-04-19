@@ -39,6 +39,12 @@ function save_product_infrastructure() {
   save_repo "${PRODUCT_INFRASTRUCTURE_DIR}" "infrastructure" "${arguments[@]}"
 }
 
+function save_product_code() {
+  local arguments=("$@")
+
+  save_repo "${AUTOMATION_BUILD_DIR}" "code" "${arguments[@]}"
+}
+
 # -- Context properties file --
 
 function save_context_property() {

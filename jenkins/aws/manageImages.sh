@@ -105,6 +105,20 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             ;;
 
+        scripts) 
+            IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/scripts.zip"
+            
+            if [[ -f "${IMAGE_FILE}" ]]; then
+                ${AUTOMATION_DIR}/manageScripts.sh -s \
+                        -u "${DEPLOYMENT_UNIT}" \
+                        -g "${CODE_COMMIT}" \
+                        -f "${IMAGE_FILE}"
+                RESULT=$? && [[ "${RESULT}" -ne 0 ]]&& exit
+            else
+                RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
+            fi
+            ;;
+
         swagger)
             IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/swagger.zip"
 

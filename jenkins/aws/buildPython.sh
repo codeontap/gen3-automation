@@ -7,6 +7,9 @@ trap '[[ (-z "${AUTOMATION_DEBUG}") && (-d "${venv_dir}") ]] && rm -rf "${venv_d
 function main() {
   # Make sure we are in the build source directory
   cd ${AUTOMATION_BUILD_SRC_DIR}
+  
+  # Update git origin url for product code repo to specify automation user credentials for successful push
+  [[ -n "${PRODUCT_CODE_REPO}" ]] && git remote set-url origin https://${GITHUB_CREDENTIALS}@${GITHUB_GIT_DNS}/${GITHUB_GIT_ORG}/${PRODUCT_CODE_REPO}.git
 
   # Determine required tasks
   # test is always required

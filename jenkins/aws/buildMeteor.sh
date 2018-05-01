@@ -11,7 +11,7 @@ cd app
 NODE_PACKAGE_MANAGER="${NODE_PACKAGE_MANAGER:-yarn}"
 
 # Install required node modules
-${NODE_PACKAGE_MANAGER} install --production
+${NODE_PACKAGE_MANAGER} install
 RESULT=$?
 [[ $RESULT -ne 0 ]] && fatal "npm install failed"
 

@@ -17,9 +17,9 @@ if [[ -n "${COMPONENT}" ]]; then
 fi
 
 # Snapshot the database
-cd $(findGen3SegmentDir "${AUTOMATION_DATA_DIR}/${ACCOUNT}" "${PRODUCT}" "${SEGMENT}")
+cd "${SEGMENT_SOLUTIONS_DIR}"
 
 ${GENERATION_DIR}/snapshotRDSDatabase.sh -s b${AUTOMATION_JOB_IDENTIFIER} ${SNAPSHOT_OPTS} "$@"
 RESULT=$?
-[[ ${RESULT} -ne 0 ]] && fatal "Snapshot of ${SEGMENT} failed"
+[[ ${RESULT} -ne 0 ]] && fatal "Snapshot of ${ENVIRONMENT}/${SEGMENT} failed"
 

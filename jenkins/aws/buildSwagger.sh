@@ -70,7 +70,7 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
         -c "${COMBINE_COMMAND}"
 fi
 
-[[ ! -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && fatal "Can't find source swagger file"
+[[ ! -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && fatal "Can't find source swagger file" && exit 1
 
 # Validate it
 # We use a few different validators until we settle on a preferred one
@@ -79,9 +79,8 @@ VALIDATORS=( \
 "swagger-tools validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})" \
 "ajv           validate -d /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE}) -s /usr/local/lib/node_modules/swagger-schema-official/schema.json")
 for VALIDATOR in "${VALIDATORS[@]}"; do
-    docker run --rm -v "${tmpdir}:/app/indir" codeontap/utilities ${VALIDATOR}
-    RESULT=$?
-    [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file is not valid"
+    docker run --rm -v "${tmpdir}:/app/indir" codeontap/utilities ${VALIDATOR} ||
+      { exit_status=$?; fatal "Swagger file is not valid"; exit ${exit_status}; }
 done
 
 #a new path for a cleaned up swagger file
@@ -106,7 +105,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
 
     # Check generation was successful
     [[ ! -f "${SWAGGER_RESULT_FILE}" ]] &&
-        fatal "Can't find generated swagger files. Were they generated successfully?"
+        fatal "Can't find generated swagger files. Were they generated successfully?" && exit 1
 else
     zip "${SWAGGER_RESULT_FILE}" "${CLEAN_SWAGGER_SPEC_FILE}"
 fi
@@ -121,7 +120,7 @@ docker run --rm \
     -e SWAGGER_JSON=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") \
     codeontap/swaggerui-export
 RESULT=$?
-[[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed"
+[[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed" && exit 1
 
 # All good
 RESULT=0

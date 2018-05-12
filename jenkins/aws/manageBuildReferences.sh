@@ -17,7 +17,7 @@ function usage() {
 
 Manage build references for one or more deployment units
 
-Usage: $(basename $0)   -s DEPLOYMENT_UNIT_LIST -g SEGMENT_APPSETTINGS_DIR
+Usage: $(basename $0)   -s DEPLOYMENT_UNIT_LIST -g SEGMENT_BUILDS_DIR
                         -c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST 
                         -p CODE_PROVIDER_LIST -i IMAGE_FORMATS_LIST
                         -a ACCEPTANCE_TAG -v VERIFICATION_TAG -f -l -u
@@ -25,7 +25,7 @@ where
 (o) -a ACCEPTANCE_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_ACCEPT}) to tag all builds as accepted
 (o) -c CODE_COMMIT_LIST             is the commit for each deployment unit
 (o) -f (REFERENCE_OPERATION=${REFERENCE_OPERATION_LISTFULL}) to detail full build info
-(o) -g SEGMENT_APPSETTINGS_DIR      is the segment appsettings to be managed
+(o) -g SEGMENT_BUILDS_DIR            is the segment builds directory tree to be managed
     -h                              shows this text
 (o) -i IMAGE_FORMATS_LIST           is the list of image formats for each deployment unit
 (o) -l (REFERENCE_OPERATION=${REFERENCE_OPERATION_LIST}) to detail DEPLOYMENT_UNIT_LIST build info
@@ -171,7 +171,7 @@ while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
             REFERENCE_OPERATION="${REFERENCE_OPERATION_LISTFULL}"
             ;;
         g)
-            SEGMENT_APPSETTINGS_DIR="${OPTARG}"
+            SEGMENT_BUILDS_DIR="${OPTARG}"
             ;;
         h)
             usage
@@ -229,13 +229,13 @@ case ${REFERENCE_OPERATION} in
 
     ${REFERENCE_OPERATION_LISTFULL})
         # Populate DEPLOYMENT_UNIT_LIST based on current appsettings
-        [[ -z "${SEGMENT_APPSETTINGS_DIR}" ]] && fatalMandatory && exit
+        [[ -z "${SEGMENT_BUILDS_DIR}" ]] && fatalMandatory && exit
         ;;
 
     ${REFERENCE_OPERATION_UPDATE})
         # Update builds based on provided deployment unit list
         [[ (-z "${DEPLOYMENT_UNIT_LIST}") ||
-            (-z "${SEGMENT_APPSETTINGS_DIR}") ]] && fatalMandatory && exit
+            (-z "${SEGMENT_BUILDS_DIR}") ]] && fatalMandatory && exit
         ;;
 
     ${REFERENCE_OPERATION_VERIFY})
@@ -258,10 +258,10 @@ CODE_REPO_ARRAY=(${CODE_REPO_LIST})
 CODE_PROVIDER_ARRAY=(${CODE_PROVIDER_LIST})
 IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS_LIST})
 
-if [[ -n "${SEGMENT_APPSETTINGS_DIR}" ]]; then
+if [[ -n "${SEGMENT_BUILDS_DIR}" ]]; then
     # Most operations require access to the segment build settings
-    mkdir -p ${SEGMENT_APPSETTINGS_DIR}
-    cd ${SEGMENT_APPSETTINGS_DIR}
+    mkdir -p ${SEGMENT_BUILDS_DIR}
+    cd ${SEGMENT_BUILDS_DIR}
 fi
 
 if [[ ("${REFERENCE_OPERATION}" == "${REFERENCE_OPERATION_LISTFULL}") ]]; then
@@ -302,7 +302,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
     fi
     
     # Ensure appsettings directories exist
-    if [[ -n "${SEGMENT_APPSETTINGS_DIR}" ]]; then
+    if [[ -n "${SEGMENT_BUILDS_DIR}" ]]; then
         mkdir -p "${CURRENT_DEPLOYMENT_UNIT}" "${EFFECTIVE_DEPLOYMENT_UNIT}"
     fi
 

@@ -13,59 +13,100 @@ function namedef_supported() {
 
 # -- Error handling  --
 
+export LOG_LEVEL_DEBUG="debug"
+export LOG_LEVEL_TRACE="trace"
+export LOG_LEVEL_INFORMATION="info"
+export LOG_LEVEL_WARNING="warn"
+export LOG_LEVEL_ERROR="error"
+export LOG_LEVEL_FATAL="fatal"
+
+declare -A LOG_LEVEL_ORDER
+LOG_LEVEL_ORDER=(
+  ["${LOG_LEVEL_DEBUG}"]="0"
+  ["${LOG_LEVEL_TRACE}"]="1"
+  ["${LOG_LEVEL_INFORMATION}"]="3"
+  ["${LOG_LEVEL_WARNING}"]="5"
+  ["${LOG_LEVEL_ERROR}"]="7"
+  ["${LOG_LEVEL_FATAL}"]="9"
+)
+
+function checkLogLevel() {
+  local level="$1"
+
+  [[ (-n "${level}") && (-n "${LOG_LEVEL_ORDER[${level}]}") ]] && { echo -n "${level}"; return 0; }
+  [[ -n "${GENERATION_DEBUG}" ]] && { echo -n "${LOG_LEVEL_DEBUG}"; return 0; }
+  echo -n "${LOG_LEVEL_INFORMATION}"
+  return 0
+}
+
+# Default implementation - can be overriden by caller
+function getLogLevel() {
+  checkLogLevel
+}
+
+# Default implementation - can be overriden by caller but must honour parameter order
+function outputLogEntry() {
+  local severity="${1^}"; shift
+  local parts=("$@")
+
+  echo -e "\n(${severity})" "${parts[@]}"
+  return 0
+}
+
+function willLog() {
+  local severity="$1"
+
+  [[ ${LOG_LEVEL_ORDER[$(getLogLevel)]} -le ${LOG_LEVEL_ORDER[${severity}]} ]]
+}
+
 function message() {
   local severity="$1"; shift
   local parts=("$@")
 
-  echo -e "\n(${severity})" "${parts[@]}"
+  if willLog "${severity}"; then
+    outputLogEntry "${severity}" "${parts[@]}"
+  else
+    return 0
+  fi
 }
 
 function locationMessage() {
-  local parts=("$@")
+  local restore_nullglob=$(shopt -p nullglob)
+  local restore_globstar=$(shopt -p globstar)
+  shopt -u nullglob globstar
 
-  echo -n "${parts[@]}" "Are we in the right place?"
+  echo -n "$@" "Are we in the right place?"
+
+  ${restore_nullglob}
+  ${restore_globstar}
 }
 
 function cantProceedMessage() {
-  local parts=("$@")
-
-  echo -n "${parts[@]}" "Nothing to do."
+  echo -n "$@" "Nothing to do."
 }
 
 function debug() {
-  local parts=("$@")
-
-  [[ -n "${GENERATION_DEBUG}" ]] && message "Debug" "${parts[@]}"
+  message "${LOG_LEVEL_DEBUG}" "$@"
 }
 
 function trace() {
-  local parts=("$@")
-
-  [[ "$(getLogLevel)" == "trace" ]] && message "Trace" "${parts[@]}"
+  message "${LOG_LEVEL_TRACE}" "$@"
 }
 
 function info() {
-  local parts=("$@")
-
-  message "Info" "${parts[@]}"
+  message "${LOG_LEVEL_INFORMATION}" "$@"
 }
 
 function warning() {
-  local parts=("$@")
-
-  message "Warning" "${parts[@]}"
+  message "${LOG_LEVEL_WARNING}" "$@"
 }
 
 function error() {
-  local parts=("$@")
-
-  message "Error" "${parts[@]}" >&2
+  message "${LOG_LEVEL_ERROR}" "$@" >&2
 }
 
 function fatal() {
-  local parts=("$@")
-
-  message "Fatal" "${parts[@]}" >&2
+  message "${LOG_LEVEL_FATAL}" "$@" >&2
 }
 
 function fatalOption() {
@@ -81,19 +122,15 @@ function fatalOptionArgument() {
 }
 
 function fatalCantProceed() {
-  local parts=("$@")
-
-  fatal "$(cantProceedMessage "${parts[@]}")"
+  fatal "$(cantProceedMessage "$@")"
 }
 
 function fatalLocation() {
-  local parts=("$@")
-
   local restore_nullglob=$(shopt -p nullglob)
   local restore_globstar=$(shopt -p globstar)
   shopt -u nullglob globstar
 
-  fatal "$(locationMessage "${parts[@]}")"
+  fatal "$(locationMessage "$@")"
 
   ${restore_nullglob}
   ${restore_globstar}
@@ -123,38 +160,52 @@ function contains() {
   [[ "${string}" =~ ${pattern} ]]
 }
 
+function generateComplexString() {
+  # String suitable for a password - Alphanumeric and special characters
+  local length="$1"; shift
+
+  echo "$(dd bs=256 count=1 if=/dev/urandom | base64 | env LC_CTYPE=C tr -dc '[:punct:][:alnum:]' | tr -d '@"/'  | fold -w "${length}" | head -n 1)" || return $?
+}
+
+function generateSimpleString() {
+  # Simple string - Alphanumeric only
+  local length="$1"; shift
+
+  echo "$(dd bs=256 count=1 if=/dev/urandom | base64 | env LC_CTYPE=C tr -dc '[:alnum:]' | fold -w "${length}" | head -n 1)" || return $?
+}
+
 # -- File manipulation --
 
 function formatPath() {
-  local parts=("$@")
-
-  join "/" "${parts[@]}"
+  join "/" "$@"
 }
 
 function filePath() {
   local file="$1"; shift
 
-  echo "${file%/*}"
+  contains "${file}" "/" &&
+    echo -n "${file%/*}" ||
+    echo -n ""
 }
 
 function fileName() {
   local file="$1"; shift
 
-  echo "${file##*/}"
+  echo -n "${file##*/}"
 }
 
 function fileBase() {
   local file="$1"; shift
 
   local name="$(fileName "${file}")"
-  echo "${name%.*}"
+  echo -n "${name%.*}"
 }
 
 function fileExtension() {
   local file="$1"; shift
 
   local name="$(fileName "${file}")"
-  echo "${name##*.}"
+  echo -n "${name##*.}"
 }
 
 function fileContents() {
@@ -261,63 +312,6 @@ function findFiles() {
   fi
 
   return 1
-}
-
-# -- Temporary file management --
-
-# OS Temporary directory
-function getOSTempRootDir() {
-  uname | grep -iq "MINGW64" &&
-    echo -n "c:/tmp" ||
-    echo -n "$(filePath $(mktemp -u -t tmp.XXXXXXXXXX))"
-}
-
-# Default implementation - can be overriden by caller
-function getTempRootDir() {
-  getOSTempRootDir
-}
-
-function getTempDir() {
-  local template="$1"; shift
-  local temp_path="$1"; shift
-
-  [[ -z "${template}" ]] && template="XXX"
-  [[ -z "${temp_path}" ]] && temp_path="$(getTempRootDir)"
-
-  [[ -n "${temp_path}" ]] &&
-    mktemp -d "${temp_path}/${template}" ||
-    mktemp -d "$(getOSTempRootDir)/${template}"
-}
-
-function getTempFile() {
-  local template="$1"; shift
-  local temp_path="$1"; shift
-
-  [[ -z "${template}" ]] && template="XXX"
-  [[ -z "${temp_path}" ]] && temp_path="$(getTempRootDir)"
-
-  [[ -n "${temp_path}" ]] &&
-    mktemp    "${temp_path}/${template}" ||
-    mktemp -t "${template}"
-}
-
-function cleanup() {
-  local root_dir="${1:-.}"
-
-  find "${root_dir}" -name "composite_*" -delete
-  find "${root_dir}" -name "STATUS.txt" -delete
-  find "${root_dir}" -name "stripped_*" -delete
-  find "${root_dir}" -name "ciphertext*" -delete
-  find "${root_dir}" -name "temp_*" -type f -delete
-
-  # Handle cleanup of temporary directories
-  temp_dirs=($(find "${root_dir}" -name "temp_*" -type d))
-  for temp_dir in "${temp_dirs[@]}"; do
-    # Subdir may already have been deleted by parent temporary directory
-    if [[ -e "${temp_dir}" ]]; then
-      rm -rf "${temp_dir}"
-    fi
-  done
 }
 
 # -- Array manipulation --
@@ -435,56 +429,164 @@ function reverseArray() {
   fi
 }
 
-function addToArrayWithPrefix() {
+function addToArrayInternal() {
   if namedef_supported; then
     local -n array="$1"; shift
   else
     local array_name="$1"; shift
     eval "local array=(\"\${${array_name}[@]}\")"
   fi
+  local type="$1"; shift
   local prefix="$1"; shift
   local elements=("$@")
 
   for element in "${elements[@]}"; do
     if [[ -n "${element}" ]]; then
-      array+=("${prefix}${element}")
+      [[ "${type,,}" == "stack" ]] &&
+        array=("${prefix}${element}" "${array[@]}") ||
+        array+=("${prefix}${element}")
     fi
   done
 
   ! namedef_supported && eval "${array_name}=(\"\${array[@]}\")"
+  return 0
+}
+
+function removeFromArrayInternal() {
+  if namedef_supported; then
+    local -n array="$1"; shift
+  else
+    local array_name="$1"; shift
+    eval "local array=(\"\${${array_name}[@]}\")"
+  fi
+  local type="$1"; shift
+  local count="${1:-1}"; shift
+
+  local remaining=$(( ${#array[@]} - ${count} ))
+  [[ ${remaining} -lt 0 ]] && remaining=0
+
+  [[ "${type,,}" == "stack" ]] &&
+    array=("${array[@]:${count}}") ||
+    array=("${array[@]:0:${remaining}}")
+
+  ! namedef_supported && eval "${array_name}=(\"\${array[@]}\")"
+  return 0
 }
 
 function addToArray() {
   local array="$1"; shift
   local elements=("$@")
 
-  addToArrayWithPrefix "${array}" "" "${elements[@]}"
-}
-
-function addToArrayHeadWithPrefix() {
-  if namedef_supported; then
-    local -n array="$1"; shift
-  else
-    local array_name="$1"; shift
-    eval "local array=(\"\${${array_name}[@]}\")"
-  fi
-  local prefix="$1"; shift
-  local elements=("$@")
-
-  for element in "${elements[@]}"; do
-    if [[ -n "${element}" ]]; then
-      array=("${prefix}${element}" "${array[@]}")
-    fi
-  done
-
-  ! namedef_supported && eval "${array_name}=(\"\${array[@]}\")"
+  addToArrayInternal "${array}" "array" "" "${elements[@]}"
 }
 
 function addToArrayHead() {
   local array="$1"; shift
   local elements=("$@")
 
-  addToArrayHeadWithPrefix "${array}" "" "${elements[@]}"
+  addToArrayInternal "${array}" "stack" "" "${elements[@]}"
+}
+
+function removeFromArray() {
+  local array="$1"; shift
+  local count="$1"; shift
+
+  removeFromArrayInternal "${array}" "array" "${count}"
+}
+
+function removeFromArrayHead() {
+  local array="$1"; shift
+  local count="$1"; shift
+
+  removeFromArrayInternal "${array}" "stack" "${count}"
+}
+
+function pushStack() {
+  local array="$1"; shift
+  local elements=("$@")
+
+  addToArrayHead "${array}" "${elements[@]}"
+}
+
+function popStack() {
+  local array="$1"; shift
+  local count="$1"; shift
+
+  removeFromArrayHead "${array}" "${count}"
+}
+
+# -- Temporary file management --
+
+# OS Temporary directory
+function getOSTempRootDir() {
+  uname | grep -iq "MINGW64" &&
+    echo -n "c:/tmp" ||
+    echo -n "$(filePath $(mktemp -u -t tmp.XXXXXXXXXX))"
+}
+
+# Default implementation - can be overriden by caller
+function getTempRootDir() {
+  getOSTempRootDir
+}
+
+function getTempDir() {
+  local template="$1"; shift
+  local tmp_dir="$1"; shift
+
+  [[ -z "${template}" ]] && template="XXXX"
+  [[ -z "${tmp_dir}" ]] && tmp_dir="$(getTempRootDir)"
+
+  [[ -n "${tmp_dir}" ]] &&
+    mktemp -d "${tmp_dir}/${template}" ||
+    mktemp -d "$(getOSTempRootDir)/${template}"
+}
+
+export tmp_dir_stack=()
+
+function pushTempDir() {
+  local template="$1"; shift
+
+  local tmp_dir="$( getTempDir "${template}" "${tmp_dir_stack[0]}" )"
+
+  pushStack "tmp_dir_stack" "${tmp_dir}"
+}
+
+function popTempDir() {
+  local count="${1:-1}"; shift
+
+  # Popped value not returned but keep the code here for now
+  local index=$(( $count - 1 ))
+  local tmp_dir="${tmp_dir_stack[@]:${index}:1}"
+
+  popStack "tmp_dir_stack" "${count}"
+}
+
+function getTopTempDir() {
+  echo -n "${tmp_dir_stack[@]:0:1}"
+}
+
+function getTempFile() {
+  local template="$1"; shift
+  local tmp_dir="$1"; shift
+
+  [[ -z "${template}" ]] && template="XXXX"
+  [[ -z "${tmp_dir}" ]] && tmp_dir="$(getTempRootDir)"
+
+  [[ -n "${tmp_dir}" ]] &&
+    mktemp    "${tmp_dir}/${template}" ||
+    mktemp -t "${template}"
+}
+
+# -- Cli file generation --
+function split_cli_file() {
+  local cli_file="$1"; shift
+  local outdir="$1"; shift
+
+  for resource in $( jq -r 'keys[]' <"${cli_file}" ) ; do
+    for command in $( jq -r ".$resource | keys[]"<"${cli_file}" ); do
+        jq ".${resource}.${command}" >"${outdir}/cli-${resource}-${command}.json" <"${cli_file}"
+    done
+  done
 }
 
 # -- JSON manipulation --
@@ -493,23 +595,58 @@ function runJQ() {
   local arguments=("$@")
 
   # TODO(mfl): remove once path length limitations in jq are fixed
-  local tmpdir="$( getTempDir "jq_XXX" )"
+
+  local file_seen="false"
+  local file
+  local tmp_dir="."
   local modified_arguments=()
-  local index=0
+  local return_status
 
   for argument in "${arguments[@]}"; do
     if [[ -f "${argument}" ]]; then
-      local file="$( getTempFile "XXX" "${tmpdir}" )"
+      if [[ "${file_seen}" != "true" ]]; then
+        pushTempDir "${FUNCNAME[0]}_XXXX"
+        tmp_dir="$(getTopTempDir)"
+        file_seen="true"
+      fi
+      file="$( getTempFile "XXXX" "${tmp_dir}" )"
       cp "${argument}" "${file}" > /dev/null
       modified_arguments+=("./$(fileName "${file}" )")
     else
       modified_arguments+=("${argument}")
     fi
-    ((index++))
   done
 
   # TODO(mfl): Add -L once path length limitations fixed
-  (cd ${tmpdir}; jq "${modified_arguments[@]}")
+  (cd ${tmp_dir}; jq "${modified_arguments[@]}"); return_status=$?
+  [[ "${file_seen}" == "true" ]] && popTempDir
+  return ${return_status}
+}
+
+function jqMergeFilter() {
+  local files=("$@")
+
+  local command_line=""
+  local index=0
+
+  for f in "${files[@]}"; do
+    [[ "${index}" > 0 ]] && command_line+=" * "
+    command_line+=".[${index}]"
+    index=$(( $index + 1 ))
+  done
+
+  echo -n "${command_line}"
+}
+
+function jqMerge() {
+  local files=("$@")
+
+  if [[ "${#files[@]}" -gt 0 ]]; then
+    runJQ -s "$( jqMergeFilter "${files[@]}" )" "${files[@]}"
+  else
+    echo -n "{}"
+    return 0
+  fi
 }
 
 function getJSONValue() {
@@ -534,10 +671,44 @@ function addJSONAncestorObjects() {
   local pattern="."
 
   for (( index=${#ancestors[@]}-1 ; index >= 0 ; index-- )) ; do
-    pattern="{\"${ancestors[index]}\" : ${pattern} }"
+    [[ -n "${ancestors[index]}" ]] && pattern="{\"${ancestors[index]}\" : ${pattern} }"
   done
 
   runJQ "${pattern}" < "${file}"
+}
+
+# -- KMS --
+function decrypt_kms_string() {
+  local region="$1"; shift
+  local value="$1"; shift
+
+  pushTempDir "${FUNCNAME[0]}_XXXX"
+  local tmp_file="$(getTopTempDir)/value"
+  local return_status
+
+  echo "${value}" | base64 --decode > "${tmp_file}"
+  aws --region "${region}" kms decrypt --ciphertext-blob "fileb://${tmp_file}" --output text --query Plaintext | base64 --decode; return_status=$?
+
+  popTempDir
+  return ${return_status}
+}
+
+function encrypt_kms_string() {
+  local region="$1"; shift
+  local value="$1"; shift
+  local kms_key_id="$1"; shift
+
+  aws --region "${region}" kms encrypt --key-id "${kms_key_id}" --plaintext "${value}" --query CiphertextBlob --output text
+}
+
+# -- Cognito --
+
+function update_cognito_userpool() {
+  local region="$1"; shift
+  local userpoolid="$1"; shift
+  local configfile="$1"; shift
+
+  aws --region ${region} cognito-idp update-user-pool --user-pool-id "${userpoolid}" --cli-input-json "file://${configfile}"
 }
 
 # -- S3 --
@@ -547,10 +718,9 @@ function isBucketAccessible() {
   local bucket="$1"; shift
   local prefix="$1"; shift
 
-  local result_file="$( getTempFile "s3_access_XXX.txt")"
+  local result_file="$(getTopTempDir)/is_bucket_accessible_XXXX.txt"
 
   aws --region ${region} s3 ls "s3://${bucket}/${prefix}${prefix:+/}" > "${result_file}"
-  return $?
 }
 
 function copyFilesFromBucket() {
@@ -574,25 +744,29 @@ function syncFilesToBucket() {
   fi
   local optional_arguments=("$@")
 
-  local tmpdir="$( getTempDir "s3_sync_XXX")"
-
+  pushTempDir "${FUNCNAME[0]}_XXXX"
+  local tmp_dir="$(getTopTempDir)"
+  local return_status
 
   # Copy files locally so we can synch with S3, potentially including deletes
   for file in "${syncFiles[@]}" ; do
     if [[ -f "${file}" ]]; then
       case "$(fileExtension "${file}")" in
         zip)
-          unzip "${file}" -d "${tmpdir}"
+          unzip "${file}" -d "${tmp_dir}"
           ;;
         *)
-          cp "${file}" "${tmpdir}"
+          cp "${file}" "${tmp_dir}"
           ;;
       esac
     fi
   done
 
   # Now synch with s3
-  aws --region ${region} s3 sync "${optional_arguments[@]}" "${tmpdir}/" "s3://${bucket}/${prefix}${prefix:+/}"
+  aws --region ${region} s3 sync "${optional_arguments[@]}" "${tmp_dir}/" "s3://${bucket}/${prefix}${prefix:+/}"; return_status=$?
+
+  popTempDir
+  return ${return_status}
 }
 
 function deleteTreeFromBucket() {
@@ -606,14 +780,15 @@ function deleteTreeFromBucket() {
 }
 
 # -- PKI --
-
 function create_pki_credentials() {
   local dir="$1"; shift
 
   if [[ (! -f "${dir}/aws-ssh-crt.pem") &&
-        (! -f "${dir}/aws-ssh-prv.pem") ]]; then
-      openssl genrsa -out "${dir}/aws-ssh-prv.pem.plaintext" 2048 || return $?
-      openssl rsa -in "${dir}/aws-ssh-prv.pem.plaintext" -pubout > "${dir}/aws-ssh-crt.pem" || return $?
+        (! -f "${dir}/aws-ssh-prv.pem") &&
+        (! -f "${dir}/.aws-ssh-crt.pem") &&
+        (! -f "${dir}/.aws-ssh-prv.pem") ]]; then
+      openssl genrsa -out "${dir}/.aws-ssh-prv.pem.plaintext" 2048 || return $?
+      openssl rsa -in "${dir}/.aws-ssh-prv.pem.plaintext" -pubout > "${dir}/.aws-ssh-crt.pem" || return $?
   fi
 
   if [[ ! -f "${dir}/.gitignore" ]]; then
@@ -634,9 +809,11 @@ function delete_pki_credentials() {
   shopt -s nullglob
 
   rm -f "${dir}"/aws-ssh-crt* "${dir}"/aws-ssh-prv*
+  rm -f "${dir}"/.aws-ssh-crt* "${dir}"/.aws-ssh-prv*
 
   ${restore_nullglob}
 }
+
 # -- SSH --
 
 function update_ssh_credentials() {
@@ -669,9 +846,9 @@ function delete_ssh_credentials() {
 function update_oai_credentials() {
   local region="$1"; shift
   local name="$1"; shift
-  local result_file="${1:-$( getTempFile update_oai_XXX.json)}"; shift
+  local result_file="${1:-$( getTempFile update_oai_XXXX.json)}"; shift
 
-  local oai_list_file="$( getTempFile oai_list_XXX.json)"
+  local oai_list_file="$( getTempFile oai_list_XXXX.json)"
   local oai_id=
 
   # Check for existing identity
@@ -697,7 +874,7 @@ function delete_oai_credentials() {
   local region="$1"; shift
   local name="$1"; shift
 
-  local oai_delete_file="$( getTempFile oai_delete_XXX.json)"
+  local oai_delete_file="$( getTempFile oai_delete_XXXX.json)"
   local oai_id=
   local oai_etag=
 
@@ -727,15 +904,101 @@ function create_snapshot() {
   db_info=$(aws --region "${region}" rds describe-db-instances --db-instance-identifier ${db_identifier} )
 
   if [[ -n "${db_info}" ]]; then
-    aws --region "${region}" rds create-db-snapshot --db-snapshot-identifier "${db_snapshot_identifier}" --db-instance-identifier "${db_identifier}" > /dev/null 2>&1 || return $?
+    aws --region "${region}" rds create-db-snapshot --db-snapshot-identifier "${db_snapshot_identifier}" --db-instance-identifier "${db_identifier}" 1> /dev/null || return $?
     aws --region "${region}" rds wait db-snapshot-available --db-snapshot-identifier "${db_snapshot_identifier}"  || return $?
     db_snapshot=$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" || return $?)
   fi
-  echo -n "$(echo "${db_snapshot}" | jq -r '.DBSnapshots[0] | .DBSnapshotIdentifier + " " + .SnapshotCreateTime' )"
+  info "Snapshot Created - $(echo "${db_snapshot}" | jq -r '.DBSnapshots[0] | .DBSnapshotIdentifier + " " + .SnapshotCreateTime' )"
 }
 
+function encrypt_snapshot() {
+  local region="$1"; shift
+  local db_snapshot_identifier="$1"; shift
+  local kms_key_id="$1"; shift
+
+  # Check the snapshot status
+  snapshot_info=$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" || return $? )
+
+  if [[ -n "${snapshot_info}" ]]; then
+    if [[ $(echo "${snapshot_info}" | jq -r '.DBSnapshots[0].Status == "Available"') ]]; then
+
+      if [[ $(echo "${snapshot_info}" | jq -r '.DBSnapshots[0].Encrypted') == false ]]; then
+
+        info "Converting snapshot ${db_snapshot_identifier} to an encrypted snapshot"
+
+        # create encrypted snapshot
+        aws --region "${region}" rds copy-db-snapshot \
+          --source-db-snapshot-identifier "${db_snapshot_identifier}" \
+          --target-db-snapshot-identifier "encrypted-${db_snapshot_identifier}" \
+          --kms-key-id "${kms_key_id}" 1> /dev/null || return $?
+
+        info "Waiting for temp encrypted snapshot to become available..."
+        sleep 2
+        aws --region "${region}" rds wait db-snapshot-available --db-snapshot-identifier "encrypted-${db_snapshot_identifier}" || return $?
+
+        info "Removing plaintext snapshot..."
+        # delete the original snapshot
+        aws --region "${region}" rds delete-db-snapshot --db-snapshot-identifier "${db_snapshot_identifier}"  1> /dev/null || return $?
+        aws --region "${region}" rds wait db-snapshot-deleted --db-snapshot-identifier "${db_snapshot_identifier}"  || return $?
+
+        # Copy snapshot back to original identifier
+        info "Renaming encrypted snapshot..."
+        aws --region "${region}" rds copy-db-snapshot \
+          --source-db-snapshot-identifier "encrypted-${db_snapshot_identifier}" \
+          --target-db-snapshot-identifier "${db_snapshot_identifier}" 1> /dev/null || return $?
+
+        sleep 2
+        aws --region "${region}" rds wait db-snapshot-available --db-snapshot-identifier "${db_snapshot_identifier}"  || return $?
+
+        # Remove the encrypted temp snapshot
+        aws --region "${region}" rds delete-db-snapshot --db-snapshot-identifier "encrypted-${db_snapshot_identifier}"  1> /dev/null || return $?
+        aws --region "${region}" rds wait db-snapshot-deleted --db-snapshot-identifier "encrypted-${db_snapshot_identifier}"  || return $?
+
+        db_snapshot=$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" || return $?)
+        info "Snapshot Converted - $(echo "${db_snapshot}" | jq -r '.DBSnapshots[0] | .DBSnapshotIdentifier + " " + .SnapshotCreateTime + " Encrypted: " + (.Encrypted|tostring)' )"
+
+        return 0
+
+      else
+
+        echo "Snapshot ${db_snapshot_identifier} already encrypted"
+        return 0
+
+      fi
+
+    else
+      echo "Snapshot not in a usuable state $(echo "${snapshot_info}")"
+      return 255
+    fi
+  fi
+}
+
+function set_rds_master_password() {
+  local region="$1"; shift
+  local db_identifier="$1"; shift
+  local password="$1"; shift
+
+  info "Resetting master password for RDS instance ${db_identifier}"
+  aws --region "${region}" rds modify-db-instance --db-instance-identifier ${db_identifier} --master-user-password "${password}" 1> /dev/null
+}
+
+function get_rds_url() {
+  local engine="$1"; shift
+  local username="$1"; shift
+  local password="$1"; shift
+  local fqdn="$1"; shift
+  local port="$1"; shift
+  local database_name="$1"; shift
+
+  echo "${engine}://${username}:${password}@${fqdn}:${port}/${database_name}"
+}
 
 # -- Git Repo Management --
+
+function in_git_repo() {
+  git status >/dev/null 2>&1
+}
+
 function clone_git_repo() {
   local repo_provider="$1"; shift
   local repo_host="$1"; shift
@@ -803,4 +1066,67 @@ function push_git_repo() {
     fi
 
   return 0
+}
+
+function git_mv() {
+  in_git_repo && git mv "$@" || mv "$@"
+}
+
+function git_rm() {
+  in_git_repo && git rm "$@" || rm "$@"
+}
+
+# -- semver handling --
+# From github.com/fsaintjacques/semver-tool
+
+function semver_validate {
+  local version=$1
+
+[[ "$version" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-([^+]+))?(\+(.*))?$ ]] || return 1
+  local major=${BASH_REMATCH[1]}
+  local minor=${BASH_REMATCH[2]}
+  local patch=${BASH_REMATCH[3]}
+  local prere=${BASH_REMATCH[5]}
+  local build=${BASH_REMATCH[7]}
+
+  echo -n ${major} ${minor} ${patch} ${prere} ${build}
+  return 0
+}
+
+function semver_compare {
+  local v1="$(semver_validate "$1")"; shift
+  local v2="$(semver_validate "$1")"; shift
+
+  if [[ (-z "${v1}") || (-z "${v2}") ]]; then
+    echo -n "?"
+    return 1
+  fi
+
+  local v1_components=(${v1})
+  local v2_components=(${v2})
+
+  # MAJOR, MINOR and PATCH should compare numericaly
+  for i in 0 1 2; do
+    local diff=$((${v1_components[$i]} - ${v2_components[$i]}))
+    if [[ ${diff} -lt 0 ]]; then
+      echo -n -1; return 0
+    elif [[ ${diff} -gt 0 ]]; then
+      echo -n 1; return 0
+    fi
+  done
+
+  # PREREL should compare with the ASCII order.
+  if [[ -z "${v1_components[3]}" ]] && [[ -n "${v2_components[3]}" ]]; then
+    echo -n -1; return 0;
+  elif [[ -n "${v1_components[3]}" ]] && [[ -z "${v2_components[3]}" ]]; then
+    echo -n 1; return 0;
+  elif [[ -n "${v1_components[3]}" ]] && [[ -n "${v2_components[3]}" ]]; then
+    if [[ "${v1_components[3]}" > "${v2_components[3]}" ]]; then
+      echo -n 1; return 0;
+    elif [[ "${v1_components[3]}" < "${v2_components[3]}" ]]; then
+      echo -n -1; return 0;
+    fi
+  fi
+
+  echo -n 0
 }

@@ -108,10 +108,10 @@ function main() {
       case "${level}" in
         account)     cd "${ACCOUNT_DIR}"; units_list="${ACCOUNT_UNITS_LIST}" ;;
         product)     cd "${PRODUCT_DIR}"; units_list="${PRODUCT_UNITS_LIST}" ;;
-        application) cd "${SEGMENT_DIR}"; units_list="${APPLICATION_UNITS_LIST}" ;;
-        solution)    cd "${SEGMENT_DIR}"; units_list="${SOLUTION_UNITS_LIST}" ;;
-        segment)     cd "${SEGMENT_DIR}"; units_list="${SEGMENT_UNITS_LIST}" ;;
-        multiple)    cd "${SEGMENT_DIR}"; units_list="${MULTIPLE_UNITS_LIST}" ;;
+        application) cd "${SEGMENT_SOLUTIONS_DIR}"; units_list="${APPLICATION_UNITS_LIST}" ;;
+        solution)    cd "${SEGMENT_SOLUTIONS_DIR}"; units_list="${SOLUTION_UNITS_LIST}" ;;
+        segment)     cd "${SEGMENT_SOLUTIONS_DIR}"; units_list="${SEGMENT_UNITS_LIST}" ;;
+        multiple)    cd "${SEGMENT_SOLUTIONS_DIR}"; units_list="${MULTIPLE_UNITS_LIST}" ;;
         *) fatal "Unknown level ${level}"; return 1 ;;
       esac
 

@@ -332,6 +332,11 @@ fi
 findGen3Dirs "${BASE_DIR}"
 RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 
+# Check the cmdb doesn't need upgrading
+debug "Checking if cmdb upgrade needed ..."
+upgrade_cmdb "${BASE_DIR}" ||
+    { RESULT=$?; fatal "CMDB upgrade failed."; exit }
+
 # Remember directories for future steps
 save_gen3_dirs_in_context
 

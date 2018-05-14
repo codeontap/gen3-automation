@@ -262,7 +262,6 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
     fi
 
     TENANT_INFRASTRUCTURE_DIR=$(findGen3TenantInfrastructureDir "${BASE_DIR}" "${TENANT}")
-    info "Tenant Infra - ${TENANT_INFRASTRUCTURE_DIR}"
     if [[ -z "${TENANT_INFRASTRUCTURE_DIR}" ]]; then
 
         TENANT_INFRASTRUCTURE_DIR="${BASE_DIR}/${TENANT}"
@@ -335,7 +334,7 @@ RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
 # Check the cmdb doesn't need upgrading
 debug "Checking if cmdb upgrade needed ..."
 upgrade_cmdb "${BASE_DIR}" ||
-    { RESULT=$?; fatal "CMDB upgrade failed."; exit }
+    { RESULT=$?; fatal "CMDB upgrade failed."; exit; }
 
 # Remember directories for future steps
 save_gen3_dirs_in_context

@@ -280,7 +280,7 @@ defineRegistryProviderAttributes "${REMOTE_REGISTRY_PROVIDER}" "${REGISTRY_TYPE}
 
 # pull = tag if local provider = remote provider
 if [[ ("${REGISTRY_PROVIDER}" == "${REMOTE_REGISTRY_PROVIDER}") &&
-        ("${REGISTRY_OPERATION}" == "${${REGISTRY_OPERATION_PULL}}") ]]; then
+        ("${REGISTRY_OPERATION}" == "${REGISTRY_OPERATION_PULL}") ]]; then
     REGISTRY_OPERATION="${REGISTRY_OPERATION_TAG}"
 fi
 

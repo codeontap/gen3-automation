@@ -249,7 +249,7 @@ defineDockerProviderAttributes "${REMOTE_DOCKER_PROVIDER}" "REMOTE_DOCKER_PROVID
 
 # pull = tag if local provider = remote provider
 if [[ ("${DOCKER_PROVIDER}" == "${REMOTE_DOCKER_PROVIDER}") &&
-        ("${DOCKER_OPERATION}" == "${${DOCKER_OPERATION_PULL}}") ]]; then
+        ("${DOCKER_OPERATION}" == "${DOCKER_OPERATION_PULL}") ]]; then
     DOCKER_OPERATION="${DOCKER_OPERATION_TAG}"
 fi
 

@@ -101,7 +101,8 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
     ${GENERATION_DIR}/createExtendedSwaggerSpecification.sh \
         -s "${CLEAN_SWAGGER_SPEC_FILE}" \
         -o "${SWAGGER_RESULT_FILE}" \
-        -i "${APIGW_CONFIG}"
+        -i "${APIGW_CONFIG}" \
+        ${SWAGGER_PROXY_PATH_OPTION}
 
     # Check generation was successful
     [[ ! -f "${SWAGGER_RESULT_FILE}" ]] &&

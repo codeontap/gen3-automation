@@ -10,13 +10,10 @@ function main() {
   cd ${AUTOMATION_BUILD_SRC_DIR}
   
   # packge for content node
-  if [[ -d "${AUTOMATION_BUILD_SRC_DIR}" ]]; then
-    mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
+  mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
     
-    cd "${AUTOMATION_BUILD_SRC_DIR}"
-    zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/spa.zip" * 
-
-  fi
+  cd "${AUTOMATION_BUILD_SRC_DIR}"
+  zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/spa.zip" * 
 
   # All good
   return 0

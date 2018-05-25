@@ -4,6 +4,8 @@
 trap '[[ (-z "${AUTOMATION_DEBUG}") ; exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
+tmpdir="$(getTempDir "cota_inf_XXX")"
+
 function main() {
     # Make sure we are in the build source directory
     cd ${AUTOMATION_BUILD_SRC_DIR}
@@ -24,4 +26,3 @@ function main() {
 }
 
 main "$@"
-

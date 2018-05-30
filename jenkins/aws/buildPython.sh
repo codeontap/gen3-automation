@@ -124,7 +124,9 @@ function main() {
         ENV_FILE=${PYTHON_SWAGGER_ENV_FILE} python manage.py swagger ${MANAGE_OPTIONS} ||
           { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
       fi
-      save_product_code "swagger documents generated based on ${GIT_COMMIT}"
+      # set code reference to master if a
+      [[ ! -n "${SWAGGER_CODE_REFERENCE}" ]] && SWAGGER_CODE_REFERENCE="master"
+      save_product_code "swagger documents generated based on ${GIT_COMMIT}" "${SWAGGER_CODE_REFERENCE}"
     else
       warning "No manage.py"
     fi

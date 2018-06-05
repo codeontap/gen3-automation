@@ -121,7 +121,8 @@ function main() {
               { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
         done
       else
-        ENV_FILE=${PYTHON_SWAGGER_ENV_FILE} python manage.py swagger ${MANAGE_OPTIONS} ||
+        SWAGGER_TARGET_FILE="${AUTOMATION_BUILD_DIR}"/../spec/swagger.yaml
+        ENV_FILE=${PYTHON_SWAGGER_ENV_FILE} python manage.py swagger ${SWAGGER_TARGET_FILE} ${MANAGE_OPTIONS} ||
           { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
       fi
       # set code reference to master if a

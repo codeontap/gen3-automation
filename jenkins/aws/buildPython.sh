@@ -117,11 +117,11 @@ function main() {
         for COMPONENT_INSTANCE in ${COMPONENT_INSTANCES}; do
             # spec directory is on the same level with the build directory 
             SWAGGER_TARGET_FILE="${AUTOMATION_BUILD_DIR}"/../spec/${COMPONENT_INSTANCE}/swagger.yaml
-            COMPONENT_INSTANCE=${COMPONENT_INSTANCE} python manage.py swagger ${SWAGGER_TARGET_FILE} ${MANAGE_OPTIONS} ||
+            ENV_FILE=${PYTHON_SWAGGER_ENV_FILE} COMPONENT_INSTANCE=${COMPONENT_INSTANCE} python manage.py swagger ${SWAGGER_TARGET_FILE} ${MANAGE_OPTIONS} ||
               { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
         done
       else
-        python manage.py swagger ${MANAGE_OPTIONS} ||
+        ENV_FILE=${PYTHON_SWAGGER_ENV_FILE} python manage.py swagger ${MANAGE_OPTIONS} ||
           { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
       fi
       save_product_code "swagger documents generated based on ${GIT_COMMIT}"

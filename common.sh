@@ -56,7 +56,7 @@ function save_context_property() {
     local property_value="${value}"
   else
     if namedef_supported; then
-      local -n property_value="${value}"
+      local -n property_value="${name}"
     else
       eval "local property_value=\"\${${name}}\""
     fi

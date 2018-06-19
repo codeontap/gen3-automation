@@ -711,6 +711,58 @@ function update_cognito_userpool() {
   aws --region ${region} cognito-idp update-user-pool --user-pool-id "${userpoolid}" --cli-input-json "file://${configfile}"
 }
 
+function manage_congnito_domain() { 
+  local region="$1"; shift
+  local userpoolid="$1"; shift
+  local configfile="$1"; shift
+  local action="$1"; shift
+
+  local return_status=0
+
+  domain="$( jq -r '.Domain' < $configfile )"
+  domain_userpool="$( aws --region ${region} cognito-idp describe-user-pool-domain --domain ${domain} | jq -r '.DomainDescription.UserPoolId | select (.!=null)' )"
+
+  if [[ -z "${domain_userpool}" ]]; then
+    
+    case "${action}" in 
+        create)
+            info "Adding domain to userpool"
+            aws --region "${region}" cognito-idp create-user-pool-domain --user-pool-id "${userpoolid}" --cli-input-json "file://${configfile}" || return $?
+            return_status=$?
+            ;;
+        delete)
+            info "Domain not assigned to a userpool. Nothing to do"
+            ;;
+    esac
+
+  elif [[ "${domain_userpool}" != "${userpoolid}" ]]; then
+    error "User Pool Domain ${domain} is used by userpool ${domain_userpool}"
+    return_status=255
+
+  else  
+    case "${action}" in 
+        create)
+            info "User Pool domain already configured"
+            ;;
+        delete)
+            info "Deleting domain from user pool"
+            aws --region "${region}" cognito-idp delete-user-pool-domain --user-pool-id "${userpoolid}" --domain "${domain}" || return $?
+            ;;
+    esac
+  fi
+
+  return ${return_status}
+}
+
+# -- ElasticSearch -- 
+function update_es_domain() { 
+  local region="$1"; shift
+  local esid="$1"; shift 
+  local configfile="$1"; shift 
+
+  aws --region "${region}" es update-elasticsearch-domain-config --domain-name "${esid}" --cli-input-json "file://${configfile}" || return $?
+}
+
 # -- S3 --
 
 function isBucketAccessible() {
@@ -753,7 +805,9 @@ function syncFilesToBucket() {
     if [[ -f "${file}" ]]; then
       case "$(fileExtension "${file}")" in
         zip)
-          unzip "${file}" -d "${tmp_dir}"
+          # Always use local time to force redeploy of files
+          # in case we are reverting to an earlier version
+          unzip -DD "${file}" -d "${tmp_dir}"
           ;;
         *)
           cp "${file}" "${tmp_dir}"

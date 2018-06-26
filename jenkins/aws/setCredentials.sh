@@ -45,7 +45,7 @@ else
             AWS_CRED_AWS_ACCESS_KEY_ID="${!AWS_CRED_AWS_ACCESS_KEY_ID_VAR}"
             AWS_CRED_AWS_SECRET_ACCESS_KEY="${!AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}"
 
-            if (-n ${AWS_CRED_AWS_ACCESS_KEY_ID}) && (-n ${AWS_CRED_AWS_SECRET_ACCESS_KEY}) ]]; then
+            if [[ (-n ${AWS_CRED_AWS_ACCESS_KEY_ID}) && (-n ${AWS_CRED_AWS_SECRET_ACCESS_KEY}) ]]; then
                 export AWS_ACCESS_KEY_ID="${AWS_CRED_AWS_ACCESS_KEY_ID}"
                 export AWS_SECRET_ACCESS_KEY="${AWS_CRED_AWS_SECRET_ACCESS_KEY}"
             fi

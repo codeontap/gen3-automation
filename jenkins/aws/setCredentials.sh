@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Set up the access 
+# Set up the access
 #
 # This script is designed to be sourced into other scripts
 #
@@ -30,20 +30,30 @@ else
     if [[ -z "${!AWS_CRED_AUTOMATION_USER_VAR}" ]]; then AWS_CRED_AUTOMATION_USER_VAR="AWS_AUTOMATION_USER"; fi
     AWS_CRED_AUTOMATION_ROLE_VAR="${AWS_CRED_ACCOUNT}_AUTOMATION_ROLE"
     if [[ -z "${!AWS_CRED_AUTOMATION_ROLE_VAR}" ]]; then AWS_CRED_AUTOMATION_ROLE_VAR="AWS_AUTOMATION_ROLE"; fi
-    
+    AWS_CRED_AUTOMATION_ROLE="${!AWS_CRED_AUTOMATION_ROLE_VAR:-codeontap-automation}"
+
     if [[ (-n ${!AWS_CRED_AWS_ACCOUNT_ID_VAR}) && (-n ${!AWS_CRED_AUTOMATION_USER_VAR}) ]]; then
-        # Assume automation role using automation user access credentials
+        # Assume automation role either
+        # - using the role we are current running under, or
+        # - using credentails associated with the automation user
         # Note that the value for the user is just a way to obtain the access credentials
         # and doesn't have to be the same as the IAM user associated with the credentials
-        AWS_CRED_AWS_ACCESS_KEY_ID_VAR="${!AWS_CRED_AUTOMATION_USER_VAR^^}_AWS_ACCESS_KEY_ID"
-        AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR="${!AWS_CRED_AUTOMATION_USER_VAR^^}_AWS_SECRET_ACCESS_KEY"
-        AWS_CRED_AUTOMATION_ROLE="${!AWS_CRED_AUTOMATION_ROLE_VAR:-codeontap-automation}"
-        AWS_CRED_AWS_ACCESS_KEY_ID="${!AWS_CRED_AWS_ACCESS_KEY_ID_VAR}"
-        AWS_CRED_AWS_SECRET_ACCESS_KEY="${!AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}"
-        if [[ (-n ${AWS_CRED_AWS_ACCESS_KEY_ID}) && (-n ${AWS_CRED_AWS_SECRET_ACCESS_KEY}) ]]; then
+        if [[ "${!AWS_CRED_AUTOMATION_USER_VAR^^}" != "ROLE" ]]; then
+            # Not using current role so determine the credentials
+            AWS_CRED_AWS_ACCESS_KEY_ID_VAR="${!AWS_CRED_AUTOMATION_USER_VAR^^}_AWS_ACCESS_KEY_ID"
+            AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR="${!AWS_CRED_AUTOMATION_USER_VAR^^}_AWS_SECRET_ACCESS_KEY"
+            AWS_CRED_AWS_ACCESS_KEY_ID="${!AWS_CRED_AWS_ACCESS_KEY_ID_VAR}"
+            AWS_CRED_AWS_SECRET_ACCESS_KEY="${!AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}"
+
+            if (-n ${AWS_CRED_AWS_ACCESS_KEY_ID}) && (-n ${AWS_CRED_AWS_SECRET_ACCESS_KEY}) ]]; then
+                export AWS_ACCESS_KEY_ID="${AWS_CRED_AWS_ACCESS_KEY_ID}"
+                export AWS_SECRET_ACCESS_KEY="${AWS_CRED_AWS_SECRET_ACCESS_KEY}"
+            fi
+        fi
+
+        if [[ ("${!AWS_CRED_AUTOMATION_USER_VAR^^}" == "ROLE") ||
+              ((-n ${AWS_CRED_AWS_ACCESS_KEY_ID}) && (-n ${AWS_CRED_AWS_SECRET_ACCESS_KEY})) ]]; then
             TEMP_CREDENTIAL_FILE="${AUTOMATION_DATA_DIR}/temp_aws_credentials.json"
-            export AWS_ACCESS_KEY_ID="${AWS_CRED_AWS_ACCESS_KEY_ID}"
-            export AWS_SECRET_ACCESS_KEY="${AWS_CRED_AWS_SECRET_ACCESS_KEY}"
             unset AWS_SESSION_TOKEN
             aws sts assume-role \
                 --role-arn arn:aws:iam::${!AWS_CRED_AWS_ACCOUNT_ID_VAR}:role/${AWS_CRED_AUTOMATION_ROLE} \

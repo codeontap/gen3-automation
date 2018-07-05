@@ -208,10 +208,20 @@ function defineDockerProviderAttributes() {
     DDPA_PROVIDER="${1^^}"
     DDPA_PREFIX="${2^^}"
 
-    # Attribute variable names
-    for DDPA_ATTRIBUTE in "DNS" "API_DNS" "USER_VAR" "PASSWORD_VAR"; do
+    # Direct variable names
+    for DDPA_ATTRIBUTE in "DNS" "API_DNS"; do
         DDPA_PROVIDER_VAR="${DDPA_PROVIDER}_DOCKER_${DDPA_ATTRIBUTE}"
         declare -g ${DDPA_PREFIX}_${DDPA_ATTRIBUTE}="${!DDPA_PROVIDER_VAR}"
+    done
+
+    # Indirect variable names
+    for DDPA_ATTRIBUTE in "USER_VAR" "PASSWORD_VAR"; do
+        DDPA_PROVIDER_VAR="${DDPA_PROVIDER}_DOCKER_${DDPA_ATTRIBUTE}"
+        if [[ -n "${!DDPA_PROVIDER_VAR}" ]]; then
+            declare -g ${DDPA_PREFIX}_${DDPA_ATTRIBUTE}="${!DDPA_PROVIDER_VAR}"
+        else
+            declare -g ${DDPA_PREFIX}_${DDPA_ATTRIBUTE}="EMPTY_VAR"
+        fi
     done
 }
 

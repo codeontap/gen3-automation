@@ -38,7 +38,11 @@ else
         # - using credentails associated with the automation user
         # Note that the value for the user is just a way to obtain the access credentials
         # and doesn't have to be the same as the IAM user associated with the credentials
-        if [[ "${!AWS_CRED_AUTOMATION_USER_VAR^^}" != "ROLE" ]]; then
+        if [[ "${!AWS_CRED_AUTOMATION_USER_VAR^^}" == "ROLE" ]]; then
+            # Clear any use of previously obtained credentials
+            unset AWS_ACCESS_KEY_ID
+            unset AWS_SECRET_ACCESS_KEY
+        else
             # Not using current role so determine the credentials
             AWS_CRED_AWS_ACCESS_KEY_ID_VAR="${!AWS_CRED_AUTOMATION_USER_VAR^^}_AWS_ACCESS_KEY_ID"
             AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR="${!AWS_CRED_AUTOMATION_USER_VAR^^}_AWS_SECRET_ACCESS_KEY"

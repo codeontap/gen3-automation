@@ -15,6 +15,9 @@ SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 tmpdir="$(getTempDir "cota_sw_XXX")"
 debug "TMPDIR=${tmpdir}"
 
+dockertmpdir="$(getTempDir "cota_docker_XXXX" "${DOCKER_STAGE_DIR}")"
+chmod a+rwx "${dockertmpdir}"
+
 # Determine build dir in case of multiple specs in subdirs
 BUILD_DIR="$(fileName "${AUTOMATION_BUILD_DIR}" )"
 
@@ -41,20 +44,20 @@ SWAGGER_SPEC_YAML_EXTENSIONS_FILE=$(findFile \
                     "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/swagger_extensions.yaml")
 
 # Make a local copy of the swagger json file
-TEMP_SWAGGER_SPEC_FILE="${tmpdir}/swagger.json"
+TEMP_SWAGGER_SPEC_FILE="${dockertmpdir}/swagger.json"
 [[ -f "${SWAGGER_SPEC_FILE}" ]] && cp "${SWAGGER_SPEC_FILE}" "${TEMP_SWAGGER_SPEC_FILE}"
 
 # Convert yaml files to json, possibly including a separate yaml based extensions file
-TEMP_SWAGGER_SPEC_YAML_FILE="${tmpdir}/swagger.yaml"
+TEMP_SWAGGER_SPEC_YAML_FILE="${dockertmpdir}/swagger.yaml"
 if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
     cp "${SWAGGER_SPEC_YAML_FILE}" "${TEMP_SWAGGER_SPEC_YAML_FILE}"
 
     if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
         # Combine the two
-        cp "${TEMP_SWAGGER_SPEC_YAML_FILE}" "${tmpdir}/swagger_copy.yaml"
-        cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${tmpdir}/swagger_extensions.yaml"
+        cp "${TEMP_SWAGGER_SPEC_YAML_FILE}" "${dockertmpdir}/swagger_copy.yaml"
+        cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${dockertmpdir}/swagger_extensions.yaml"
         docker run --rm \
-            -v "${tmpdir}:/app/indir" -v "${tmpdir}:/app/outdir" \
+            -v "${dockertmpdir}:/app/indir" -v "${dockertmpdir}:/app/outdir" \
             codeontap/utilities sme merge \
             /app/indir/swagger_copy.yaml \
             /app/indir/swagger_extensions.yaml \
@@ -65,7 +68,7 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
     # AWS uses these are directives in API Gateway templates
     COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/$(fileName ${TEMP_SWAGGER_SPEC_YAML_FILE})','r')), open('/app/outdir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})','w'), indent=4)"
     docker run --rm \
-        -v "${tmpdir}:/app/indir" -v "${tmpdir}:/app/outdir" \
+        -v "${dockertmpdir}:/app/indir" -v "${dockertmpdir}:/app/outdir" \
         codeontap/python-utilities \
         -c "${COMBINE_COMMAND}"
 fi
@@ -79,7 +82,7 @@ VALIDATORS=( \
 "swagger-tools validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})" \
 "ajv           validate -d /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE}) -s /usr/local/lib/node_modules/swagger-schema-official/schema.json")
 for VALIDATOR in "${VALIDATORS[@]}"; do
-    docker run --rm -v "${tmpdir}:/app/indir" codeontap/utilities ${VALIDATOR} ||
+    docker run --rm -v "${dockertmpdir}:/app/indir" codeontap/utilities ${VALIDATOR} ||
       { exit_status=$?; fatal "Swagger file is not valid"; exit ${exit_status}; }
 done
 
@@ -111,14 +114,19 @@ else
 fi
 
 # Generate documentation
-mkdir "${tmpdir}/swaggerUI"
+mkdir "${dockertmpdir}/swaggerUI/indir"
+mkdir "${dockertmpdir}/swaggerUI/outdir"
+
 [[ -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && 
-    cp "${TEMP_SWAGGER_SPEC_FILE}" "${tmpdir}/swaggerUI/"
+    cp "${TEMP_SWAGGER_SPEC_FILE}" "${dockertmpdir}/swaggerUI/indir"
 
 docker run --rm \
-    -v "${tmpdir}/swaggerUI:/app/indir" -v "${DIST_DIR}:/app/outdir" \
+    -v "${dockertmpdir}/swaggerUI/indir:/app/indir" -v "${dockertmpdir}/swaggerUI/outdir:/app/outdir" \
     -e SWAGGER_JSON=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") \
     codeontap/swaggerui-export
+
+cp "${dockertmpdir}/swaggerUI/outdir" "${DIST_DIR}"
+
 RESULT=$?
 [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed" && exit 1
 

@@ -631,7 +631,12 @@ function main() {
           ;;
 
       ${RELEASE_MODE_PROMOTION})
-          define_context_property "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${FROM_ENVIRONMENT}"
+          if [[ "${AUTOMATION_RELEASE_IDENTIFIER}" == "branch:*" ]]; then
+            define_context_property "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER#"branch:"}"
+          else  
+            define_context_property "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${FROM_ENVIRONMENT}"
+          fi
+
           define_context_property "RELEASE_MODE_TAG" "p${ACCEPTANCE_TAG}-${ENVIRONMENT}"
           ;;
 

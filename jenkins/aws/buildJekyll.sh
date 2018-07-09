@@ -4,8 +4,8 @@
 trap '[[ (-z "${AUTOMATION_DEBUG}") ; exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
-dockertmpdir="$(getTempDir "cota_docker_XXXX" "${DOCKER_STAGE_DIR}")"
-chmod a+rwx "${dockertmpdir}"
+dockerstagedir="$(getTempDir "cota_docker_XXXX" "${DOCKER_STAGE_DIR}")"
+chmod a+rwx "${dockerstagedir}"
 
 function main() {
   # Make sure we are in the build source directory
@@ -35,23 +35,23 @@ function main() {
     JEKYLL_ENV="production"
   fi
 
-  mkdir "${dockertmpdir}/indir"
-  cp "${AUTOMATION_BUILD_SRC_DIR}"  "${dockertmpdir}/indir"
+  mkdir "${dockerstagedir}/indir"
+  cp "${AUTOMATION_BUILD_SRC_DIR}"  "${dockerstagedir}/indir"
 
   # run Jekyll build using Docker Build image 
   info "Running Jeykyll build"
   docker run --rm \
     --env JEKYLL_ENV="${JEKYLL_ENV}" \
     --env TZ="${JEKYLL_TIMEZONE}" \
-    --volume="${dockertmpdir}/indir:/srv/jekyll" \
+    --volume="${dockerstagedir}/indir:/srv/jekyll" \
     jekyll/builder:"${JEKYLL_VERSION}" \
     jekyll build --verbose 
     
   # Package for spa if required
-  if [[ -f "${dockertmpdir}/indir/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then
+  if [[ -f "${dockerstagedir}/indir/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then
 
     # Allow access to all files that have been generated so they can be cleaned up. 
-    cd "${dockertmpdir}/indir/_site"
+    cd "${dockerstagedir}/indir/_site"
     
     mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
     zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/spa.zip" * 

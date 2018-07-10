@@ -5,6 +5,8 @@ trap '[[ (-z "${AUTOMATION_DEBUG}") ; exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 tmpdir="$(getTempDir "cota_inf_XXX")"
+dockerstagedir="$(getTempDir "cota_docker_XXXX" "${DOCKER_STAGE_DIR}")"
+chmod a+rwx "${dockerstagedir}"
 
 function main() {
   # Make sure we are in the build source directory
@@ -38,19 +40,24 @@ function main() {
 
   # run Jekyll build using Docker Build image 
   info "Running Jeykyll build"
+
+  mkdir -p "${dockerstagedir}/indir"
+  mkdir -p "${dockerstagedir}/outdir"
+  cp ${AUTOMATION_BUILD_SRC_DIR} "${dockerstagedir}/indir"
+
   docker run --rm \
     --env JEKYLL_ENV="${JEKYLL_ENV}" \
     --env TZ="${JEKYLL_TIMEZONE}" \
-    --volume="${AUTOMATION_BUILD_SRC_DIR}:/indir" \
-    --volume="${tmpdir}/_site:/outdir" \
+    --volume="${dockerstagedir}/indir:/indir" \
+    --volume="${dockerstagedir}/outdir:/outdir" \
     codeontap/infradocs:"${INFRADOCS_VERSION}" 
 
   # Package for spa if required
   if [[ -f "${tmpdir}/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then
     
+    cd "${dockerstagedir}/outdir"
+
     mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
-    
-    cd "${tmpdir}/_site"
     zip -r "${AUTOMATION_BUILD_SRC_DIR}/dist/spa.zip" * 
     
   else 

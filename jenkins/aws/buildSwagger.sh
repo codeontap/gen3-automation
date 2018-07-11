@@ -114,8 +114,8 @@ else
 fi
 
 # Generate documentation
-mkdir "${dockerstagedir}/swaggerUI/indir"
-mkdir "${dockerstagedir}/swaggerUI/outdir"
+mkdir -p "${dockerstagedir}/swaggerUI/indir"
+mkdir -p "${dockerstagedir}/swaggerUI/outdir"
 
 [[ -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && 
     cp "${TEMP_SWAGGER_SPEC_FILE}" "${dockerstagedir}/swaggerUI/indir"
@@ -125,7 +125,7 @@ docker run --rm \
     -e SWAGGER_JSON=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") \
     codeontap/swaggerui-export
 
-cp "${dockerstagedir}/swaggerUI/outdir" "${DIST_DIR}"
+cp -R "${dockerstagedir}/swaggerUI/outdir" "${DIST_DIR}"
 
 RESULT=$?
 [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed" && exit 1

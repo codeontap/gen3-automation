@@ -13,6 +13,7 @@ DOCKER_OPERATION_VERIFY="verify"
 DOCKER_OPERATION_TAG="tag"
 DOCKER_OPERATION_PULL="pull"
 DOCKER_OPERATION_DEFAULT="${DOCKER_OPERATION_VERIFY}"
+DOCKER_CONTEXT_DIR_DEFAULT="${AUTOMATION_BUILD_DIR}"
 
 function usage() {
     cat <<EOF
@@ -53,6 +54,7 @@ REMOTE_DOCKER_TAG=DOCKER_TAG
 DOCKER_IMAGE_SOURCE=${DOCKER_IMAGE_SOURCE_DEFAULT}
 DOCKER_OPERATION=${DOCKER_OPERATION_DEFAULT}
 DOCKER_PRODUCT=${PRODUCT}
+DOCKER_CONTEXT_DIR=${DOCKER_CONTEXT_DIR_DEFAULT}
 
 NOTES:
 
@@ -231,6 +233,7 @@ DOCKER_TAG="${DOCKER_TAG:-${DOCKER_TAG_DEFAULT}}"
 DOCKER_IMAGE_SOURCE="${DOCKER_IMAGE_SOURCE:-${DOCKER_IMAGE_SOURCE_DEFAULT}}"
 DOCKER_OPERATION="${DOCKER_OPERATION:-${DOCKER_OPERATION_DEFAULT}}"
 DOCKER_PRODUCT="${DOCKER_PRODUCT:-${PRODUCT}}"
+DOCKER_CONTEXT_DIR="${DOCKER_CONTEXT_DIR:-${DOCKER_CONTEXT_DIR_DEFAULT}}"
 
 # Default local repository is based on standard image naming conventions
 if [[ (-n "${DOCKER_PRODUCT}") && 
@@ -286,14 +289,14 @@ case ${DOCKER_OPERATION} in
             if [[ -f "${DOCKER_GITHUB_SSH_KEY_FILE}" ]]; then
                 # Perform the build
                 info "build docker image with SSH_KEY argument"
-                docker build -t "${FULL_DOCKER_IMAGE}" -f "${DOCKERFILE}" "${AUTOMATION_BUILD_DIR}" --build-arg SSH_KEY="$(cat ${DOCKER_GITHUB_SSH_KEY_FILE})"
+                docker build -t "${FULL_DOCKER_IMAGE}" -f "${DOCKERFILE}" "${DOCKER_CONTEXT_DIR}" --build-arg SSH_KEY="$(cat ${DOCKER_GITHUB_SSH_KEY_FILE})"
                 RESULT=$?
             else
                 fatal "Unable to locate github ssh key file for the docker image" && exit
             fi
         else
             # Perform the build
-            docker build -t "${FULL_DOCKER_IMAGE}" -f "${DOCKERFILE}" "${AUTOMATION_BUILD_DIR}"
+            docker build -t "${FULL_DOCKER_IMAGE}" -f "${DOCKERFILE}" "${DOCKER_CONTEXT_DIR}"
             RESULT=$?
         fi
 

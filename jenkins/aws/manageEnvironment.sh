@@ -5,7 +5,7 @@ trap 'exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 function main() {
-  TAG="env${AUTOMATION_JOB_IDENTIFIER}-${PRODUCT}-${ENVIRONMENT}"
+  TAG="env${AUTOMATION_JOB_IDENTIFIER}-${PRODUCT}-${ENVIRONMENT}-${SEGMENT}"
 
   ${AUTOMATION_DIR}/manageUnits.sh -r "${TAG}" || return $?
 

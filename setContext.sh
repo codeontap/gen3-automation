@@ -613,8 +613,14 @@ function main() {
           # the user is deciding the naming scheme
           AUTOMATION_DEPLOYMENT_IDENTIFIER="d${AUTOMATION_DEPLOYMENT_IDENTIFIER}"
       fi
-      define_context_property "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${ENVIRONMENT}"
-      define_context_property "DEPLOYMENT_TAG" "${AUTOMATION_DEPLOYMENT_IDENTIFIER}-${ENVIRONMENT}"
+
+      if [[ "${SEGMENT}" == "default" ]]; then
+        define_context_property "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${ENVIRONMENT}"
+        define_context_property "DEPLOYMENT_TAG" "${AUTOMATION_DEPLOYMENT_IDENTIFIER}-${ENVIRONMENT}"
+      else  
+        define_context_property "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${SEGMENT}-${ENVIRONMENT}"
+        define_context_property "DEPLOYMENT_TAG" "${AUTOMATION_DEPLOYMENT_IDENTIFIER}-${SEGMENT}-${ENVIRONMENT}"
+      fi
 
   case "${RELEASE_MODE}" in
       ${RELEASE_MODE_CONTINUOUS})

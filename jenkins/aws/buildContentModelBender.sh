@@ -16,7 +16,7 @@ function main() {
   mkdir -p "${dockerstagedir}/indir"
   mkdir -p "${dockerstagedir}/stage"
 
-  cp "${AUTOMATION_BUILD_SRC_DIR}" "${dockerstagedir}/indir"
+  cp -r "${AUTOMATION_BUILD_SRC_DIR}"/* "${dockerstagedir}/indir/"
 
   # run Model Bender build using Docker Build image 
   info "Running ModelBender enterprise tasks..."

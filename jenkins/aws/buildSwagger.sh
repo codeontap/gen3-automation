@@ -125,7 +125,7 @@ docker run --rm \
     -e SWAGGER_JSON=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") \
     codeontap/swaggerui-export
 
-cp -R "${dockerstagedir}/swaggerUI/outdir/" "${DIST_DIR}"
+cp -r "${dockerstagedir}"/swaggerUI/outdir/* "${DIST_DIR}/"
 
 RESULT=$?
 [[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed" && exit 1

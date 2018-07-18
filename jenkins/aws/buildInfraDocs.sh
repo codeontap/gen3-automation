@@ -43,7 +43,7 @@ function main() {
 
   mkdir -p "${dockerstagedir}/indir"
   mkdir -p "${dockerstagedir}/outdir"
-  cp -r "${AUTOMATION_BUILD_SRC_DIR}"/* "${dockerstagedir}/indir"
+  cp -r "${AUTOMATION_BUILD_SRC_DIR}"/* "${dockerstagedir}/indir/"
 
   docker run --rm \
     --env JEKYLL_ENV="${JEKYLL_ENV}" \

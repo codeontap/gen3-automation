@@ -53,7 +53,7 @@ function main() {
     codeontap/infradocs:"${INFRADOCS_VERSION}" 
 
   # Package for spa if required
-  if [[ -f "${tmpdir}/_site/${JEKYLL_DEFAULT_PAGE}" ]]; then
+  if [[ -f "${dockerstagedir}/outdir/${JEKYLL_DEFAULT_PAGE}" ]]; then
     
     cd "${dockerstagedir}/outdir"
 
@@ -72,4 +72,3 @@ function main() {
 }
 
 main "$@"
-

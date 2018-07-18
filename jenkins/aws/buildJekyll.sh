@@ -36,7 +36,7 @@ function main() {
   fi
 
   mkdir "${dockerstagedir}/indir"
-  cp "${AUTOMATION_BUILD_SRC_DIR}"  "${dockerstagedir}/indir"
+  cp -R "${AUTOMATION_BUILD_SRC_DIR}"  "${dockerstagedir}/indir"
 
   # run Jekyll build using Docker Build image 
   info "Running Jeykyll build"

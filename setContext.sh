@@ -366,6 +366,12 @@ function main() {
   # Use "default" if no segment provided
   [[ -z "${SEGMENT}" ]] && SEGMENT="default"
 
+  if [[ "${SEGMENT}" == "default" ]]; then 
+    DEPLOYMENT_LOCATION="${ENVIRONMENT}"
+  else
+    DEPLOYMENT_LOCATION="${ENVIRONMENT}-${SEGMENT}"
+  fi
+
   findAndDefineSetting "ENVIRONMENT" "" "" "" "value" "${ENVIRONMENT}"
   findAndDefineSetting "SEGMENT"     "" "" "" "value" "${SEGMENT}"
 
@@ -613,8 +619,9 @@ function main() {
           # the user is deciding the naming scheme
           AUTOMATION_DEPLOYMENT_IDENTIFIER="d${AUTOMATION_DEPLOYMENT_IDENTIFIER}"
       fi
-      define_context_property "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${ENVIRONMENT}"
-      define_context_property "DEPLOYMENT_TAG" "${AUTOMATION_DEPLOYMENT_IDENTIFIER}-${ENVIRONMENT}"
+
+     define_context_property "RELEASE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${DEPLOYMENT_LOCATION}"
+     define_context_property "DEPLOYMENT_TAG" "${AUTOMATION_DEPLOYMENT_IDENTIFIER}-${DEPLOYMENT_LOCATION}"
 
   case "${RELEASE_MODE}" in
       ${RELEASE_MODE_CONTINUOUS})
@@ -637,11 +644,11 @@ function main() {
             define_context_property "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${FROM_ENVIRONMENT}"
           fi
 
-          define_context_property "RELEASE_MODE_TAG" "p${ACCEPTANCE_TAG}-${ENVIRONMENT}"
+          define_context_property "RELEASE_MODE_TAG" "p${ACCEPTANCE_TAG}-${DEPLOYMENT_LOCATION}"
           ;;
 
       ${RELEASE_MODE_HOTFIX})
-          define_context_property "RELEASE_MODE_TAG" "h${AUTOMATION_RELEASE_IDENTIFIER}-${ENVIRONMENT}"
+          define_context_property "RELEASE_MODE_TAG" "h${AUTOMATION_RELEASE_IDENTIFIER}-${DEPLOYMENT_LOCATION}"
           define_context_property "ACCEPTANCE_TAG" "latest"
           ;;
   esac

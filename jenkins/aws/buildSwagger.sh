@@ -120,9 +120,10 @@ mkdir -p "${dockerstagedir}/swaggerUI/outdir"
 [[ -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && 
     cp "${TEMP_SWAGGER_SPEC_FILE}" "${dockerstagedir}/swaggerUI/indir"
 
+SWAGGER_SPEC_TITLE="$(jq -r '.info.title' <  "${TEMP_SWAGGER_SPEC_FILE}")"
 docker run --rm \
     -v "${dockerstagedir}/swaggerUI/indir:/app/indir" -v "${dockerstagedir}/swaggerUI/outdir:/app/outdir" \
-    -e SWAGGER_JSON=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") \
+    -e API_URLS="[{\"url\": \"/swagger.json\", \"name\" : \"${SWAGGER_SPEC_TITLE}\"}]" \
     codeontap/swaggerui-export
 
 cp -r "${dockerstagedir}"/swaggerUI/outdir/* "${DIST_DIR}/"

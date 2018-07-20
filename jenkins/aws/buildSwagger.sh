@@ -123,6 +123,7 @@ mkdir -p "${dockerstagedir}/swaggerUI/outdir"
 SWAGGER_SPEC_TITLE="$(jq -r '.info.title' <  "${TEMP_SWAGGER_SPEC_FILE}")"
 docker run --rm \
     -v "${dockerstagedir}/swaggerUI/indir:/app/indir" -v "${dockerstagedir}/swaggerUI/outdir:/app/outdir" \
+    -e SWAGGER_JSON=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") \
     -e API_URLS="[{\"url\": \"./swagger.json\", \"name\" : \"${SWAGGER_SPEC_TITLE}\"}]" \
     -e VALIDATOR_URL="null" \
     codeontap/swaggerui-export

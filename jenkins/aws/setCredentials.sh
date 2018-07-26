@@ -17,6 +17,9 @@ unset AWS_CRED_TEMP_AWS_ACCESS_KEY_ID
 unset AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY
 unset AWS_CRED_TEMP_AWS_SESSION_TOKEN
 
+# Determine default maximum validity period
+AUTOMATION_ROLE_VALIDITY="${AUTOMATION_ROLE_VALIDITY:-10800}"
+
 # First check for account specific credentials
 AWS_CRED_OVERRIDE_AWS_ACCESS_KEY_ID_VAR="${AWS_CRED_ACCOUNT}_AWS_ACCESS_KEY_ID"
 AWS_CRED_OVERRIDE_AWS_SECRET_ACCESS_KEY_VAR="${AWS_CRED_ACCOUNT}_AWS_SECRET_ACCESS_KEY"
@@ -59,10 +62,16 @@ else
               ((-n ${AWS_CRED_AWS_ACCESS_KEY_ID}) && (-n ${AWS_CRED_AWS_SECRET_ACCESS_KEY})) ]]; then
             TEMP_CREDENTIAL_FILE="${AUTOMATION_DATA_DIR}/temp_aws_credentials.json"
             unset AWS_SESSION_TOKEN
+
             aws sts assume-role \
                 --role-arn arn:aws:iam::${!AWS_CRED_AWS_ACCOUNT_ID_VAR}:role/${AWS_CRED_AUTOMATION_ROLE} \
                 --role-session-name "$(echo $GIT_USER | tr -cd '[[:alnum:]]' )" \
-                --output json > ${TEMP_CREDENTIAL_FILE}
+                --duration-seconds "${AUTOMATION_ROLE_VALIDITY}" \
+                --output json > ${TEMP_CREDENTIAL_FILE} ||
+                aws sts assume-role \
+                    --role-arn arn:aws:iam::${!AWS_CRED_AWS_ACCOUNT_ID_VAR}:role/${AWS_CRED_AUTOMATION_ROLE} \
+                    --role-session-name "$(echo $GIT_USER | tr -cd '[[:alnum:]]' )" \
+                    --output json > ${TEMP_CREDENTIAL_FILE}
             unset AWS_ACCESS_KEY_ID
             unset AWS_SECRET_ACCESS_KEY
             AWS_CRED_TEMP_AWS_ACCESS_KEY_ID=$(jq -r '.Credentials.AccessKeyId' < ${TEMP_CREDENTIAL_FILE})

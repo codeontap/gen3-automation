@@ -17,8 +17,8 @@ unset AWS_CRED_TEMP_AWS_ACCESS_KEY_ID
 unset AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY
 unset AWS_CRED_TEMP_AWS_SESSION_TOKEN
 
-# Determine default maximum validity period
-AUTOMATION_ROLE_VALIDITY="${AUTOMATION_ROLE_VALIDITY:-10800}"
+# Determine default maximum validity period - align to role default
+AUTOMATION_ROLE_VALIDITY="${AUTOMATION_ROLE_VALIDITY:-3600}"
 
 # First check for account specific credentials
 AWS_CRED_OVERRIDE_AWS_ACCESS_KEY_ID_VAR="${AWS_CRED_ACCOUNT}_AWS_ACCESS_KEY_ID"

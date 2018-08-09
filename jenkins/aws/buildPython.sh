@@ -90,7 +90,7 @@ function main() {
         { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
     else
       if [[ -f manage.py ]]; then
-        info "Running unit tests ..."
+        info "Running unit tests with manage.py test..."
         if [[ -n ${MANAGE_OPTIONS} ]]; then
           # Set --junit-xml argument if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
           MANAGE_OPTIONS=" --junit-xml "+"${MANAGE_OPTIONS}"

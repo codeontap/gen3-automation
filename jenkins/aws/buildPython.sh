@@ -86,7 +86,7 @@ function main() {
       if [[ -n ${UNIT_OPTIONS} ]]; then
         MANAGE_OPTIONS+=" ${UNIT_OPTIONS}"
       fi
-      python pytest ${MANAGE_OPTIONS} ||
+      pytest ${MANAGE_OPTIONS} ||
         { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
     else
       if [[ -f manage.py ]]; then

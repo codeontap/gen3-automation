@@ -69,25 +69,40 @@ function main() {
   fi
 
   if inArray "REQUIRED_TASKS" "unit"; then
-    # Run unit tests - there should always be a task even if it does nothing
-    if [[ -f manage.py ]]; then
-      info "Running unit tests ..."
-      MANAGE_OPTIONS=""
-      if [[ -n ${TEST_REPORTS_DIR} ]]; then
-        if [[ -n ${TEST_JUNIT_DIR} ]]; then
-          # Set --junit-xml option if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
-          MANAGE_OPTIONS+=" --junit-xml ${TEST_REPORTS_DIR}/${TEST_JUNIT_DIR}/unit-test-results.xml"
-        fi
+    # Run unit tests - there should always be a task even if it does nothing. Checking for pytest.ini file first.
+    MANAGE_OPTIONS=""
+    if [[ -n ${TEST_REPORTS_DIR} ]]; then
+      if [[ -n ${TEST_JUNIT_DIR} ]]; then
+        # Set path for test results in xml format if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
+        MANAGE_OPTIONS+="${TEST_REPORTS_DIR}/${TEST_JUNIT_DIR}/unit-test-results.xml"
       fi
-
+    fi
+    if [[ -f pytest.ini ]]; then
+      info "Running unit tests with pytest..."
+      if [[ -n ${MANAGE_OPTIONS} ]]; then
+        # Set --junitxml option if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
+        MANAGE_OPTIONS=" --junitxml="+"${MANAGE_OPTIONS}"
+      fi
       if [[ -n ${UNIT_OPTIONS} ]]; then
         MANAGE_OPTIONS+=" ${UNIT_OPTIONS}"
       fi
-
-      ENV_FILE=${PYTHON_UNIT_TEST_ENV_FILE} python manage.py test ${MANAGE_OPTIONS} ||
+      python pytest ${MANAGE_OPTIONS} ||
         { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
     else
-      warning "No manage.py - no tests run"
+      if [[ -f manage.py ]]; then
+        info "Running unit tests with manage.py test..."
+        if [[ -n ${MANAGE_OPTIONS} ]]; then
+          # Set --junit-xml argument if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
+          MANAGE_OPTIONS=" --junit-xml "+"${MANAGE_OPTIONS}"
+        fi
+        if [[ -n ${UNIT_OPTIONS} ]]; then
+          MANAGE_OPTIONS+=" ${UNIT_OPTIONS}"
+        fi
+        ENV_FILE=${PYTHON_UNIT_TEST_ENV_FILE} python manage.py test ${MANAGE_OPTIONS} ||
+          { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
+      else
+        warning "Neither pytest.ini nor manage.py found - no tests run"
+      fi
     fi
   fi
 

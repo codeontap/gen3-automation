@@ -101,7 +101,7 @@ function main() {
         ENV_FILE=${PYTHON_UNIT_TEST_ENV_FILE} python manage.py test ${MANAGE_OPTIONS} ||
           { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
       else
-        warning "No manage.py - no tests run"
+        warning "Neither pytest.ini nor manage.py found - no tests run"
       fi
     fi
   fi

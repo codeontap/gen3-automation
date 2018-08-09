@@ -70,9 +70,19 @@ function main() {
 
   if inArray "REQUIRED_TASKS" "unit"; then
     # Run unit tests - there should always be a task even if it does nothing. Checking for pytest.ini file first.
+    MANAGE_OPTIONS=""
+    if [[ -n ${TEST_REPORTS_DIR} ]]; then
+      if [[ -n ${TEST_JUNIT_DIR} ]]; then
+        # Set path for test results in xml format if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
+        MANAGE_OPTIONS+="${TEST_REPORTS_DIR}/${TEST_JUNIT_DIR}/unit-test-results.xml"
+      fi
+    fi
     if [[ -f pytest.ini ]]; then
       info "Running unit tests with pytest..."
-      MANAGE_OPTIONS=""
+      if [[ -n ${MANAGE_OPTIONS} ]]; then
+        # Set --junitxml option if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
+        MANAGE_OPTIONS=" --junitxml="+"${MANAGE_OPTIONS}"
+      fi
       if [[ -n ${UNIT_OPTIONS} ]]; then
         MANAGE_OPTIONS+=" ${UNIT_OPTIONS}"
       fi
@@ -81,12 +91,9 @@ function main() {
     else
       if [[ -f manage.py ]]; then
         info "Running unit tests ..."
-        MANAGE_OPTIONS=""
-        if [[ -n ${TEST_REPORTS_DIR} ]]; then
-          if [[ -n ${TEST_JUNIT_DIR} ]]; then
-            # Set --junit-xml option if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
-            MANAGE_OPTIONS+=" --junit-xml ${TEST_REPORTS_DIR}/${TEST_JUNIT_DIR}/unit-test-results.xml"
-          fi
+        if [[ -n ${MANAGE_OPTIONS} ]]; then
+          # Set --junit-xml argument if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
+          MANAGE_OPTIONS=" --junit-xml "+"${MANAGE_OPTIONS}"
         fi
         if [[ -n ${UNIT_OPTIONS} ]]; then
           MANAGE_OPTIONS+=" ${UNIT_OPTIONS}"

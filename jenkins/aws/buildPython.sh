@@ -81,7 +81,13 @@ function main() {
       info "Running unit tests with pytest..."
       if [[ -n ${MANAGE_OPTIONS} ]]; then
         # Set --junitxml option if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
-        MANAGE_OPTIONS=" --junitxml="+"${MANAGE_OPTIONS}"
+        MANAGE_OPTIONS=" --junitxml=${MANAGE_OPTIONS}"
+      fi
+      if [[ -n ${COVERAGE_REPORT} ]]; then
+        MANAGE_OPTIONS+=" --cov --cov-report ${COVERAGE_REPORT}"
+        if [[ -n ${COVERAGE_REPORT_OUTPUT} ]]; then
+          MANAGE_OPTIONS+=":${COVERAGE_REPORT_OUTPUT}"
+        fi
       fi
       if [[ -n ${UNIT_OPTIONS} ]]; then
         MANAGE_OPTIONS+=" ${UNIT_OPTIONS}"
@@ -93,7 +99,7 @@ function main() {
         info "Running unit tests with manage.py test..."
         if [[ -n ${MANAGE_OPTIONS} ]]; then
           # Set --junit-xml argument if TEST_REPORTS_DIR and TEST_JUNIT_DIR are set
-          MANAGE_OPTIONS=" --junit-xml "+"${MANAGE_OPTIONS}"
+          MANAGE_OPTIONS=" --junit-xml ${MANAGE_OPTIONS}"
         fi
         if [[ -n ${UNIT_OPTIONS} ]]; then
           MANAGE_OPTIONS+=" ${UNIT_OPTIONS}"

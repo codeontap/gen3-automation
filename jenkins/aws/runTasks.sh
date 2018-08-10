@@ -26,7 +26,6 @@ for CURRENT_TASK in $TASK_LIST; do
     RESULT=$?
     [[ ${RESULT} -ne 0 ]] &&
         fatal "Running of task ${CURRENT_TASK} failed" && exit
-
 done
 
 # All good

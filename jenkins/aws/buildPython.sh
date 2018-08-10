@@ -84,8 +84,12 @@ function main() {
         MANAGE_OPTIONS=" --junitxml=${MANAGE_OPTIONS}"
       fi
       if [[ -n ${COVERAGE_REPORT} ]]; then
+        # Note: coverage and pytest-cov are required to run `pytest` with `--cov` option
+        # COVERAGE_REPORT specifies output format - xml, html or annotate
         MANAGE_OPTIONS+=" --cov --cov-report ${COVERAGE_REPORT}"
         if [[ -n ${COVERAGE_REPORT_OUTPUT} ]]; then
+          # COVERAGE_REPORT_OUTPUT specifies output path
+          # see https://pypi.org/project/pytest-cov/ for details
           MANAGE_OPTIONS+=":${COVERAGE_REPORT_OUTPUT}"
         fi
       fi

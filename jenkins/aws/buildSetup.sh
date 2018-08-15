@@ -74,6 +74,12 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
         
+        pipeline)
+            ${AUTOMATION_DIR}/managePipeline.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            RESULT=$?
+            [[ "${RESULT}" -eq 0 ]] && PRESENT=1
+            ;;
+
         scripts)
             ${AUTOMATION_DIR}/manageScripts.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?

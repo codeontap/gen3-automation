@@ -105,7 +105,7 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             ;;
 
-        scripts) 
+        pipeline) 
             IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/pipeline.zip"
             
             if [[ -f "${IMAGE_FILE}" ]]; then

@@ -11,26 +11,10 @@ function main() {
     cd ${AUTOMATION_BUILD_SRC_DIR}
     
     # Make sure we have a script to start from
-    [[ ! -f pipeline-definition.json   ]] &&
+    [[ ! -f pipeline-definition.json && ! -f pipeline-parameters.json ]] &&
         { fatal "No pipeline-definition.json found"; return 1; }
 
-    cp pipeline-definition.json "${tmpdir}/pipeline-definition.json"
-    
-    if [[ -f pipeline-parameters.json ]]; then
-        cp pipeline-parameters.json "${tmpdir}/pipeline-parameters.json"
-    else
-        echo "{}" > "${tmpdir}/pipeline-definition.json"
-    fi
-
-    mkdir "${tmpdir}/_scripts"
-
-    for item in *; do
-        if [ -d ${item} ]; then
-            cd {$item}
-            zip -r "${tmpdir}/_scripts/${item}.zip" *
-            cd ${AUTOMATION_BUILD_SRC_DIR}
-        fi
-    done
+    cp -Lr "${AUTOMATION_BUILD_SRC_DIR}/" "${tmpdir}/"
 
     cd "${tmpdir}"
     zip -r "${tmpdir}/pipeline.zip" *  

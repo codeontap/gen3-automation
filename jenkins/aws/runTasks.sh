@@ -22,7 +22,7 @@ TASK_LIST="${TASK_LIST:-$TASK}"
 
 # run the required tasks
 for CURRENT_TASK in $TASK_LIST; do
-    ${GENERATION_DIR}/runTask.sh -t "${TASK_TIER}" -i "${TASK_COMPONENT}" -w "${CURRENT_TASK}" -c "${TASK_CONTAINER}" "${ENVS[@]}"
+    ${GENERATION_DIR}/runTask.sh -t "${TASK_TIER}" -i "${TASK_COMPONENT}" -w "${CURRENT_TASK}" -x "${TASK_INSTANCE}" -y "${TASK_VERSION}" -c "${TASK_CONTAINER}" "${ENVS[@]}"
     RESULT=$?
     [[ ${RESULT} -ne 0 ]] &&
         fatal "Running of task ${CURRENT_TASK} failed" && exit

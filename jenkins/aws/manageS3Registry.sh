@@ -310,6 +310,7 @@ FULL_TAGGED_REGISTRY_IMAGE="s3://${REGISTRY_PROVIDER_DNS}/${TAGGED_REGISTRY_IMAG
 setCredentials "${REGISTRY_PROVIDER}"
 
 # Confirm access to the local registry
+echo "RegistryProvider: ${REGISTRY_PROVIDER} AccessKey: ${AWS_ACCESS_KEY_ID} SecretKey: ${AWS_SECRET_ACCESS_KEY} SessionToken: ${AWS_SESSION_TOKEN}"
 aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_TYPE}" >/dev/null 2>&1
 RESULT=$?
 [[ "$RESULT" -ne 0 ]] &&

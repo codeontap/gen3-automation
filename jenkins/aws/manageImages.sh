@@ -78,7 +78,7 @@ IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra FORMATS <<< "${IMAGE_FORMATS}"
 for FORMAT in "${FORMATS[@]}"; do
     case ${FORMAT,,} in
 
-        datasetS3) 
+        dataset) 
             IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/cot_data_file_manifest.json"
             if [[ -f "${IMAGE_FILE}" ]]; then 
                 ${AUTOMATION_DIR}/manageDataSetS3.sh -s \

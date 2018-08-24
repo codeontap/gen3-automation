@@ -62,6 +62,12 @@ RESULT=$?
 PRESENT=0
 for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
     case ${IMAGE_FORMAT,,} in
+        dataset)
+            ${AUTOMATION_DIR}/manageDataSetS3.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" 
+            RESULT=$?
+            [[ "${RESULT}" -eq 0 ]] && PRESENT=1
+            ;;
+
         docker)
             ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?

@@ -26,6 +26,8 @@ function main() {
             dataset_prefix="$( jq -r '.Occurrence.State.Attributes.DATASET_PREFIX' < "${BUILD_BLUEPRINT}" )"
             master_data_bucket_name="$( jq -r '.Occurrence.State.Attributes.DATASOURCE_NAME' < "${BUILD_BLUEPRINT}" )"
 
+            info "Master Data: ${dataset_master_location} -Prefix: ${dataset_prefix} -MasterBucket: ${master_data_bucket_name}"
+
             aws --region "${REGISTRY_PROVIDER_REGION}" s3 list-objects-v2 --bucket "${master_data_bucket_name}" --prefix "${dataset_prefix}" --query 'Contents[*].{Key,ETag,LastModified}' > "${data_manifest_file}" 
             if [[ -f "${data_manifest_file}" ]]; then 
 
@@ -42,8 +44,9 @@ function main() {
                 
         else 
 
-        fatal "Could not find build blueprint"
-        return 255
+            fatal "Could not find build blueprint"
+            return 255
+        fi
     done
 
     return 0

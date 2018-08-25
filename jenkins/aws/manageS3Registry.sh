@@ -217,7 +217,17 @@ function copyToRegistry() {
     local SAVE_AS="${2}"
     local FILES_TEMP_DIR="temp_files_dir"
 
-    if [[ FILE_TO_COPY != s3://* ]]; then
+    if [[ "${FILE_TO_COPY}" =~ ^s3:// ]]; then
+
+        aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FILE_TO_COPY}"  >/dev/null 2>&1
+        RESULT=$?
+        [[ "$RESULT" -ne 0 ]] &&
+            fatal "Can't access ${FILE_TO_COPY}" && exit
+
+        aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILE_TO_COPY}" "${FULL_REGISTRY_IMAGE_PATH}/"
+
+    else
+
         rm -rf "${FILES_TEMP_DIR}"
         mkdir -p "${FILES_TEMP_DIR}"
         cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}/${SAVE_AS}"
@@ -237,13 +247,6 @@ function copyToRegistry() {
         [[ $RESULT -ne 0 ]] &&
             fatal "Unable to save ${BASE_REGISTRY_FILENAME} in the local registry" && exit
 
-    else
-        aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FILE_TO_COPY}"  >/dev/null 2>&1
-        RESULT=$?
-        [[ "$RESULT" -ne 0 ]] &&
-            fatal "Can't access ${FILE_TO_COPY}" && exit
-
-        aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILE_TO_COPY}" "${FULL_REGISTRY_IMAGE_PATH}/"
     fi
 
     aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}"
@@ -310,7 +313,6 @@ FULL_TAGGED_REGISTRY_IMAGE="s3://${REGISTRY_PROVIDER_DNS}/${TAGGED_REGISTRY_IMAG
 setCredentials "${REGISTRY_PROVIDER}"
 
 # Confirm access to the local registry
-echo "RegistryProvider: ${REGISTRY_PROVIDER} AccessKey: ${AWS_ACCESS_KEY_ID} SecretKey: ${AWS_SECRET_ACCESS_KEY} SessionToken: ${AWS_SESSION_TOKEN}"
 aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "s3://${REGISTRY_PROVIDER_DNS}/${REGISTRY_TYPE}" >/dev/null 2>&1
 RESULT=$?
 [[ "$RESULT" -ne 0 ]] &&
@@ -320,7 +322,7 @@ RESULT=$?
 case ${REGISTRY_OPERATION} in
     ${REGISTRY_OPERATION_SAVE})
         copyToRegistry "${REGISTRY_FILENAME}" "${BASE_REGISTRY_FILENAME}"
-        if [[ -n "${ADDITIONAL_FILEPATH}" ]];
+        if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then
             copyToRegistry "${REGISTRY_ADDITIONAL_DIRECTORY}" 
         fi
         ;;
@@ -385,7 +387,7 @@ case ${REGISTRY_OPERATION} in
         setCredentials "${REGISTRY_PROVIDER}"
 
         copyToRegistry "${IMAGE_FILE}" "${BASE_REGISTRY_FILENAME}"
-        if [[ -n "${ADDITIONAL_FILEPATH}" ]];
+        if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then
             copyToRegistry "${REGISTRY_ADDITIONAL_DIRECTORY}" 
         fi
         ;;        

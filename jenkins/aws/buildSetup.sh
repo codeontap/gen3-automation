@@ -63,7 +63,7 @@ PRESENT=0
 for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
     case ${IMAGE_FORMAT,,} in
         dataset)
-            ${AUTOMATION_DIR}/manageDataSetS3.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" 
+            ${AUTOMATION_DIR}/manageDataSetS3.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "undefined"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;

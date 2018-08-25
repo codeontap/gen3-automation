@@ -11,11 +11,14 @@ tmpdir="$(getTempDir "cota_inf_XXX")"
 data_manifest_filename="cot_data_file_manifest.json"
         
 function main() {
-    for DEPLOYMENT_UNIT in ${DEPLOYMENT_UNITS[0]}; do
+    info "Building Deployment ${DEPLOYMENT_UNIT_LIST}"
+    for DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST[0]}; do
 
         # Generate a build blueprint so that we can find out the source S3 bucket
         . "${GENERATION_DIR}/createBuildBluePrint.sh" -u "${DEPLOYMENT_UNIT}" 
         BUILD_BLUEPRINT="${AUTOMATION_DATA_DIR}/build_blueprint-${DEPLOYMENT_UNIT}-.json"
+
+        info "Checking out the contents of ${BUILD_BLUEPRINT}"
 
         if [[ -f "${BUILD_BLUEPRINT}" ]]; then 
 
@@ -24,18 +27,21 @@ function main() {
 
             dataset_master_location="$( jq -r '.Occurrence.State.Attributes.DATASET_MASTER_LOCATION' < "${BUILD_BLUEPRINT}" )"
             dataset_prefix="$( jq -r '.Occurrence.State.Attributes.DATASET_PREFIX' < "${BUILD_BLUEPRINT}" )"
-            master_data_bucket_name="$( jq -r '.Occurrence.State.Attributes.DATASOURCE_NAME' < "${BUILD_BLUEPRINT}" )"
+            master_data_bucket_name="$( jq -r '.Occurrence.State.Attributes.NAME' < "${BUILD_BLUEPRINT}" )"
+            dataset_region="$( jq -r '.Occurrence.State.Attributes.REGION' < "${BUILD_BLUEPRINT}" )"
 
-            info "Master Data: ${dataset_master_location} -Prefix: ${dataset_prefix} -MasterBucket: ${master_data_bucket_name}"
+            info "Master Data: ${dataset_master_location} "
+            aws --region "${dataset_region}" s3api list-objects-v2 --bucket "${master_data_bucket_name}" --prefix "${dataset_prefix}" --query 'Contents[*].{Key:Key,ETag:ETag,LastModified:LastModified}' > "${data_manifest_file}" 
 
-            aws --region "${REGISTRY_PROVIDER_REGION}" s3 list-objects-v2 --bucket "${master_data_bucket_name}" --prefix "${dataset_prefix}" --query 'Contents[*].{Key,ETag,LastModified}' > "${data_manifest_file}" 
             if [[ -f "${data_manifest_file}" ]]; then 
 
-                build_reference="$( sha256sum "${data_manifest_file}" )"
-                save_chain_property CODE_COMMIT "${build_reference}"
-                save_chain_property S3_DATA_STAGE "${dataset_master_location}"
+                build_reference="$( sha256sum "${data_manifest_file}" | cut -d " " -f 1  )"
+                save_context_property CODE_COMMIT_LIST "${build_reference}"
+                save_context_property S3_DATA_STAGE "${dataset_master_location}"
 
                 cp "${data_manifest_file}" "${AUTOMATION_BUILD_SRC_DIR}/${data_manifest_filename}"
+
+                info "Commit: ${build_reference}"
             
             else 
                 fatal "Could not generate data manifest file"

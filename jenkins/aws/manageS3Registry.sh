@@ -37,8 +37,8 @@ Usage: $(basename $0) -s -v -p -k -x
 where
 
 (o) -a REGISTRY_PROVIDER                is the local registry provider
-(o) -d REGISTRY_PRODUCT                 is the product to use when defaulting REGISTRY_REPO
 (o) -b REGISTRY_ADDITIONAL_DIRECTORY    is an additonal directory that is stored with the image
+(o) -d REGISTRY_PRODUCT                 is the product to use when defaulting REGISTRY_REPO
 (o) -f REGISTRY_FILENAME                is the filename used when storing images
 (o) -g REGISTRY_CODE_COMMIT             to use when defaulting REGISTRY_REPO
     -h                                  shows this text

@@ -156,7 +156,7 @@ function defineGitProviderSettings() {
         "API_DNS" "${DGPD_PROVIDER}" "${DGPD_PROVIDER_TYPE}" "value" "api.${NAME_VALUE}"
 }
 
-REGISTRY_TYPES=("docker" "lambda" "pipeline" "scripts" "swagger" "spa" "contentnode" )
+REGISTRY_TYPES=("dataset" "docker" "lambda" "pipeline" "scripts" "swagger" "spa" "contentnode" )
 REGISTRY_PROVIDERS=()
 function defineRegistryProviderSettings() {
     # Define key values about use of a docker provider

@@ -32,31 +32,33 @@ Usage: $(basename $0) -s -v -p -k -x
                         -d REGISTRY_PRODUCT
                         -u REGISTRY_DEPLOYMENT_UNIT
                         -g REGISTRY_CODE_COMMIT
+                        -b REGISTRY_ADDITIONAL_DIRECTORY
 
 where
 
-(o) -a REGISTRY_PROVIDER        is the local registry provider
-(o) -d REGISTRY_PRODUCT         is the product to use when defaulting REGISTRY_REPO
-(o) -f REGISTRY_FILENAME        is the filename used when storing images
-(o) -g REGISTRY_CODE_COMMIT     to use when defaulting REGISTRY_REPO
-    -h                          shows this text
-(o) -i REMOTE_REGISTRY_REPO     is the repository to pull
-(o) -k                          tag an image in the local registry with the remote details
-                                (REGISTRY_OPERATION=${REGISTRY_OPERATION_TAG})
-(o) -l REGISTRY_REPO            is the local repository
-(o) -p                          pull image from a remote to a local registry
-                                (REGISTRY_OPERATION=${REGISTRY_OPERATION_PULL})
-(o) -r REMOTE_REGISTRY_TAG      is the tag to pull
-(o) -s                          save in local registry
-                                (REGISTRY_OPERATION=${REGISTRY_OPERATION_SAVE})
-(o) -t REGISTRY_TAG             is the local tag
-(o) -u REGISTRY_DEPLOYMENT_UNIT is the deployment unit to use when defaulting REGISTRY_REPO
-(o) -v                          verify image is present in local registry
-                                (REGISTRY_OPERATION=${REGISTRY_OPERATION_VERIFY})
-(o) -x                          expand on save if REGISTRY_FILENAME is a zip file
-                                (REGISTRY_EXPAND=true)
-(m) -y REGISTRY_TYPE            is the registry image type
-(o) -z REMOTE_REGISTRY_PROVIDER is the registry provider to pull from
+(o) -a REGISTRY_PROVIDER                is the local registry provider
+(o) -b REGISTRY_ADDITIONAL_DIRECTORY    is an additonal directory that is stored with the image
+(o) -d REGISTRY_PRODUCT                 is the product to use when defaulting REGISTRY_REPO
+(o) -f REGISTRY_FILENAME                is the filename used when storing images
+(o) -g REGISTRY_CODE_COMMIT             to use when defaulting REGISTRY_REPO
+    -h                                  shows this text
+(o) -i REMOTE_REGISTRY_REPO             is the repository to pull
+(o) -k                                  tag an image in the local registry with the remote details
+                                        (REGISTRY_OPERATION=${REGISTRY_OPERATION_TAG})
+(o) -l REGISTRY_REPO                    is the local repository
+(o) -p                                  pull image from a remote to a local registry
+                                        (REGISTRY_OPERATION=${REGISTRY_OPERATION_PULL})
+(o) -r REMOTE_REGISTRY_TAG              is the tag to pull
+(o) -s                                  save in local registry
+                                        (REGISTRY_OPERATION=${REGISTRY_OPERATION_SAVE})
+(o) -t REGISTRY_TAG                     is the local tag
+(o) -u REGISTRY_DEPLOYMENT_UNIT         is the deployment unit to use when defaulting REGISTRY_REPO
+(o) -v                                  verify image is present in local registry
+                                        (REGISTRY_OPERATION=${REGISTRY_OPERATION_VERIFY})
+(o) -x                                  expand on save if REGISTRY_FILENAME is a zip file
+                                        (REGISTRY_EXPAND=true)
+(m) -y REGISTRY_TYPE                    is the registry image type
+(o) -z REMOTE_REGISTRY_PROVIDER         is the registry provider to pull from
 
 (m) mandatory, (o) optional, (d) deprecated
 
@@ -82,10 +84,13 @@ EOF
 }
 
 # Parse options
-while getopts ":a:d:f:g:hki:l:pr:st:u:vxy:z:" opt; do
+while getopts ":a:b:d:f:g:hki:l:pr:st:u:vxy:z:" opt; do
     case $opt in
         a)
             REGISTRY_PROVIDER="${OPTARG}"
+            ;;
+        b)
+            REGISTRY_ADDITIONAL_DIRECTORY="${OPTARG}"
             ;;
         d)
             REGISTRY_PRODUCT="${OPTARG}"
@@ -212,24 +217,37 @@ function copyToRegistry() {
     local SAVE_AS="${2}"
     local FILES_TEMP_DIR="temp_files_dir"
 
-    rm -rf "${FILES_TEMP_DIR}"
-    mkdir -p "${FILES_TEMP_DIR}"
-    cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}/${SAVE_AS}"
-    RESULT=$?
-    [[ $RESULT -ne 0 ]] && fatal "Unable to copy ${FILE_TO_COPY}" && exit
+    if [[ "${FILE_TO_COPY}" =~ ^s3:// ]]; then
 
-    if [[ ("${REGISTRY_EXPAND}" == "true") &&
+        aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FILE_TO_COPY}"  >/dev/null 2>&1
+        RESULT=$?
+        [[ "$RESULT" -ne 0 ]] &&
+            fatal "Can't access ${FILE_TO_COPY}" && exit
+
+        aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILE_TO_COPY}" "${FULL_REGISTRY_IMAGE_PATH}/"
+
+    else
+
+        rm -rf "${FILES_TEMP_DIR}"
+        mkdir -p "${FILES_TEMP_DIR}"
+        cp "${FILE_TO_COPY}" "${FILES_TEMP_DIR}/${SAVE_AS}"
+        RESULT=$?
+        [[ $RESULT -ne 0 ]] && fatal "Unable to copy ${FILE_TO_COPY}" && exit
+
+        if [[ ("${REGISTRY_EXPAND}" == "true") &&
             ("${FILE_TO_COPY##*.}" == "zip") ]]; then
-        unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
+                unzip "${FILE_TO_COPY}" -d "${FILES_TEMP_DIR}"
+                RESULT=$?
+                [[ $RESULT -ne 0 ]] &&
+                    fatal "Unable to unzip ${FILE_TO_COPY}" && exit
+        fi
+
+        aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILES_TEMP_DIR}/" "${FULL_REGISTRY_IMAGE_PATH}/"
         RESULT=$?
         [[ $RESULT -ne 0 ]] &&
-            fatal "Unable to unzip ${FILE_TO_COPY}" && exit
-    fi
+            fatal "Unable to save ${BASE_REGISTRY_FILENAME} in the local registry" && exit
 
-    aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp --recursive "${FILES_TEMP_DIR}/" "${FULL_REGISTRY_IMAGE_PATH}/"
-    RESULT=$?
-    [[ $RESULT -ne 0 ]] &&
-        fatal "Unable to save ${BASE_REGISTRY_FILENAME} in the local registry" && exit
+    fi
 
     aws --region "${REGISTRY_PROVIDER_REGION}" s3 cp "${TAG_FILE}" "${FULL_TAGGED_REGISTRY_IMAGE}"
     RESULT=$?
@@ -304,6 +322,9 @@ RESULT=$?
 case ${REGISTRY_OPERATION} in
     ${REGISTRY_OPERATION_SAVE})
         copyToRegistry "${REGISTRY_FILENAME}" "${BASE_REGISTRY_FILENAME}"
+        if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then
+            copyToRegistry "${REGISTRY_ADDITIONAL_DIRECTORY}" 
+        fi
         ;;
 
     ${REGISTRY_OPERATION_VERIFY})
@@ -341,9 +362,11 @@ case ${REGISTRY_OPERATION} in
     ${REGISTRY_OPERATION_PULL})
         # Formulate the remote registry details
         REMOTE_REGISTRY_IMAGE="${REGISTRY_TYPE}/${REMOTE_REGISTRY_REPO}/${BASE_REGISTRY_FILENAME}"
+        REMOTE_REGISTRY_PATH="${REGISTRY_TYPE}/${REMOTE_REGISTRY_REPO}"
         REMOTE_TAGGED_REGISTRY_IMAGE="${REGISTRY_TYPE}/${REMOTE_REGISTRY_REPO}/tags/${REMOTE_REGISTRY_TAG}"
         FULL_REMOTE_REGISTRY_IMAGE="s3://${REMOTE_REGISTRY_PROVIDER_DNS}/${REMOTE_REGISTRY_IMAGE}"
         FULL_REMOTE_TAGGED_REGISTRY_IMAGE="s3://${REMOTE_REGISTRY_PROVIDER_DNS}/${REMOTE_TAGGED_REGISTRY_IMAGE}"
+        FULL_REMOTE_REGISTRY_PATH="s3://${REMOTE_REGISTRY_PROVIDER_DNS}/${REMOTE_REGISTRY_PATH}"
         IMAGE_FILE="./temp_${BASE_REGISTRY_FILENAME}"
 
         # Get access to the remote registry
@@ -366,6 +389,13 @@ case ${REGISTRY_OPERATION} in
         setCredentials "${REGISTRY_PROVIDER}"
 
         copyToRegistry "${IMAGE_FILE}" "${BASE_REGISTRY_FILENAME}"
+        if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then
+            if [[ "${REGISTRY_ADDITIONAL_DIRECTORY}" == "REGISTRY_CONTENT" ]]; then 
+                copyToRegistry "${FULL_REMOTE_REGISTRY_PATH}"
+            else 
+                copyToRegistry "${REGISTRY_ADDITIONAL_DIRECTORY}" 
+            fi
+        fi
         ;;        
         
     *)

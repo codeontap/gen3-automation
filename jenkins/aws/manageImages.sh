@@ -77,6 +77,21 @@ IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra FORMATS <<< "${IMAGE_FORMATS}"
 
 for FORMAT in "${FORMATS[@]}"; do
     case ${FORMAT,,} in
+
+        dataset) 
+            IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/cot_data_file_manifest.json"
+            if [[ -f "${IMAGE_FILE}" ]]; then 
+                ${AUTOMATION_DIR}/manageDataSetS3.sh -s \
+                    -u "${DEPLOYMENT_UNIT}" \
+                    -g "${CODE_COMMIT}" \
+                    -f "${IMAGE_FILE}" \
+                    -b "${S3_DATA_STAGE}"
+                RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+            else
+                RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
+            fi
+            ;;
+
         docker)
             # Package for docker
             DOCKERFILE="${AUTOMATION_BUILD_SRC_DIR}/Dockerfile"

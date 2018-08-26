@@ -35,10 +35,12 @@ function main() {
 
             if [[ -f "${data_manifest_file}" ]]; then 
 
-                build_reference="$( sha256sum "${data_manifest_file}" | cut -d " " -f 1  )"
+                build_reference="$( shasum -U -a 1 "${data_manifest_file}" | cut -d " " -f 1  )"
                 save_context_property CODE_COMMIT_LIST "${build_reference}"
                 save_context_property S3_DATA_STAGE "${dataset_master_location}"
 
+                save_chain_property GIT_COMMIT "${build_reference}"
+                
                 cp "${data_manifest_file}" "${AUTOMATION_BUILD_SRC_DIR}/${data_manifest_filename}"
 
                 info "Commit: ${build_reference}"

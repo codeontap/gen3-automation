@@ -59,16 +59,11 @@ function main() {
     if [[ -f package.json ]]; then
       # Select the package manage to use
         if [[ -z "${NODE_PACKAGE_MANAGER}" ]]; then
-            if $(which yarn > /dev/null 2>&1) ; then
-                NODE_PACKAGE_MANAGER="yarn"
-            else
-                NODE_PACKAGE_MANAGER="npm"
-                NODE_PACKAGE_MANAGER_INSTALL_OPTIONS="--unsafe-perm"
-            fi
+            NODE_PACKAGE_MANAGER="npm"
         fi
         # Set install options
         case ${NODE_PACKAGE_MANAGER} in
-          nmp)
+          npm)
             NODE_PACKAGE_MANAGER_INSTALL_OPTIONS="--unsafe-perm"
             ;;
           *)

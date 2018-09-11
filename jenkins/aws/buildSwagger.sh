@@ -86,11 +86,10 @@ for VALIDATOR in "${VALIDATORS[@]}"; do
       { exit_status=$?; fatal "Swagger file is not valid"; exit ${exit_status}; }
 done
 
-#a new path for a cleaned up swagger file
-CLEAN_SWAGGER_SPEC_FILE="${tmpdir}/swagger-cleaned-up.json"
+# Remove definitions in swagger file not supported by AWS
+SWAGGER_EXTENDED_BASE_FILE="${tmpdir}/swagger-extended-base.json"
 
-# Clenup definitions in swagger file
-runJQ -f "${AUTOMATION_DIR}/cleanUpSwagger.jq" < "${TEMP_SWAGGER_SPEC_FILE}" > "${CLEAN_SWAGGER_SPEC_FILE}"
+runJQ -f "${AUTOMATION_DIR}/cleanUpSwagger.jq" < "${TEMP_SWAGGER_SPEC_FILE}" > "${SWAGGER_EXTENDED_BASE_FILE}"
 
 # Augment the swagger file if required
 APIGW_CONFIG=$(findFile \
@@ -102,7 +101,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
 
     # Generate the swagger file
     ${GENERATION_DIR}/createExtendedSwaggerSpecification.sh \
-        -s "${CLEAN_SWAGGER_SPEC_FILE}" \
+        -s "${SWAGGER_EXTENDED_BASE_FILE}" \
         -o "${SWAGGER_RESULT_FILE}" \
         -i "${APIGW_CONFIG}"
 
@@ -110,7 +109,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
     [[ ! -f "${SWAGGER_RESULT_FILE}" ]] &&
         fatal "Can't find generated swagger files. Were they generated successfully?" && exit 1
 else
-    zip "${SWAGGER_RESULT_FILE}" "${CLEAN_SWAGGER_SPEC_FILE}"
+    zip "${SWAGGER_RESULT_FILE}" "${SWAGGER_EXTENDED_BASE_FILE}"
 fi
 
 # Generate documentation

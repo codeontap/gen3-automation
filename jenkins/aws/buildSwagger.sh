@@ -109,7 +109,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
     [[ ! -f "${SWAGGER_RESULT_FILE}" ]] &&
         fatal "Can't find generated swagger files. Were they generated successfully?" && exit 1
 else
-    zip "${SWAGGER_RESULT_FILE}" "${SWAGGER_EXTENDED_BASE_FILE}"
+    zip -j "${SWAGGER_RESULT_FILE}" "${SWAGGER_EXTENDED_BASE_FILE}"
 fi
 
 # Generate documentation

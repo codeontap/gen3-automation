@@ -159,7 +159,7 @@ function main() {
   fi
 
   if inArray "REQUIRED_TASKS" "build"; then
-    # Clean up pyc files before packagng into zappa 
+    # Clean up pyc files before packaging into zappa 
     find "${AUTOMATION_BUILD_SRC_DIR}" -name "*.pyc" -delete
 
     # Package for lambda if required

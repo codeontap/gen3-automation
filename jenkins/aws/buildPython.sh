@@ -159,6 +159,9 @@ function main() {
   fi
 
   if inArray "REQUIRED_TASKS" "build"; then
+    # Clean up pyc files before packagng into zappa 
+    find "${AUTOMATION_BUILD_SRC_DIR}" -name "*.pyc" -delete
+
     # Package for lambda if required
     for ZAPPA_DIR in "${AUTOMATION_BUILD_DEVOPS_DIR}/lambda" "./"; do
       if [[ -f "${ZAPPA_DIR}/zappa_settings.json" ]]; then

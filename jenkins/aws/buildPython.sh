@@ -57,8 +57,21 @@ function main() {
     fi
 
     if [[ -f package.json ]]; then
-      npm install --unsafe-perm ||
-        { exit_status=$?; fatal "npm install failed"; return ${exit_status}; }
+      # Select the package manage to use
+        if [[ -z "${NODE_PACKAGE_MANAGER}" ]]; then
+            NODE_PACKAGE_MANAGER="npm"
+        fi
+        # Set install options
+        case ${NODE_PACKAGE_MANAGER} in
+          npm)
+            NODE_PACKAGE_MANAGER_INSTALL_OPTIONS="--unsafe-perm"
+            ;;
+          *)
+            NODE_PACKAGE_MANAGER_INSTALL_OPTIONS=""
+            ;;
+        esac
+        ${NODE_PACKAGE_MANAGER} install ${NODE_PACKAGE_MANAGER_INSTALL_OPTIONS} ||
+        { exit_status=$?; fatal "${NODE_PACKAGE_MANAGER} install failed"; return ${exit_status}; }
     fi
 
     # Run bower as part of the build if required
@@ -180,8 +193,16 @@ function main() {
   if inArray "REQUIRED_TASKS" "build|unit|swagger"; then
     # Clean up
     if [[ -f package.json ]]; then
-      npm prune --production ||
+      case ${NODE_PACKAGE_MANAGER} in
+        yarn)
+          yarn install --production ||
+        { exit_status=$?; fatal "yarn install --production failed"; return ${exit_status}; }
+          ;;
+        *)
+          npm prune --production ||
         { exit_status=$?; fatal "npm prune failed"; return ${exit_status}; }
+          ;;
+      esac
     fi
 
     # Clean up the virtual env

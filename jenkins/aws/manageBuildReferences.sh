@@ -388,8 +388,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     fi
                     if [[ ("${CODE_REPO}" == "?") ||
                             ("${CODE_PROVIDER}" == "?") ]]; then
-                        warning "Ignoring tag for the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - no code repo and/or provider defined"
-                        continue
+                        fatal "Ignoring tag for the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - no code repo and/or provider defined" && exit
                     fi
                     # Determine the details of the provider hosting the code repo
                     defineGitProviderAttributes "${CODE_PROVIDER}" "CODE"

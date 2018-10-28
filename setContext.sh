@@ -366,7 +366,7 @@ function main() {
   # Use "default" if no segment provided
   [[ -z "${SEGMENT}" ]] && SEGMENT="default"
 
-  if [[ "${SEGMENT}" == "default" ]]; then 
+  if [[ "${SEGMENT}" == "default" ]]; then
     DEPLOYMENT_LOCATION="${ENVIRONMENT}"
   else
     DEPLOYMENT_LOCATION="${ENVIRONMENT}-${SEGMENT}"
@@ -469,6 +469,7 @@ function main() {
   IMAGE_FORMATS_ARRAY=()
   arrayFromList "UNITS" "${DEPLOYMENT_UNITS:-${DEPLOYMENT_UNIT:-${SLICES:-${SLICE}}}}" "${DEPLOYMENT_UNIT_SEPARATORS}"
   for CURRENT_DEPLOYMENT_UNIT in "${UNITS[@]}"; do
+      [[ -z "${CURRENT_DEPLOYMENT_UNIT}" ]] && continue
       arrayFromList "BUILD_REFERENCE_PARTS" "${CURRENT_DEPLOYMENT_UNIT}" "${BUILD_REFERENCE_PART_SEPARATORS}"
       DEPLOYMENT_UNIT_PART="${BUILD_REFERENCE_PARTS[0]}"
       TAG_PART="${BUILD_REFERENCE_PARTS[1]:-?}"
@@ -640,7 +641,7 @@ function main() {
       ${RELEASE_MODE_PROMOTION})
           if [[ "${AUTOMATION_RELEASE_IDENTIFIER}" == "branch:*" ]]; then
             define_context_property "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER#"branch:"}"
-          else  
+          else
             define_context_property "ACCEPTANCE_TAG" "${AUTOMATION_RELEASE_IDENTIFIER}-${FROM_ENVIRONMENT}"
           fi
 

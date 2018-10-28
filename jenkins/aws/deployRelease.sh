@@ -6,7 +6,7 @@ trap 'exit 1' SIGHUP SIGINT SIGTERM
 
 function main() {
   # Update the stacks
-  ${AUTOMATION_DIR}/manageUnits.sh -l "application" -a "${DEPLOYMENT_UNITS}" || return $?
+  ${AUTOMATION_DIR}/manageUnits.sh -l "application" -a "${DEPLOYMENT_UNIT_LIST}" || return $?
 
   # Add release and deployment tags to details
   DETAIL_MESSAGE="deployment=${DEPLOYMENT_TAG}, release=${RELEASE_TAG}, ${DETAIL_MESSAGE}"

@@ -543,7 +543,7 @@ function main() {
   save_context_property CODE_REPO_LIST       "${CODE_REPO_ARRAY[*]}"
   save_context_property CODE_PROVIDER_LIST   "${CODE_PROVIDER_ARRAY[*]}"
   save_context_property IMAGE_FORMATS_LIST   "${IMAGE_FORMATS_ARRAY[*]}"
-  [[ -n "${UPDATED_UNITS}" ]] && save_context_property DEPLOYMENT_UNITS "${UPDATED_UNITS}"
+  [[ -n "${UPDATED_UNITS}" ]] && save_context_property CLEANED_DEPLOYMENT_UNITS "${UPDATED_UNITS}"
 
   ### Release management ###
 

@@ -300,14 +300,21 @@ function main() {
 
       # Build source directory
       AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"
-      [[ -d "${AUTOMATION_BUILD_DIR}/src" ]] &&
-        AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
 
-      [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] &&
-        AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
+      if [[ -n "${BUILD_SRC_DIR}" ]]; then 
+        [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_SRC_DIR}" ]] && 
+            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_SRC_DIR}" ||
+            { fatal "Build source directory ${BUILD_SRC_DIR} not found"; exit; }
+      else
+        [[ -d "${AUTOMATION_BUILD_DIR}/src" ]] &&
+            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
 
-      [[ -d "${AUTOMATION_BUILD_DIR}/content" ]] &&
-        AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/content"
+        [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] &&
+            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
+
+        [[ -d "${AUTOMATION_BUILD_DIR}/content" ]] &&
+            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/content"
+      fi
 
       # Build devops directory
       AUTOMATION_BUILD_DEVOPS_DIR="${AUTOMATION_BUILD_DIR}"

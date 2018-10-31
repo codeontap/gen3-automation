@@ -12,14 +12,13 @@ function main() {
   [[ -n "${PRODUCT_CODE_REPO}" ]] && git remote set-url origin https://${GITHUB_CREDENTIALS}@${GITHUB_GIT_DNS}/${GITHUB_GIT_ORG}/${PRODUCT_CODE_REPO}.git
 
   # Determine required tasks
-  # test is always required
   [[ -n "${BUILD_TASKS}" ]] && REQUIRED_TASKS=( ${BUILD_TASKS} ) || REQUIRED_TASKS=( "build" "unit" )
 
   # virtual environment is needed not only for build, but for unit and swagger tasks
   if inArray "REQUIRED_TASKS" "build|unit|swagger"; then
     # Is this really a python based project
-    [[ ! -f requirements.txt ]] &&
-      { fatal "No requirements.txt - is this really a python base repo?"; return 1; }
+    [[ ! -f requirements.txt ]] && [[ ! -d requirements ]] &&
+      { fatal "No requirements.txt or requirements - is this really a python base repo?"; return 1; }
 
     # Set up the virtual build environment
     venv_dir="$(getTempDir "cota_venv_XXX")"
@@ -35,8 +34,15 @@ function main() {
     [[ -n "${AUTOMATION_PIP_VERSION}" ]] && pip install "pip==${AUTOMATION_PIP_VERSION}"
 
     # Process requirements files
+    # If there is a root requirements.txt file install it and if there are any other matching requirements*.txt pattern
+    # Otherwise use *.txt files from the requirements directory
     shopt -s nullglob
-    REQUIREMENTS_FILES=( requirements*.txt )
+    if [[ -n "${PYTHON_REQUIREMENTS_FILES}" ]]; then
+        REQUIREMENTS_FILES=( ${PYTHON_REQUIREMENTS_FILES} )
+    else
+        [[ -f requirements.txt ]] && REQUIREMENTS_FILES=( requirements*.txt ) || REQUIREMENTS_FILES=( requirements/*.txt )
+    fi
+    
     for REQUIREMENTS_FILE in "${REQUIREMENTS_FILES[@]}"; do
       pip install -r ${REQUIREMENTS_FILE} --upgrade ||
       { exit_status=$?; fatal "Installation of requirements failed"; return ${exit_status}; }

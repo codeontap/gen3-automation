@@ -18,7 +18,7 @@ function usage() {
 Manage build references for one or more deployment units
 
 Usage: $(basename $0)   -s DEPLOYMENT_UNIT_LIST -g SEGMENT_BUILDS_DIR
-                        -c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST 
+                        -c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST
                         -p CODE_PROVIDER_LIST -i IMAGE_FORMATS_LIST
                         -a ACCEPTANCE_TAG -v VERIFICATION_TAG -f -l -u
 where
@@ -32,7 +32,7 @@ where
 (o) -p CODE_PROVIDER_LIST           is the repo provider for each deployment unit
 (o) -r CODE_REPO_LIST               is the repo for each deployment unit
 (m) -s DEPLOYMENT_UNIT_LIST         is the list of deployment units to process
-(o) -t CODE_TAG_LIST                is the tag for each deployment unit                                          
+(o) -t CODE_TAG_LIST                is the tag for each deployment unit
 (o) -u (REFERENCE_OPERATION=${REFERENCE_OPERATION_UPDATE}) to update build references
 (o) -v VERIFICATION_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_VERIFY}) to verify build references
 
@@ -91,17 +91,17 @@ function updateDetail() {
 function getBuildReferenceParts() {
     local GBRP_REFERENCE="${1}"
     local ATTRIBUTE=
-    
+
     if [[ "${GBRP_REFERENCE}" =~ ^\{ ]]; then
         # Newer JSON based format
-        for ATTRIBUTE in commit tag format; do 
+        for ATTRIBUTE in commit tag format; do
             ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null)" <<< "${GBRP_REFERENCE}")
             if [[ -z "${ATTRIBUTE_VALUE}" ]]; then
                 ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null)" <<< "${GBRP_REFERENCE}")
             fi
             declare -g "BUILD_REFERENCE_${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE:-?}"
         done
-        for ATTRIBUTE in formats; do 
+        for ATTRIBUTE in formats; do
             readarray -t FORMAT_VALUES < <(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}")
             arrayIsEmpty FORMAT_VALUES &&
                 readarray -t FORMAT_VALUES < <(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" <<< "${GBRP_REFERENCE}")
@@ -129,7 +129,7 @@ function formatBuildReference() {
     local FBR_FORMATS="${3,,:-?}"
 
     BUILD_REFERENCE="{\"Commit\": \"${FBR_COMMIT}\""
-    if [[ "${FBR_TAG}" != "?" ]]; then 
+    if [[ "${FBR_TAG}" != "?" ]]; then
         BUILD_REFERENCE="${BUILD_REFERENCE}, \"Tag\": \"${FBR_TAG}\""
     fi
     if [[ "${FBR_FORMATS}" == "?" ]]; then
@@ -199,7 +199,7 @@ while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
             ;;
         v)
             REFERENCE_OPERATION="${REFERENCE_OPERATION_VERIFY}"
-            VERIFICATION_TAG="${OPTARG}"            
+            VERIFICATION_TAG="${OPTARG}"
             ;;
         \?)
             fatalOption; exit
@@ -300,7 +300,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
         LEGACY_BUILD_FILE="${EFFECTIVE_DEPLOYMENT_UNIT}/build.ref"
         BUILD_FILE="${LEGACY_BUILD_FILE}"
     fi
-    
+
     # Ensure appsettings directories exist
     if [[ -n "${SEGMENT_BUILDS_DIR}" ]]; then
         mkdir -p "${CURRENT_DEPLOYMENT_UNIT}" "${EFFECTIVE_DEPLOYMENT_UNIT}"
@@ -339,7 +339,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
             # Add build info to DETAIL_MESSAGE
             updateDetail "${CURRENT_DEPLOYMENT_UNIT}" "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMATS}"
             ;;
-    
+
         ${REFERENCE_OPERATION_LISTFULL})
             if [[ -f ${BUILD_FILE} ]]; then
                 getBuildReferenceParts "$(cat ${BUILD_FILE})"
@@ -351,7 +351,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                         IMAGE_FORMATS_ARRAY["${INDEX}"]="${BUILD_REFERENCE_FORMATS}"
                     fi
                 fi
-            fi            
+            fi
             ;;
 
         ${REFERENCE_OPERATION_UPDATE})
@@ -361,23 +361,23 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                 warning "Ignoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
                 continue
             fi
-        
+
             # Preserve the format if none provided
             if [[ ("${IMAGE_FORMATS}" == "?") &&
                     (-f ${NEW_BUILD_FILE}) ]]; then
                 getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
                 IMAGE_FORMATS="${BUILD_REFERENCE_FORMATS}"
             fi
-            
+
             # Construct the build reference
             formatBuildReference "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMATS}"
-        
+
             # Update the build reference
             # Use newer naming and clean up legacy named build reference files
             echo -n "${BUILD_REFERENCE}" > "${NEW_BUILD_FILE}"
             [[ -e "${LEGACY_BUILD_FILE}" ]] && rm "${LEGACY_BUILD_FILE}"
             ;;
-    
+
         ${REFERENCE_OPERATION_VERIFY})
             # Ensure code repo defined if tag provided only if commit not provided
             if [[ "${CODE_COMMIT}" == "?" ]]; then
@@ -399,12 +399,12 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                     "${CODE_TAG}^{}" | cut -f 1)
                     [[ -z "${CODE_COMMIT}" ]] &&
                         fatal "Tag ${CODE_TAG} not found in the ${CODE_REPO} repo. Was an annotated tag used?" && exit
-                    
+
                     # Fetch other info about the tag
-                    # We are using a github api here to avoid having to pull in the whole repo - 
+                    # We are using a github api here to avoid having to pull in the whole repo -
                     # git currently doesn't have a command to query the message of a remote tag
                     CODE_TAG_MESSAGE=$(curl -s https://${!CODE_CREDENTIALS_VAR}@${CODE_API_DNS}/repos/${CODE_ORG}/${CODE_REPO}/git/tags/${TAG_COMMIT} | jq .message | tr -d '"')
-                    [[ (-z "${CODE_TAG_MESSAGE}") || 
+                    [[ (-z "${CODE_TAG_MESSAGE}") ||
                         ("${CODE_TAG_MESSAGE}" == "Not Found") ]] &&
                         fatal "Message for tag ${CODE_TAG} not found in the ${CODE_REPO} repo" && exit
                     # else
@@ -413,12 +413,12 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     # Nothing to do for this deployment unit
                     # Note that it is permissible to not have a tag for a deployment unit
                     # that is associated with a code repo. This situation arises
-                    # if application settings are changed and a new release is 
+                    # if application settings are changed and a new release is
                     # thus required.
                     continue
                 fi
             fi
-            
+
             # If no formats explicitly defined, use those in the build reference if defined
             if [[ ("${IMAGE_FORMATS}" == "?") &&
                     (-f ${NEW_BUILD_FILE}) ]]; then
@@ -427,99 +427,102 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                 IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra CODE_IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
             fi
 
-            # Confirm the commit built successfully into an image
-            if [[ "${IMAGE_FORMATS}" != "?" ]]; then
-                for IMAGE_FORMAT in "${CODE_IMAGE_FORMATS_ARRAY[@]}"; do
-                    IMAGE_PROVIDER_VAR="PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
-                    IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
-                    FROM_IMAGE_PROVIDER_VAR="FROM_PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
-                    FROM_IMAGE_PROVIDER="${!FROM_IMAGE_PROVIDER_VAR}"
-                    case ${IMAGE_FORMAT,,} in
-                        dataset)
-                            ${AUTOMATION_DIR}/manageDataSetS3.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                            RESULT=$?
-                            ;;
-                        docker)
-                            ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                            RESULT=$?
-                            ;;
-                        lambda)
-                            ${AUTOMATION_DIR}/manageLambda.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                            RESULT=$?
-                            ;;
-                        pipeline)
-                            ${AUTOMATION_DIR}/managePipeline.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                            RESULT=$?
-                            ;;
-                        scripts)
-                            ${AUTOMATION_DIR}/manageScripts.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                            RESULT=$?
-                            ;;
-                        swagger)
-                            ${AUTOMATION_DIR}/manageSwagger.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                            RESULT=$?
-                            ;;
-                        spa)
-                            ${AUTOMATION_DIR}/manageSpa.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                            RESULT=$?
-                            ;;
-                        contentnode)
-                            ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                            RESULT=$?
-                            ;;
-                        *)
-                            fatal "Unknown image format \"${IMAGE_FORMAT}\"" && exit
-                            ;;
-                    esac
-                    if [[ "${RESULT}" -ne 0 ]]; then
-                        if [[ -n "${FROM_IMAGE_PROVIDER}" ]]; then
-                            # Attempt to pull image in from remote provider
-                            case ${IMAGE_FORMAT,,} in
-                                dataset)
-                                    ${AUTOMATION_DIR}/manageDataSetS3.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -b "REGISTRY_CONTENT"
-                                    RESULT=$?
-                                    ;;
-                                docker)
-                                    ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
-                                    RESULT=$?
-                                    ;;
-                                lambda)
-                                    ${AUTOMATION_DIR}/manageLambda.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
-                                    RESULT=$?
-                                    ;;
-                                pipeline)
-                                    ${AUTOMATION_DIR}/managePipeline.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
-                                    RESULT=$?
-                                    ;;
-                                scripts)
-                                    ${AUTOMATION_DIR}/manageScripts.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
-                                    RESULT=$?
-                                    ;;
-                                swagger)
-                                    ${AUTOMATION_DIR}/manageSwagger.sh -x -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
-                                    ${AUTOMATION_DIR}/manageSwagger.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -f "apidoc.zip"
-                                    RESULT=$?
-                                    ;;
-                                spa)
-                                    ${AUTOMATION_DIR}/manageSpa.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
-                                    RESULT=$?
-                                    ;;
-                                contentnode)
-                                    ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
-                                    RESULT=$?
-                                    ;;
-                                *)
-                                    fatal "Unknown image format \"${IMAGE_FORMAT}\"" && exit
-                                    ;;
-                            esac
-                            [[ "${RESULT}" -ne 0 ]] &&
-                                fatal "Unable to pull ${IMAGE_FORMAT,,} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" && exit
-                        else
-                            fatal "${IMAGE_FORMAT^} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?" && exit
-                        fi
+            # If we don't know the image type, then there is a problem
+            # Most likely it is the first time this unit has been mentioned and no format was
+            # included as part of the prepare operation.
+            [[ "${IMAGE_FORMATS}" == "?" ]] &&
+                        fatal "Image format(s) not known for \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit. Provide the format after the code reference separated by \"!\" if unit is being mentioned for the first time." && exit
+
+            for IMAGE_FORMAT in "${CODE_IMAGE_FORMATS_ARRAY[@]}"; do
+                IMAGE_PROVIDER_VAR="PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
+                IMAGE_PROVIDER="${!IMAGE_PROVIDER_VAR}"
+                FROM_IMAGE_PROVIDER_VAR="FROM_PRODUCT_${IMAGE_FORMAT^^}_PROVIDER"
+                FROM_IMAGE_PROVIDER="${!FROM_IMAGE_PROVIDER_VAR}"
+                case ${IMAGE_FORMAT,,} in
+                    dataset)
+                        ${AUTOMATION_DIR}/manageDataSetS3.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        RESULT=$?
+                        ;;
+                    docker)
+                        ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        RESULT=$?
+                        ;;
+                    lambda)
+                        ${AUTOMATION_DIR}/manageLambda.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        RESULT=$?
+                        ;;
+                    pipeline)
+                        ${AUTOMATION_DIR}/managePipeline.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        RESULT=$?
+                        ;;
+                    scripts)
+                        ${AUTOMATION_DIR}/manageScripts.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        RESULT=$?
+                        ;;
+                    swagger)
+                        ${AUTOMATION_DIR}/manageSwagger.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        RESULT=$?
+                        ;;
+                    spa)
+                        ${AUTOMATION_DIR}/manageSpa.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        RESULT=$?
+                        ;;
+                    contentnode)
+                        ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        RESULT=$?
+                        ;;
+                    *)
+                        fatal "Unknown image format \"${IMAGE_FORMAT}\"" && exit
+                        ;;
+                esac
+                if [[ "${RESULT}" -ne 0 ]]; then
+                    if [[ -n "${FROM_IMAGE_PROVIDER}" ]]; then
+                        # Attempt to pull image in from remote provider
+                        case ${IMAGE_FORMAT,,} in
+                            dataset)
+                                ${AUTOMATION_DIR}/manageDataSetS3.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -b "REGISTRY_CONTENT"
+                                RESULT=$?
+                                ;;
+                            docker)
+                                ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                RESULT=$?
+                                ;;
+                            lambda)
+                                ${AUTOMATION_DIR}/manageLambda.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                RESULT=$?
+                                ;;
+                            pipeline)
+                                ${AUTOMATION_DIR}/managePipeline.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                RESULT=$?
+                                ;;
+                            scripts)
+                                ${AUTOMATION_DIR}/manageScripts.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                RESULT=$?
+                                ;;
+                            swagger)
+                                ${AUTOMATION_DIR}/manageSwagger.sh -x -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageSwagger.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -f "apidoc.zip"
+                                RESULT=$?
+                                ;;
+                            spa)
+                                ${AUTOMATION_DIR}/manageSpa.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                RESULT=$?
+                                ;;
+                            contentnode)
+                                ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                                RESULT=$?
+                                ;;
+                            *)
+                                fatal "Unknown image format \"${IMAGE_FORMAT}\"" && exit
+                                ;;
+                        esac
+                        [[ "${RESULT}" -ne 0 ]] &&
+                            fatal "Unable to pull ${IMAGE_FORMAT,,} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} from provider ${FROM_IMAGE_PROVIDER}. Was the build successful?" && exit
+                    else
+                        fatal "${IMAGE_FORMAT^} image for deployment unit ${CURRENT_DEPLOYMENT_UNIT} and commit ${CODE_COMMIT} not found. Was the build successful?" && exit
                     fi
-                done
-            fi
+                fi
+            done
 
             # Save details of this deployment unit
             CODE_COMMIT_ARRAY[${INDEX}]="${CODE_COMMIT}"

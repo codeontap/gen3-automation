@@ -14,9 +14,6 @@ function main() {
     [[ ! -f pipeline-definition.json && ! -f pipeline-parameters.json ]] &&
         { fatal "No pipeline-definition.json found"; return 1; }
 
-    cp -Lr "${AUTOMATION_BUILD_SRC_DIR}/" "${tmpdir}/"
-
-    cd "${tmpdir}"
     zip -r "${tmpdir}/pipeline.zip" *  
 
     if [[ -f ${tmpdir}/pipeline.zip ]]; then

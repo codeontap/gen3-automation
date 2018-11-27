@@ -1,6 +1,6 @@
 #!/bin/bash
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
-trap '[[ (-z "${AUTOMATION_DEBUG}") && (-z "${AUTOMATION_NODEJS_VERISON}") ]] && nvm deactivate; -d "${NVM_DIR}") ]] && rm -rf "${NVM_DIR}" ; exit 1' SIGHUP SIGINT SIGTERM
+trap '[[ (-z "${AUTOMATION_DEBUG}") && (-z "${AUTOMATION_NODEJS_VERSION}") ]] && nvm deactivate; -d "${NVM_DIR}") ]] && rm -rf "${NVM_DIR}" ; exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 
@@ -13,15 +13,15 @@ function main() {
       { fatal "no packge.json file found. Is this a node repo?"; return 1; }
     
     # setup nvm environment if required 
-    if [[ -n "${AUTOMATION_NODEJS_VERISON}" ]]; then 
+    if [[ -n "${AUTOMATION_NODEJS_VERSION}" ]]; then 
 
         NVM_DIR="$(getTempDir "cota_nvm_XXX")"
         curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | NVM_DIR="${NVM_DIR}" bash 
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 
 
-        nvm install "${AUTOMATION_NODEJS_VERISON}" ||
-                { exit_status=$?; fatal "NVM install for node ${AUTOMATION_NODEJS_VERISON} install failed" ; return ${exit_status}; }
-        nvm use "${AUTOMATION_NODEJS_VERISON}"
+        nvm install "${AUTOMATION_NODEJS_VERSION}" ||
+                { exit_status=$?; fatal "NVM install for node ${AUTOMATION_NODEJS_VERSION} install failed" ; return ${exit_status}; }
+        nvm use "${AUTOMATION_NODEJS_VERSION}"
 
     fi
 
@@ -105,7 +105,7 @@ function main() {
     [[ $RESULT -ne 0 ]] && fatal "Prune failed" && return ${RESULT}
 
     # deactivate nvm if it was used 
-    if [[ -n "${AUTOMATION_NODEJS_VERISON}" ]]; then 
+    if [[ -n "${AUTOMATION_NODEJS_VERSION}" ]]; then 
         nvm deactivate
         rm -rf "${NVM_DIR}"
     fi

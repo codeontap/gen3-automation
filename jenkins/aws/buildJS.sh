@@ -1,6 +1,6 @@
 #!/bin/bash
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
-trap '[[ (-z "${AUTOMATION_DEBUG}") && (-z "${AUTOMATION_NODEJS_VERSION}") ]] && nvm deactivate; -d "${NVM_DIR}") ]] && rm -rf "${NVM_DIR}" ; exit 1' SIGHUP SIGINT SIGTERM
+trap '[[ (-z "${AUTOMATION_DEBUG}") && (-z "${NVM_DIR}") ]] && nvm deactivate; rm -rf "${NVM_DIR}" ; exit $?' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
-trap '[[ (-z "${AUTOMATION_DEBUG}") && (-z "${NVM_DIR}") ]] && nvm deactivate; rm -rf "${NVM_DIR}" ; exit $?' SIGHUP SIGINT SIGTERM
+trap '[[ (-z "${AUTOMATION_DEBUG}") && (-d "${NVM_DIR}") ]] && nvm deactivate; rm -rf "${NVM_DIR}" ; exit $?' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 
@@ -95,24 +95,23 @@ function main() {
     # Clean up dev dependencies
     case ${NODE_PACKAGE_MANAGER} in
         yarn)
-            yarn install --production
+            yarn install --production ||
+                { exit_status=$?; fatal "yarn prune failed";  return ${exit_status}; }
             ;;
         *)
-            npm prune --production
+            npm prune --production ||
+                { exit_status=$?; fatal "npm prune failed";  return ${exit_status}; }
             ;;
     esac
-    RESULT=$?
-    [[ $RESULT -ne 0 ]] && fatal "Prune failed" && return ${RESULT}
 
-    # deactivate nvm if it was used 
+    # deactivate nvm if it was used  and cleanup 
     if [[ -n "${AUTOMATION_NODEJS_VERSION}" ]]; then 
         nvm deactivate
         rm -rf "${NVM_DIR}"
     fi
 
     # All good
-    RESULT=0
-
+    return 0
 }
 
 main "$@"

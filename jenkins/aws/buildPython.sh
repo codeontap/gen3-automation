@@ -1,7 +1,7 @@
 #!/bin/bash
 
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
-trap '[[ (-z "${AUTOMATION_DEBUG}") && (-d "${venv_dir}") ]] && rm -rf "${venv_dir}"; exit 1' SIGHUP SIGINT SIGTERM
+trap 'exit $?' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 function main() {
@@ -162,12 +162,12 @@ function main() {
             # spec directory is on the same level with the build directory 
             SWAGGER_TARGET_FILE="${AUTOMATION_BUILD_DIR}"/../spec/${COMPONENT_INSTANCE}/swagger.yaml
             ENV_FILE=${PYTHON_SWAGGER_ENV_FILE} COMPONENT_INSTANCE=${COMPONENT_INSTANCE} python manage.py swagger ${SWAGGER_TARGET_FILE} ${MANAGE_OPTIONS} ||
-              { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
+              { exit_status=$?; fatal "Generate swagger documents failed"; return trapExit "${venv_dir}" ${exit_status}; }
         done
       else
         SWAGGER_TARGET_FILE="${AUTOMATION_BUILD_DIR}"/../spec/swagger.yaml
         ENV_FILE=${PYTHON_SWAGGER_ENV_FILE} python manage.py swagger ${SWAGGER_TARGET_FILE} ${MANAGE_OPTIONS} ||
-          { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
+          { exit_status=$?; fatal "Generate swagger documents failed"; return trapExit "${venv_dir}" ${exit_status}; }
       fi
       # set code reference to master if a
       [[ ! -n "${SWAGGER_CODE_REFERENCE}" ]] && SWAGGER_CODE_REFERENCE="master"
@@ -190,7 +190,7 @@ function main() {
           mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/dist"
           mv ${BUILD} "${AUTOMATION_BUILD_SRC_DIR}/dist/lambda.zip"
         else
-          { exit_status=$?; fatal "Packaging for lambda failed"; return ${exit_status}; }
+          { exit_status=$?; fatal "Packaging for lambda failed"; return trapExit "${venv_dir}" ${exit_status}; }
         fi
       fi
     done
@@ -202,11 +202,11 @@ function main() {
       case ${NODE_PACKAGE_MANAGER} in
         yarn)
           yarn install --production ||
-        { exit_status=$?; fatal "yarn install --production failed"; return ${exit_status}; }
+        { exit_status=$?; fatal "yarn install --production failed"; return trapExit "${venv_dir}" ${exit_status}; }
           ;;
         *)
           npm prune --production ||
-        { exit_status=$?; fatal "npm prune failed"; return ${exit_status}; }
+        { exit_status=$?; fatal "npm prune failed"; return trapExit "${venv_dir}" ${exit_status}; }
           ;;
       esac
     fi
@@ -218,6 +218,14 @@ function main() {
   # All good
   return 0
 }
+
+# cleanup temprorary venv directory before exiting the script
+function trapExit() {
+    NVM_DIR=$1
+    exit_status=$2
+    [[ (-z "${AUTOMATION_DEBUG}") && (-d "${venv_dir}") ]] && rm -rf "${venv_dir}"; return ${exit_status}
+}
+
 
 main "$@"
 

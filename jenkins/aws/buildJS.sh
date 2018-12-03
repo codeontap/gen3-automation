@@ -1,6 +1,6 @@
 #!/bin/bash
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
-trap '[[ (-z "${AUTOMATION_DEBUG}") && (-d "${NVM_DIR}") ]] && nvm deactivate; rm -rf "${NVM_DIR}" ; exit $?' SIGHUP SIGINT SIGTERM
+trap 'exit $?' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
 
@@ -20,7 +20,7 @@ function main() {
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 
 
         nvm install "${AUTOMATION_NODEJS_VERSION}" ||
-                { exit_status=$?; fatal "NVM install for node ${AUTOMATION_NODEJS_VERSION} install failed" ; return ${exit_status}; }
+                { exit_status=$?; fatal "NVM install for node ${AUTOMATION_NODEJS_VERSION} install failed" ; return trapExit "${NVM_DIR}" ${exit_status}; }
         nvm use "${AUTOMATION_NODEJS_VERSION}"
 
     fi
@@ -35,12 +35,12 @@ function main() {
     fi
 
     ${NODE_PACKAGE_MANAGER} install ||
-        { exit_status=$?; fatal "npm install failed";  return ${exit_status}; }
+        { exit_status=$?; fatal "npm install failed";  return trapExit "${NVM_DIR}" ${exit_status}; }
 
     # Run bower as part of the build if required
     if [[ -f bower.json ]]; then
         bower install --allow-root ||
-            { exit_status=$?; fatal "bower install failed";  return ${exit_status}; }
+            { exit_status=$?; fatal "bower install failed";  return trapExit "${NVM_DIR}" ${exit_status}; }
     fi
 
     # Determine required tasks
@@ -84,7 +84,7 @@ function main() {
 
             if [[ "${BUILD_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" != "${BUILD_TASKS[*]}" ]]; then
                 ${BUILD_UTILITY} ${REQUIRED_TASK} ||
-                    { exit_status=$?; fatal "${BUILD_UTILITY} \"${TASK}\" task failed";  return ${exit_status}; }
+                    { exit_status=$?; fatal "${BUILD_UTILITY} \"${REQUIRED_TASK}\" task failed";  return trapExit "${NVM_DIR}" ${exit_status}; }
 
                 # Task complete so stop looking for build file supporting it
                 break
@@ -96,11 +96,11 @@ function main() {
     case ${NODE_PACKAGE_MANAGER} in
         yarn)
             yarn install --production ||
-                { exit_status=$?; fatal "yarn prune failed";  return ${exit_status}; }
+                { exit_status=$?; fatal "yarn install --production failed";  return trapExit "${NVM_DIR}" ${exit_status}; }
             ;;
         *)
             npm prune --production ||
-                { exit_status=$?; fatal "npm prune failed";  return ${exit_status}; }
+                { exit_status=$?; fatal "npm prune --production failed";  return trapExit "${NVM_DIR}" ${exit_status}; }
             ;;
     esac
 
@@ -112,6 +112,13 @@ function main() {
 
     # All good
     return 0
+}
+
+# cleanup temprorary nmv directory before exiting the scripts
+function trapExit() {
+    NVM_DIR=$1
+    exit_status=$2
+    [[ (-z "${AUTOMATION_DEBUG}") && (-d "${NVM_DIR}") ]] && nvm deactivate; rm -rf "${NVM_DIR}"; return ${exit_status}
 }
 
 main "$@"

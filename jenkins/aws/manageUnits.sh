@@ -138,7 +138,7 @@ function main() {
 
         # Manage the stack if required
         if [[ -n "${DEPLOYMENT_MODE}" ]]; then
-          if [[ "${DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE_UPDATE}" ]]; then
+          if [[ "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOP}" || "${DEPLOYMENT_MODE}" == "${DEPLOYMENT_MODE_STOPSTART}" ]]; then
               ${GENERATION_DIR}/manageStack.sh -d -l "${level}" -u "${unit}" ||
                   { exit_status=$?; fatal "Deletion of the ${level} level stack for the ${unit} deployment unit failed"; return "${exit_status}"; }
           fi

@@ -78,7 +78,7 @@ fi
 # Validate it
 # We use a few different validators until we settle on a preferred one
 VALIDATORS=( \
-"swagger       validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})" \
+"swagger-cli   validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})" \
 "swagger-tools validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})" \
 "ajv           validate -d /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE}) -s /usr/local/lib/node_modules/swagger-schema-official/schema.json")
 for VALIDATOR in "${VALIDATORS[@]}"; do

@@ -14,6 +14,7 @@ REGISTRY_OPERATION_TAG="tag"
 REGISTRY_OPERATION_PULL="pull"
 REGISTRY_OPERATION_DEFAULT="${REGISTRY_OPERATION_VERIFY}"
 REGISTRY_EXPAND_DEFAULT="false"
+REGISTRY_REMOVE_SOURCE_DEFAULT="false"
 
 function usage() {
     cat <<EOF
@@ -33,12 +34,14 @@ Usage: $(basename $0) -s -v -p -k -x
                         -u REGISTRY_DEPLOYMENT_UNIT
                         -g REGISTRY_CODE_COMMIT
                         -b REGISTRY_ADDITIONAL_DIRECTORY
+                        -e REGISTRY_REMOVE_SOURCE
 
 where
 
 (o) -a REGISTRY_PROVIDER                is the local registry provider
 (o) -b REGISTRY_ADDITIONAL_DIRECTORY    is an additonal directory that is stored with the image
 (o) -d REGISTRY_PRODUCT                 is the product to use when defaulting REGISTRY_REPO
+(o) -e REGISTRY_REMOVE_SOURCE           remove the source data once the image is in the registry
 (o) -f REGISTRY_FILENAME                is the filename used when storing images
 (o) -g REGISTRY_CODE_COMMIT             to use when defaulting REGISTRY_REPO
     -h                                  shows this text
@@ -76,6 +79,7 @@ REMOTE_REGISTRY_TAG=REGISTRY_TAG
 REGISTRY_OPERATION=${REGISTRY_OPERATION_DEFAULT}
 REGISTRY_PRODUCT=${PRODUCT}
 REGISTRY_EXPAND=${REGISTRY_EXPAND_DEFAULT}
+REGISTRY_REMOVE_SOURCE=${REGISTRY_REMOVE_SOURCE_DEFAULT}
 
 NOTES:
 
@@ -84,7 +88,7 @@ EOF
 }
 
 # Parse options
-while getopts ":a:b:d:f:g:hki:l:pr:st:u:vxy:z:" opt; do
+while getopts ":a:b:d:e:f:g:hki:l:pr:st:u:vxy:z:" opt; do
     case $opt in
         a)
             REGISTRY_PROVIDER="${OPTARG}"
@@ -94,6 +98,9 @@ while getopts ":a:b:d:f:g:hki:l:pr:st:u:vxy:z:" opt; do
             ;;
         d)
             REGISTRY_PRODUCT="${OPTARG}"
+            ;;
+        e)
+            REGISTRY_REMOVE_SOURCE="true"
             ;;
         f)
             REGISTRY_FILENAME="${OPTARG}"
@@ -255,6 +262,26 @@ function copyToRegistry() {
         fatal "Unable to tag ${BASE_REGISTRY_FILENAME} as latest" && exit
 }
 
+# Remove the source S3 content. This is used to keep the S3 Stage clean for new uploads
+function removeSource() { 
+    local FILE_TO_REMOVE="${1}"
+
+    info "removing ${FILE_TO_REMOVE}"
+
+    if [[ "${FILE_TO_REMOVE}" =~ ^s3:// ]]; then
+        
+        aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FILE_TO_REMOVE}"  >/dev/null 2>&1
+        RESULT=$?
+        [[ "$RESULT" -ne 0 ]] &&
+            fatal "Can't access ${FILE_TO_REMOVE}" && exit
+
+        aws --region "${REGISTRY_PROVIDER_REGION}" s3 rm --recursive "${FILE_TO_REMOVE}" 
+    
+    else
+        info "Local data not removed as it is temporary anyway"
+    fi
+}
+
 # Apply local registry defaults
 REGISTRY_TYPE="${REGISTRY_TYPE,,:-${REGISTRY_TYPE_DEFAULT}}"
 REGISTRY_PROVIDER_VAR="PRODUCT_${REGISTRY_TYPE^^}_PROVIDER"
@@ -264,6 +291,7 @@ BASE_REGISTRY_FILENAME="${REGISTRY_FILENAME##*/}"
 REGISTRY_TAG="${REGISTRY_TAG:-${REGISTRY_TAG_DEFAULT}}"
 REGISTRY_OPERATION="${REGISTRY_OPERATION:-${REGISTRY_OPERATION_DEFAULT}}"
 REGISTRY_PRODUCT="${REGISTRY_PRODUCT:-${PRODUCT}}"
+REGISTRY_REMOVE_SOURCE="${REGISTRY_REMOVE_SOURCE:-${REGISTRY_REMOVE_SOURCE_DEFAULT}}"
 
 # Default local repository is based on standard image naming conventions
 if [[ (-n "${REGISTRY_PRODUCT}") && 
@@ -324,6 +352,14 @@ case ${REGISTRY_OPERATION} in
         copyToRegistry "${REGISTRY_FILENAME}" "${BASE_REGISTRY_FILENAME}"
         if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then
             copyToRegistry "${REGISTRY_ADDITIONAL_DIRECTORY}" 
+        fi
+        
+        # Clean out the source staging directory
+        if [[ "${REGISTRY_REMOVE_SOURCE}" == "true" ]]; then 
+            removeSource "${REGISTRY_FILENAME}"
+            if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then 
+                removeSource "${REGISTRY_ADDITIONAL_DIRECTORY}"
+            fi 
         fi
         ;;
 

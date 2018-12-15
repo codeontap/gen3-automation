@@ -273,7 +273,7 @@ function removeSource() {
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FILE_TO_REMOVE}"  >/dev/null 2>&1
         RESULT=$?
         [[ "$RESULT" -ne 0 ]] &&
-            fatal "Can't access ${FILE_TO_REMOVE}" && exit
+            fatal "Can't access ${FILE_TO_REMOVE}" && return 128
 
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 rm --recursive "${FILE_TO_REMOVE}" 
     

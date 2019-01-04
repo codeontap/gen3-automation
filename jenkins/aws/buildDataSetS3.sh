@@ -15,7 +15,7 @@ function main() {
     for DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST[0]}; do
 
         # Generate a build blueprint so that we can find out the source S3 bucket
-        . "${GENERATION_DIR}/createBuildBluePrint.sh" -u "${DEPLOYMENT_UNIT}" 
+        . "${GENERATION_DIR}/createBuildblueprint.sh" -u "${DEPLOYMENT_UNIT}" 
         BUILD_BLUEPRINT="${AUTOMATION_DATA_DIR}/build_blueprint-${DEPLOYMENT_UNIT}-.json"
 
         info "Checking out the contents of ${BUILD_BLUEPRINT}"
@@ -35,7 +35,7 @@ function main() {
 
             if [[ -f "${data_manifest_file}" && "$(cat ${data_manifest_file})" != "null"  ]]; then 
 
-                build_reference="$( shasum -U -a 1 "${data_manifest_file}" | cut -d " " -f 1  )"
+                build_reference="$( shasum -a 1 "${data_manifest_file}" | cut -d " " -f 1  )"
                 save_context_property CODE_COMMIT_LIST "${build_reference}"
                 save_context_property S3_DATA_STAGE "${dataset_master_location}"
 

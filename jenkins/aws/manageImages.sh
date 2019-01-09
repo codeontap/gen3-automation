@@ -92,6 +92,13 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             ;;
 
+        rdssnapshot)
+            ${AUTOMATION_DIR}/manageRDSSnapshot.sh -s \
+                    -u "$DEPLOYMENT_UNIT" \
+                    -g "${CODE_COMMIT}" \
+                RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
+            ;;
+
         docker)
             # Package for docker
             DOCKERFILE="${AUTOMATION_BUILD_SRC_DIR}/Dockerfile"

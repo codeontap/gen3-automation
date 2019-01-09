@@ -1218,6 +1218,16 @@ function delete_oai_credentials() {
 
 # -- RDS --
 
+function add_tag_rds_resource() {
+  local region="$1"; shift
+  local rds_identifier="$1"; shift
+  local key="${1}"; shift
+  local value="${1}"; shift
+
+  aws --region "${region}" rds add-tags-to-resource --resource-name "${rds_identifier}" --tags "Key=${key},Value=${value}" || return $?
+
+}
+
 function create_snapshot() {
   local region="$1"; shift
   local db_identifier="$1"; shift

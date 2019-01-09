@@ -67,6 +67,12 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
+        
+        rdssnapshot)
+            ${AUTOMATION_DIR}/manageRDSSnapshot.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "undefined"
+            RESULT=$?
+            [[ "${RESULT}" -eq 0 ]] && PRESENT=1
+            ;;
 
         docker)
             ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"

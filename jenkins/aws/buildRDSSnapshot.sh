@@ -3,7 +3,7 @@
 trap '[[ (-z "${AUTOMATION_DEBUG}") ; exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
-# Ge the generation context to create a bu
+# Get the generation context so we can run template generation
 . "${GENERATION_DIR}/setContext.sh"
 
 tmpdir="$(getTempDir "cota_inf_XXX")"

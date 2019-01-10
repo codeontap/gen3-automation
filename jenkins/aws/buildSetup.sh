@@ -69,7 +69,7 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             ;;
         
         rdssnapshot)
-            ${AUTOMATION_DIR}/manageRDSSnapshot.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "undefined"
+            ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "undefined"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;

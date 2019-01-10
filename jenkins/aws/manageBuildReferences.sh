@@ -444,7 +444,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                         RESULT=$?
                         ;;
                     rdssnapshot)
-                        ${AUTOMATION_DIR}/manageRDSSnapshot.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     docker)
@@ -488,7 +488,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                 RESULT=$?
                                 ;;
                             rdssnapshot)
-                                ${AUTOMATION_DIR}/manageDataSetS3.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -b "REGISTRY_CONTENT"
+                                ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -g "${CODE_COMMIT}"
                                 RESULT=$?
                                 ;;
                             docker)

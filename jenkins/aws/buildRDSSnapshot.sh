@@ -40,7 +40,7 @@ function main() {
                 build_reference="$( echo "${snapshot_create_time}" | shasum -a 1 | cut -d " " -f 1  )"
 
                 save_context_property CODE_COMMIT_LIST "${build_reference}"
-                save_context_property REGISTRY_SOURCE_SNAPSHOT "${snapshot_id}"
+                save_context_property SNAPSHOT_SOURCE "${snapshot_id}"
                 save_chain_property GIT_COMMIT "${build_reference}"
                 
                 info "Commit: ${build_reference}"

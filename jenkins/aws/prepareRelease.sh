@@ -9,7 +9,7 @@ function main() {
   ${AUTOMATION_DIR}/manageBuildReferences.sh -u || return $?
   
   # Create the templates
-${AUTOMATION_DIR}/manageUnits.sh -l "application" -a "${DEPLOYMENT_UNIT_LIST}" -r "${RELEASE_TAG}" || return $?
+  ${AUTOMATION_DIR}/manageUnits.sh -l "application" -a "${DEPLOYMENT_UNIT_LIST}" -r "${RELEASE_TAG}" || return $?
   
   # All ok so tag the config repo
   save_product_config "${DETAIL_MESSAGE}" "${PRODUCT_CONFIG_REFERENCE}" "${RELEASE_TAG}" || return $?

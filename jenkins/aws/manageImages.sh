@@ -93,7 +93,7 @@ for FORMAT in "${FORMATS[@]}"; do
             ;;
 
         rdssnapshot)
-            ${AUTOMATION_DIR}/manageRDSSnapshot.sh -s \
+            ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -s \
                     -u "$DEPLOYMENT_UNIT" \
                     -g "${CODE_COMMIT}" \
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit

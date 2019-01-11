@@ -321,7 +321,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             RESULT=$?
                             [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
-                        lambda|swagger|spa|contentnode|scripts|pipeline|dataset)
+                        lambda|swagger|spa|contentnode|scripts|pipeline|dataset|rdssnapshot)
                             ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
                                 -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
@@ -443,6 +443,10 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                         ${AUTOMATION_DIR}/manageDataSetS3.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
+                    rdssnapshot)
+                        ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        RESULT=$?
+                        ;;
                     docker)
                         ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
@@ -481,6 +485,10 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                         case ${IMAGE_FORMAT,,} in
                             dataset)
                                 ${AUTOMATION_DIR}/manageDataSetS3.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -b "REGISTRY_CONTENT"
+                                RESULT=$?
+                                ;;
+                            rdssnapshot)
+                                ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -g "${CODE_COMMIT}"
                                 RESULT=$?
                                 ;;
                             docker)

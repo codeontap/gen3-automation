@@ -1228,6 +1228,7 @@ function add_tag_rds_resource() {
 
 }
 
+# -- RDS --
 function create_snapshot() {
   local region="$1"; shift
   local db_identifier="$1"; shift
@@ -1242,8 +1243,8 @@ function create_snapshot() {
   sleep 2s
   while [ "${exit_status}" != "0" ]
   do
-      SNAPSHOT_STATE="$(aws rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" --query 'DBSnapshots[0].Status')"
-      SNAPSHOT_PROGRESS="$(aws rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" --query 'DBSnapshots[0].PercentProgress')"
+      SNAPSHOT_STATE="$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" --query 'DBSnapshots[0].Status' || return $? )" 
+      SNAPSHOT_PROGRESS="$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" --query 'DBSnapshots[0].PercentProgress' || return $? )"
       info "Snapshot id ${db_snapshot_identifier} creation: state is ${SNAPSHOT_STATE}, ${SNAPSHOT_PROGRESS}%..."
 
       aws --region "${region}" rds wait db-snapshot-available --db-snapshot-identifier "${db_snapshot_identifier}"

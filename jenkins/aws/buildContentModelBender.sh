@@ -4,7 +4,7 @@
 trap '[[ (-z "${AUTOMATION_DEBUG}") ; exit 1' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
-dockerstagedir="$(getTempDir "cota_docker_XXXX" "${DOCKER_STAGE_DIR}")"
+dockerstagedir="$(getTempDir "cota_docker_XXXXXX" "${DOCKER_STAGE_DIR}")"
 chmod a+rwx "${dockerstagedir}"
 
 function main() {

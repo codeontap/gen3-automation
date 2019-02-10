@@ -44,7 +44,7 @@ function add_standard_pairs_to_stack() {
   local input_file="$1"; shift
   local output_file="$1"; shift
 
-  pushTempDir "${FUNCNAME[0]}_XXXXXXXX"
+  pushTempDir "${FUNCNAME[0]}_XXXXXX"
   local result_file="$(getTopTempDir)/add_standard_pairs_to_stack.json"
   local return_status
 

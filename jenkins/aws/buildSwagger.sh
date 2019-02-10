@@ -15,7 +15,7 @@ SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 tmpdir="$(getTempDir "cota_sw_XXX")"
 debug "TMPDIR=${tmpdir}"
 
-dockerstagedir="$(getTempDir "cota_docker_XXXX" "${DOCKER_STAGE_DIR}")"
+dockerstagedir="$(getTempDir "cota_docker_XXXXXX" "${DOCKER_STAGE_DIR}")"
 chmod a+rwx "${dockerstagedir}"
 
 # Determine build dir in case of multiple specs in subdirs

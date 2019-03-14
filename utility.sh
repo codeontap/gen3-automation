@@ -684,14 +684,13 @@ function decrypt_kms_string() {
   local region="$1"; shift
   local value="$1"; shift
 
-  pushTempDir "${FUNCNAME[0]}_XXXXXX"
-  local tmp_file="$(getTopTempDir)/value"
+  local tmp_file="$(getTempFile)"
   local return_status
 
   echo "${value}" | base64 --decode > "${tmp_file}"
   aws --region "${region}" kms decrypt --ciphertext-blob "fileb://${tmp_file}" --output text --query Plaintext | base64 --decode; return_status=$?
 
-  popTempDir
+  rm ${tmp_file}
   return ${return_status}
 }
 

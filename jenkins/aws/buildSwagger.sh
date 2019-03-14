@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Augment a swagger file with AWS API gateway integration semantics
  

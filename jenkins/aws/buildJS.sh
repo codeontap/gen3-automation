@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap '[[ (-z "${AUTOMATION_DEBUG}") && (-d "${NVM_DIR}") ]] && nvm deactivate; rm -rf "${NVM_DIR}" ; exit $?' SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"

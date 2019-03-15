@@ -10,6 +10,12 @@ function main() {
     # Make sure we are in the build source directory
     cd ${AUTOMATION_BUILD_SRC_DIR}
     
+    # Add extra Source Code 
+    if [[ -n "${PIPELINE_EXTRA_SRC_CODE_DIR}" && -n "${PIPELINE_EXTRA_SRC_CODE_PATH}" ]]; then 
+        mkdir -p "${AUTOMATION_BUILD_SRC_DIR}/${PIPELINE_EXTRA_SRC_CODE_DIR}"
+        cp -r "${AUTOMATION_DATA_DIR}/${PIPELINE_EXTRA_SRC_CODE_PATH}"/* "${AUTOMATION_BUILD_SRC_DIR}/${PIPELINE_EXTRA_SRC_CODE_DIR}/"
+    fi
+
     # Make sure we have a script to start from
     [[ ! -f pipeline-definition.json && ! -f pipeline-parameters.json ]] &&
         { fatal "No pipeline-definition.json found"; return 1; }

@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/usr/bin/env bash -x
 
 # This script needs work - the content below was just captured here as a starting point
 # It is based on  a very old codeontap setup

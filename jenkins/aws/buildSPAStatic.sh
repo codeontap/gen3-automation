@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # - Basic build for an SPA that is static content
 
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}

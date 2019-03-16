@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # AUTOMATION_BASE_DIR assumed to be pointing to base of gen3-automation tree
 

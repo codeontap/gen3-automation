@@ -145,6 +145,16 @@ function main() {
       cd ${AUTOMATION_BUILD_SRC_DIR}
     fi
   fi
+  
+  if inArray "REQUIRED_TASKS" "test"; then
+    # Run tests with a script file
+    TEST_SCRIPT_FILE="${TEST_SCRIPT_FILE:-run_tests_ci.sh}"
+    if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/${TEST_SCRIPT_FILE}" ]]; then
+      info "Running tests with ${TEST_SCRIPT_FILE} ..."
+      ./${TEST_SCRIPT_FILE} ||
+      { exit_status=$?; fatal "Tests failed"; return ${exit_status}; }
+    fi
+  fi
 
   if inArray "REQUIRED_TASKS" "swagger"; then
     # Generate swagger documents

@@ -146,7 +146,7 @@ function main() {
     fi
   fi
   
-  if inArray "REQUIRED_TASKS" "test"; then
+  if inArray "REQUIRED_TASKS" "testviafile"; then
     # Run tests with a script file
     TEST_SCRIPT_FILE="${TEST_SCRIPT_FILE:-run_tests_ci.sh}"
     if [[ -f "${AUTOMATION_BUILD_SRC_DIR}/${TEST_SCRIPT_FILE}" ]]; then

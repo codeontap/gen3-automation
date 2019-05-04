@@ -348,12 +348,12 @@ case ${SNAPSHOT_OPERATION} in
                 setCredentials "${SNAPSHOT_PROVIDER}"
 
                 # A build will create a new snapshot we just need to bring it into the registry
-                LOCAL_SNAPSHOT_IMAGE_ARN="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SNAPSHOT_ARN}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --no-copy-tags)"
+                LOCAL_SNAPSHOT_IMAGE_ARN="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SNAPSHOT_ARN}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --no-copy-tags --query 'DBSnapshot.DBSnapshotArn' --output text || exit $?)"
 
                 if [[ -n "${LOCAL_SNAPSHOT_IMAGE_ARN}" ]]; then 
                     info "Waiting for snapshot to become available..."
                     sleep 2
-                    aws --region "${REMOTE_SNAPSHOT_PROVIDER_REGION}" rds wait db-snapshot-completed --db-snapshot-identifier "${LOCAL_SNAPSHOT_IMAGE_ARN}"
+                    aws --region "${REMOTE_SNAPSHOT_PROVIDER_REGION}" rds wait db-snapshot-completed --db-snapshot-identifier "${LOCAL_SNAPSHOT_IMAGE_ARN}" || exit $?
                     info "Registry image ${SNAPSHOT_IMAGE} should now be available"
                 else   
                     fatal "Registry image ${SNAPSHOT_IMAGE} could not be copied"

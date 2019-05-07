@@ -123,7 +123,7 @@ while getopts ":a:d:g:hki:l:pqr:st:u:vxy:z:" opt; do
             SNAPSHOT_OPERATION="${SNAPSHOT_OPERATION_VERIFY}"
             ;;
         y)
-            SNAPSHOT_TYPE="${OPTARG}"
+            SNAPSHOT_TYPE="${OPTARG,,}"
             ;;
         z)
             REMOTE_SNAPSHOT_PROVIDER="${OPTARG}"
@@ -196,7 +196,7 @@ function setCredentials() {
 }
 
 # Apply local registry defaults
-SNAPSHOT_TYPE="${SNAPSHOT_TYPE,,:-${SNAPSHOT_TYPE_DEFAULT}}"
+SNAPSHOT_TYPE="${SNAPSHOT_TYPE:-${SNAPSHOT_TYPE_DEFAULT}}"
 SNAPSHOT_PROVIDER_VAR="PRODUCT_${SNAPSHOT_TYPE^^}_PROVIDER"
 SNAPSHOT_PROVIDER="${SNAPSHOT_PROVIDER:-${!SNAPSHOT_PROVIDER_VAR}}"
 SNAPSHOT_TAG="${SNAPSHOT_TAG:-${SNAPSHOT_TAG_DEFAULT}}"

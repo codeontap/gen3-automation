@@ -32,10 +32,10 @@ if [[ "${RELEASE_MODE}" == "${RELEASE_MODE_PROMOTION}" ]]; then
     mv "${FROM_PRODUCT_TEMP_DIR}" "${FROM_PRODUCT_ROOT_DIR}"
 
     # Find the product appsettings directory
-    FROM_SETTINGS_DIR="$(findGen3ProductDir "${FROM_PRODUCT_BASE_DIR}" "${PRODUCT}")/settings/${FROM_ENVIRONMENT}/${SEGMENT}"
-            
+    FROM_BUILDS_DIR="$(findGen3ProductBuildsDir "${FROM_PRODUCT_BASE_DIR}" "${PRODUCT}")/${FROM_ENVIRONMENT}/${SEGMENT}"
+
     # Pull in the current build references in lower segment
-    ${AUTOMATION_DIR}/manageBuildReferences.sh -f -g ${FROM_SETTINGS_DIR}
+    ${AUTOMATION_DIR}/manageBuildReferences.sh -f -g ${FROM_BUILDS_DIR}
     RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
 fi
 

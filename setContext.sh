@@ -309,17 +309,10 @@ function main() {
             AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_SRC_DIR}" ||
             { fatal "Build source directory ${BUILD_SRC_DIR} not found"; exit; }
       else
-        [[ -d "${AUTOMATION_BUILD_DIR}/src" ]] &&
-            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
-
-        [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] &&
-            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
-
-        [[ -d "${AUTOMATION_BUILD_DIR}/content" ]] &&
-            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/content"
-
-        [[ -d "${AUTOMATION_BUILD_DIR}/pkg" ]] &&
-            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/pkg"
+        for sub_dir in "src" "app" "content" "pkg" "package" "content"; do
+            [[ -d "${AUTOMATION_BUILD_DIR}/${sub_dir}" ]] &&
+                AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/${sub_dir}"
+        done
       fi
 
       # Build devops directory
@@ -338,7 +331,7 @@ function main() {
       save_context_property AUTOMATION_DATA_DIR "${WORKSPACE}"
 
       # Build devops directory
-      [[ -d "${WORKSPACE}/devops" ]] && 
+      [[ -d "${WORKSPACE}/devops" ]] &&
         save_context_property AUTOMATION_BUILD_DIR "${WORKSPACE}/devops"
       [[ -d "${WORKSPACE}/deploy" ]] &&
         save_context_property AUTOMATION_BUILD_DIR "${WORKSPACE}/deploy"
@@ -437,7 +430,7 @@ function main() {
   # - provider
   findAndDefineSetting "ACCOUNT_PROVIDER" "ACCOUNT_PROVIDER" "${ACCOUNT}" "" "value" "aws"
   AUTOMATION_DIR="${AUTOMATION_PROVIDER_DIR}/${ACCOUNT_PROVIDER}"
-  
+
 
   # - access credentials
   case "${ACCOUNT_PROVIDER}" in

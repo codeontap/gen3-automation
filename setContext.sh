@@ -301,19 +301,15 @@ function main() {
       # Build source directory
       AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"
 
-      if [[ -n "${BUILD_SRC_DIR}" ]]; then 
-        [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_SRC_DIR}" ]] && 
+      if [[ -n "${BUILD_SRC_DIR}" ]]; then
+        [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_SRC_DIR}" ]] &&
             AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_SRC_DIR}" ||
             { fatal "Build source directory ${BUILD_SRC_DIR} not found"; exit; }
       else
-        [[ -d "${AUTOMATION_BUILD_DIR}/src" ]] &&
-            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/src"
-
-        [[ -d "${AUTOMATION_BUILD_DIR}/app" ]] &&
-            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/app"
-
-        [[ -d "${AUTOMATION_BUILD_DIR}/content" ]] &&
-            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/content"
+        for sub_dir in "src" "app" "content" "pkg" "package" "content"; do
+            [[ -d "${AUTOMATION_BUILD_DIR}/${sub_dir}" ]] &&
+                AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/${sub_dir}"
+        done
       fi
 
       # Build devops directory

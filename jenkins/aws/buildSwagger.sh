@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Augment a swagger file with AWS API gateway integration semantics
- 
+
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap '[[ (-z "${AUTOMATION_DEBUG}") && (-d "${tmpdir}") ]] && rm -rf "${tmpdir}";exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
@@ -29,7 +29,14 @@ SWAGGER_SPEC_FILE=$(findFile \
                     "${AUTOMATION_BUILD_DIR}/swagger.json" \
                     "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.json" \
                     "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.json" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.json")
+                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR}/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR}/../**/*spec/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/openapi.json")
 SWAGGER_SPEC_YAML_FILE=$(findFile \
                     "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/swagger.yaml" \
@@ -37,36 +44,72 @@ SWAGGER_SPEC_YAML_FILE=$(findFile \
                     "${AUTOMATION_BUILD_DIR}/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.yaml")
-SWAGGER_SPEC_YAML_EXTENSIONS_FILE=$(findFile \
-                    "${AUTOMATION_BUILD_DIR}/swagger_extensions.yaml" \
-                    "${AUTOMATION_BUILD_DEVOPS_DIR}/swagger_extensions.yaml" \
-                    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/swagger_extensions.yaml")
+                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/../**/*spec/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/openapi.yaml")
+# TODO(mfl) Remove once confirmed it is not used - see comment below
+# SWAGGER_SPEC_YAML_EXTENSIONS_FILE=$(findFile \
+#                    "${AUTOMATION_BUILD_DIR}/swagger_extensions.yaml" \
+#                    "${AUTOMATION_BUILD_DEVOPS_DIR}/swagger_extensions.yaml" \
+#                    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/swagger_extensions.yaml" \
+#                    "${AUTOMATION_BUILD_DIR}/openapi_extensions.yaml" \
+#                    "${AUTOMATION_BUILD_DEVOPS_DIR}/openapi_extensions.yaml" \
+#                    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/openapi_extensions.yaml")
 
-# Make a local copy of the swagger json file
+# Make a local copy of the swagger json file and bundle in a single file
 TEMP_SWAGGER_SPEC_FILE="${dockerstagedir}/swagger.json"
-[[ -f "${SWAGGER_SPEC_FILE}" ]] && cp "${SWAGGER_SPEC_FILE}" "${TEMP_SWAGGER_SPEC_FILE}"
+if [[ -f "${SWAGGER_SPEC_FILE}" ]]; then
+    SWAGGER_SPEC_FILE_NAME="$(fileName "${SWAGGER_SPEC_FILE}")"
+    SWAGGER_SPEC_FILE_DIR="$(filePath "${SWAGGER_SPEC_FILE}")"
 
-# Convert yaml files to json, possibly including a separate yaml based extensions file
-TEMP_SWAGGER_SPEC_YAML_FILE="${dockerstagedir}/swagger.yaml"
+    docker run --rm \
+        -v "${SWAGGER_SPEC_FILE_DIR}:/app/indir" \
+        -v "${dockerstagedir}:/app/outdir" \
+        codeontap/utilities swagger-cli bundle \
+        -outfile "/app/outdir/swagger.json" \
+        "/app/indir/${SWAGGER_SPEC_FILE_NAME}" ||
+      { exit_status=$?; fatal "Unable to bundle ${SWAGGER_SPEC_FILE}"; exit ${exit_status}; }
+fi
+
+# Convert yaml files to json after bundling into a single file
 if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
-    cp "${SWAGGER_SPEC_YAML_FILE}" "${TEMP_SWAGGER_SPEC_YAML_FILE}"
 
-    if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
-        # Combine the two
-        cp "${TEMP_SWAGGER_SPEC_YAML_FILE}" "${dockerstagedir}/swagger_copy.yaml"
-        cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${dockerstagedir}/swagger_extensions.yaml"
-        docker run --rm \
-            -v "${dockerstagedir}:/app/indir" -v "${dockerstagedir}:/app/outdir" \
-            codeontap/utilities sme merge \
-            /app/indir/swagger_copy.yaml \
-            /app/indir/swagger_extensions.yaml \
-            /app/outdir/$(fileName "${TEMP_SWAGGER_SPEC_YAML_FILE}")
-    fi
+    # TODO(mfl) Remove this commented out code once confirm functioj not used
+    # The inclusion mechanism in operapi3 should be used in preference to this
+    # home grown alternative
+#    cp "${SWAGGER_SPEC_YAML_FILE}" "${TEMP_SWAGGER_SPEC_YAML_FILE}"
+#    if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
+#        # Combine the two
+#        cp "${TEMP_SWAGGER_SPEC_YAML_FILE}" "${dockerstagedir}/swagger_copy.yaml"
+#        cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${dockerstagedir}/swagger_extensions.yaml"
+#        docker run --rm \
+#            -v "${dockerstagedir}:/app/indir" -v "${dockerstagedir}:/app/outdir" \
+#            codeontap/utilities sme merge \
+#            /app/indir/swagger_copy.yaml \
+#            /app/indir/swagger_extensions.yaml \
+#            /app/outdir/$(fileName "${TEMP_SWAGGER_SPEC_YAML_FILE}")
+#    fi
+
+    # Bundle into single yaml file
+    SWAGGER_SPEC_YAML_FILE_NAME="$(fileName "${SWAGGER_SPEC_YAML_FILE}")"
+    SWAGGER_SPEC_YAML_FILE_DIR="$(filePath "${SWAGGER_SPEC_YAML_FILE}")"
+
+    docker run --rm \
+        -v "${SWAGGER_SPEC_YAML_FILE_DIR}:/app/indir" \
+        -v "${dockerstagedir}:/app/outdir" \
+        codeontap/utilities swagger-cli bundle \
+        -outfile "/app/outdir/swagger.yaml" \
+        "/app/indir/${SWAGGER_SPEC_YAML_FILE_NAME}" ||
+      { exit_status=$?; fatal "Unable to bundle ${SWAGGER_SPEC_YAML_FILE}"; exit ${exit_status}; }
 
     # Need to use a yaml to json converter that preserves comments in YAML multi-line blocks, as
     # AWS uses these are directives in API Gateway templates
-    COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/$(fileName ${TEMP_SWAGGER_SPEC_YAML_FILE})','r')), open('/app/outdir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})','w'), indent=4)"
+    COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/swagger.yaml','r')), open('/app/outdir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})','w'), indent=4)"
     docker run --rm \
         -v "${dockerstagedir}:/app/indir" -v "${dockerstagedir}:/app/outdir" \
         codeontap/python-utilities \
@@ -76,11 +119,8 @@ fi
 [[ ! -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && fatal "Can't find source swagger file" && exit 1
 
 # Validate it
-# We use a few different validators until we settle on a preferred one
-VALIDATORS=( \
-"swagger-cli   validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})" \
-"swagger-tools validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})" \
-"ajv           validate -d /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE}) -s /usr/local/lib/node_modules/swagger-schema-official/schema.json")
+# We use swagger-cli because it supports openapi3 and bundling
+VALIDATORS=( "swagger-cli validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})" )
 for VALIDATOR in "${VALIDATORS[@]}"; do
     docker run --rm -v "${dockerstagedir}:/app/indir" codeontap/utilities ${VALIDATOR} ||
       { exit_status=$?; fatal "Swagger file is not valid"; exit ${exit_status}; }

@@ -112,25 +112,5 @@ else
     zip -j "${SWAGGER_RESULT_FILE}" "${SWAGGER_EXTENDED_BASE_FILE}"
 fi
 
-# Generate documentation
-mkdir -p "${dockerstagedir}/swaggerUI/indir"
-mkdir -p "${dockerstagedir}/swaggerUI/outdir"
-
-[[ -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && 
-    cp "${TEMP_SWAGGER_SPEC_FILE}" "${dockerstagedir}/swaggerUI/indir"
-
-SWAGGER_SPEC_TITLE="$(jq -r '.info.title' <  "${TEMP_SWAGGER_SPEC_FILE}")"
-docker run --rm \
-    -v "${dockerstagedir}/swaggerUI/indir:/app/indir" -v "${dockerstagedir}/swaggerUI/outdir:/app/outdir" \
-    -e SWAGGER_JSON=/app/indir/$(fileName "${TEMP_SWAGGER_SPEC_FILE}") \
-    -e API_URLS="[{\"url\": \"./swagger.json\", \"name\" : \"${SWAGGER_SPEC_TITLE}\"}]" \
-    -e VALIDATOR_URL="null" \
-    codeontap/swaggerui-export
-
-cp -r "${dockerstagedir}"/swaggerUI/outdir/* "${DIST_DIR}/"
-
-RESULT=$?
-[[ "${RESULT}" -ne 0 ]] && fatal "Swagger file documentation generation failed" && exit 1
-
 # All good
 RESULT=0

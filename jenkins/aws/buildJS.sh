@@ -8,16 +8,16 @@ function main() {
     # Make sure we are in the build source directory
     cd ${AUTOMATION_BUILD_SRC_DIR}
 
-    #Check for package.json 
+    #Check for package.json
     [[ ! -f package.json ]] &&
-      { fatal "no packge.json file found. Is this a node repo?"; return 1; }
-    
-    # setup nvm environment if required 
-    if [[ -n "${AUTOMATION_NODEJS_VERSION}" ]]; then 
+      { fatal "no package.json file found. Is this a node repo?"; return 1; }
+
+    # setup nvm environment if required
+    if [[ -n "${AUTOMATION_NODEJS_VERSION}" ]]; then
 
         NVM_DIR="$(getTempDir "cota_nvm_XXX")"
-        curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | NVM_DIR="${NVM_DIR}" bash 
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" 
+        curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | NVM_DIR="${NVM_DIR}" bash
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
         nvm install "${AUTOMATION_NODEJS_VERSION}" ||
                 { exit_status=$?; fatal "NVM install for node ${AUTOMATION_NODEJS_VERSION} install failed" ; return ${exit_status}; }
@@ -104,8 +104,8 @@ function main() {
             ;;
     esac
 
-    # deactivate nvm if it was used  and cleanup 
-    if [[ -n "${AUTOMATION_NODEJS_VERSION}" ]]; then 
+    # deactivate nvm if it was used  and cleanup
+    if [[ -n "${AUTOMATION_NODEJS_VERSION}" ]]; then
         nvm deactivate
         rm -rf "${NVM_DIR}"
     fi

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Create/manage images corresponding to the current build
- 
+
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
@@ -78,9 +78,9 @@ IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra FORMATS <<< "${IMAGE_FORMATS}"
 for FORMAT in "${FORMATS[@]}"; do
     case ${FORMAT,,} in
 
-        dataset) 
+        dataset)
             IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/cot_data_file_manifest.json"
-            if [[ -f "${IMAGE_FILE}" ]]; then 
+            if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageDataSetS3.sh -s \
                     -u "${DEPLOYMENT_UNIT}" \
                     -g "${CODE_COMMIT}" \
@@ -127,9 +127,9 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             ;;
 
-        pipeline) 
+        pipeline)
             IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/pipeline.zip"
-            
+
             if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/managePipeline.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
@@ -141,9 +141,9 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             ;;
 
-        scripts) 
+        scripts)
             IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/scripts.zip"
-            
+
             if [[ -f "${IMAGE_FILE}" ]]; then
                 ${AUTOMATION_DIR}/manageScripts.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
@@ -166,27 +166,6 @@ for FORMAT in "${FORMATS[@]}"; do
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             else
                 RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
-            fi
-
-            DOC_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/apidoc.html"
-
-            if [[ -f "${DOC_FILE}" ]]; then
-                ${AUTOMATION_DIR}/manageSwagger.sh -s \
-                        -u "${DEPLOYMENT_UNIT}" \
-                        -g "${CODE_COMMIT}" \
-                        -f "${DOC_FILE}"
-                RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
-
-            else
-                DOC_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/apidoc.zip"
-                
-                if [[ -f "${DOC_FILE}" ]]; then 
-                    ${AUTOMATION_DIR}/manageSwagger.sh -s \
-                            -u "${DEPLOYMENT_UNIT}" \
-                            -g "${CODE_COMMIT}" \
-                            -f "${DOC_FILE}"
-                    RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
-                fi
             fi
             ;;
 

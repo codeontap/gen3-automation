@@ -71,7 +71,7 @@ if [[ -f "${SWAGGER_SPEC_FILE}" ]]; then
         -v "${SWAGGER_SPEC_FILE_DIR}:/app/indir" \
         -v "${dockerstagedir}:/app/outdir" \
         codeontap/utilities swagger-cli bundle \
-        -outfile "/app/outdir/swagger.json" \
+        --outfile "/app/outdir/swagger.json" \
         "/app/indir/${SWAGGER_SPEC_FILE_NAME}" ||
       { exit_status=$?; fatal "Unable to bundle ${SWAGGER_SPEC_FILE}"; exit ${exit_status}; }
 fi
@@ -103,7 +103,7 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
         -v "${SWAGGER_SPEC_YAML_FILE_DIR}:/app/indir" \
         -v "${dockerstagedir}:/app/outdir" \
         codeontap/utilities swagger-cli bundle \
-        -outfile "/app/outdir/swagger.yaml" \
+        --outfile "/app/outdir/swagger.yaml" \
         "/app/indir/${SWAGGER_SPEC_YAML_FILE_NAME}" ||
       { exit_status=$?; fatal "Unable to bundle ${SWAGGER_SPEC_YAML_FILE}"; exit ${exit_status}; }
 

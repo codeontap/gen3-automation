@@ -12,7 +12,7 @@ mkdir -p ${DIST_DIR}
 SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 
 # We need to use a docker staging dir to provide docker-in-docker support
-tmpdir="$(getTempDir "cota_docker_XXXXXX" "${DOCKER_STAGE_DIR}")"
+tmpdir="$(getTempDir "cota_swag_XXXXXX" "${DOCKER_STAGE_DIR}")"
 chmod a+rwx "${tmpdir}"
 
 TEMP_SWAGGER_SPEC_FILE="${tmpdir}/swagger.json"
@@ -67,7 +67,7 @@ if [[ -f "${SWAGGER_SPEC_FILE}" ]]; then
     SWAGGER_SPEC_FILE_DIR="$(filePath "${SWAGGER_SPEC_FILE}")"
 
     # Copy the swagger spec to a directory docker can get to
-    cp -R "${SWAGGER_SPEC_FILE_DIR}" "${tmpdir}/bundle"
+    cp -rp "${SWAGGER_SPEC_FILE_DIR}" "${tmpdir}/bundle"
     SWAGGER_SPEC_FILE_DIR="${tmpdir}/bundle"
 
     docker run --rm \
@@ -103,11 +103,11 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
     SWAGGER_SPEC_YAML_FILE_DIR="$(filePath "${SWAGGER_SPEC_YAML_FILE}")"
 
     # Copy the swagger spec to a directory docker can get to
-    cp -R "${SWAGGER_SPEC_YAML_FILE_DIR}" "${tmpdir}/bundle"
+    cp -rp "${SWAGGER_SPEC_YAML_FILE_DIR}" "${tmpdir}/bundle"
     SWAGGER_SPEC_YAML_FILE_DIR="${tmpdir}/bundle"
 
     docker run --rm \
-        -v "${SWAGGER_SPEC_YAML_FILE_DIR}/bundle:/app/indir" \
+        -v "${SWAGGER_SPEC_YAML_FILE_DIR}:/app/indir" \
         -v "${tmpdir}:/app/outdir" \
         codeontap/utilities swagger-cli bundle \
         --outfile "/app/outdir/swagger.yaml" \

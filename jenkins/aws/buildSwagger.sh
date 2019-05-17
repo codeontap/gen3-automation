@@ -11,12 +11,11 @@ DIST_DIR="${AUTOMATION_BUILD_DIR}/dist"
 mkdir -p ${DIST_DIR}
 SWAGGER_RESULT_FILE="${DIST_DIR}/swagger.zip"
 
-# Create a dir for some temporary files
-tmpdir="$(getTempDir "cota_sw_XXX")"
-debug "TMPDIR=${tmpdir}"
+# We need to use a docker staging dir to provide docker-in-docker support
+tmpdir="$(getTempDir "cota_docker_XXXXXX" "${DOCKER_STAGE_DIR}")"
+chmod a+rwx "${tmpdir}"
 
-dockerstagedir="$(getTempDir "cota_docker_XXXXXX" "${DOCKER_STAGE_DIR}")"
-chmod a+rwx "${dockerstagedir}"
+TEMP_SWAGGER_SPEC_FILE="${tmpdir}/swagger.json"
 
 # Determine build dir in case of multiple specs in subdirs
 BUILD_DIR="$(fileName "${AUTOMATION_BUILD_DIR}" )"
@@ -62,14 +61,18 @@ SWAGGER_SPEC_YAML_FILE=$(findFile \
 #                    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/openapi_extensions.yaml")
 
 # Make a local copy of the swagger json file and bundle in a single file
-TEMP_SWAGGER_SPEC_FILE="${dockerstagedir}/swagger.json"
 if [[ -f "${SWAGGER_SPEC_FILE}" ]]; then
+
     SWAGGER_SPEC_FILE_NAME="$(fileName "${SWAGGER_SPEC_FILE}")"
     SWAGGER_SPEC_FILE_DIR="$(filePath "${SWAGGER_SPEC_FILE}")"
 
+    # Copy the swagger spec to a directory docker can get to
+    cp -R "${SWAGGER_SPEC_FILE_DIR}" "${tmpdir}/bundle"
+    SWAGGER_SPEC_FILE_DIR="${tmpdir}/bundle"
+
     docker run --rm \
         -v "${SWAGGER_SPEC_FILE_DIR}:/app/indir" \
-        -v "${dockerstagedir}:/app/outdir" \
+        -v "${tmpdir}:/app/outdir" \
         codeontap/utilities swagger-cli bundle \
         --outfile "/app/outdir/swagger.json" \
         "/app/indir/${SWAGGER_SPEC_FILE_NAME}" ||
@@ -85,10 +88,10 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
 #    cp "${SWAGGER_SPEC_YAML_FILE}" "${TEMP_SWAGGER_SPEC_YAML_FILE}"
 #    if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
 #        # Combine the two
-#        cp "${TEMP_SWAGGER_SPEC_YAML_FILE}" "${dockerstagedir}/swagger_copy.yaml"
-#        cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${dockerstagedir}/swagger_extensions.yaml"
+#        cp "${TEMP_SWAGGER_SPEC_YAML_FILE}" "${tmpdir}/swagger_copy.yaml"
+#        cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${tmpdir}/swagger_extensions.yaml"
 #        docker run --rm \
-#            -v "${dockerstagedir}:/app/indir" -v "${dockerstagedir}:/app/outdir" \
+#            -v "${tmpdir}:/app/indir" -v "${tmpdir}:/app/outdir" \
 #            codeontap/utilities sme merge \
 #            /app/indir/swagger_copy.yaml \
 #            /app/indir/swagger_extensions.yaml \
@@ -99,9 +102,13 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
     SWAGGER_SPEC_YAML_FILE_NAME="$(fileName "${SWAGGER_SPEC_YAML_FILE}")"
     SWAGGER_SPEC_YAML_FILE_DIR="$(filePath "${SWAGGER_SPEC_YAML_FILE}")"
 
+    # Copy the swagger spec to a directory docker can get to
+    cp -R "${SWAGGER_SPEC_YAML_FILE_DIR}" "${tmpdir}/bundle"
+    SWAGGER_SPEC_YAML_FILE_DIR="${tmpdir}/bundle"
+
     docker run --rm \
-        -v "${SWAGGER_SPEC_YAML_FILE_DIR}:/app/indir" \
-        -v "${dockerstagedir}:/app/outdir" \
+        -v "${SWAGGER_SPEC_YAML_FILE_DIR}/bundle:/app/indir" \
+        -v "${tmpdir}:/app/outdir" \
         codeontap/utilities swagger-cli bundle \
         --outfile "/app/outdir/swagger.yaml" \
         "/app/indir/${SWAGGER_SPEC_YAML_FILE_NAME}" ||
@@ -111,7 +118,7 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
     # AWS uses these are directives in API Gateway templates
     COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/swagger.yaml','r')), open('/app/outdir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})','w'), indent=4)"
     docker run --rm \
-        -v "${dockerstagedir}:/app/indir" -v "${dockerstagedir}:/app/outdir" \
+        -v "${tmpdir}:/app/indir" -v "${tmpdir}:/app/outdir" \
         codeontap/python-utilities \
         -c "${COMBINE_COMMAND}"
 fi
@@ -122,7 +129,7 @@ fi
 # We use swagger-cli because it supports openapi3 and bundling
 VALIDATORS=( "swagger-cli validate /app/indir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})" )
 for VALIDATOR in "${VALIDATORS[@]}"; do
-    docker run --rm -v "${dockerstagedir}:/app/indir" codeontap/utilities ${VALIDATOR} ||
+    docker run --rm -v "${tmpdir}:/app/indir" codeontap/utilities ${VALIDATOR} ||
       { exit_status=$?; fatal "Swagger file is not valid"; exit ${exit_status}; }
 done
 

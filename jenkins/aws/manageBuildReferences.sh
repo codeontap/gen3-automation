@@ -285,25 +285,19 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
     IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra CODE_IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
 
     # Look for the deployment unit and build reference files
-    EFFECTIVE_DEPLOYMENT_UNIT="${CURRENT_DEPLOYMENT_UNIT}"
-    for REF_FILE in deployment_unit.ref slice.ref; do
-        DEPLOYMENT_UNIT_FILE="${CURRENT_DEPLOYMENT_UNIT}/${REF_FILE}"
-        if [[ -f "${DEPLOYMENT_UNIT_FILE}" ]]; then
-            EFFECTIVE_DEPLOYMENT_UNIT=$(cat "${DEPLOYMENT_UNIT_FILE}")
-            break
-        fi
-    done
-    NEW_BUILD_FILE="${EFFECTIVE_DEPLOYMENT_UNIT}/build.json"
-    BUILD_FILE="${NEW_BUILD_FILE}"
-    if [[ ! -f "${BUILD_FILE}" ]]; then
-        # Legacy file naming
-        LEGACY_BUILD_FILE="${EFFECTIVE_DEPLOYMENT_UNIT}/build.ref"
-        BUILD_FILE="${LEGACY_BUILD_FILE}"
-    fi
+    BUILD_FILE="${CURRENT_DEPLOYMENT_UNIT}/build.json"
+
+    # Allow for building a new build.json with a reference to a shared build
+    SHARED_BUILD_FILE="${CURRENT_DEPLOYMENT_UNIT}/shared_build.json"
+    if [[ -f "${SHARED_BUILD_FILE}" ]]; then 
+        REGISTRY_DEPLOYMENT_UNIT="$(jq -r '.Reference' < ${SHARED_BUILD_FILE})"
+    else 
+        REGISTRY_DEPLOYMENT_UNIT="${CURRENT_DEPLOYMENT_UNIT}"
+    fi 
 
     # Ensure appsettings directories exist
     if [[ -n "${SEGMENT_BUILDS_DIR}" ]]; then
-        mkdir -p "${CURRENT_DEPLOYMENT_UNIT}" "${EFFECTIVE_DEPLOYMENT_UNIT}"
+        mkdir -p "${CURRENT_DEPLOYMENT_UNIT}"
     fi
 
     case ${REFERENCE_OPERATION} in
@@ -317,13 +311,13 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     case ${IMAGE_FORMAT_LOWER} in
                         docker)
                             ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
-                                -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                                -s "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
                             [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
                         lambda|swagger|spa|contentnode|scripts|pipeline|dataset|rdssnapshot)
                             ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
-                                -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                                -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
                             [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
@@ -341,15 +335,13 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
             ;;
 
         ${REFERENCE_OPERATION_LISTFULL})
-            if [[ -f ${BUILD_FILE} ]]; then
+            if [[ -f ${BUILD_FILE} && ! -f ${SHARED_BUILD_FILE} ]]; then
                 getBuildReferenceParts "$(cat ${BUILD_FILE})"
                 if [[ "${BUILD_REFERENCE_COMMIT}" != "?" ]]; then
                     # Update arrays
-                    if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" == "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
-                        CODE_COMMIT_ARRAY["${INDEX}"]="${BUILD_REFERENCE_COMMIT}"
-                        CODE_TAG_ARRAY["${INDEX}"]="${BUILD_REFERENCE_TAG}"
-                        IMAGE_FORMATS_ARRAY["${INDEX}"]="${BUILD_REFERENCE_FORMATS}"
-                    fi
+                    CODE_COMMIT_ARRAY["${INDEX}"]="${BUILD_REFERENCE_COMMIT}"
+                    CODE_TAG_ARRAY["${INDEX}"]="${BUILD_REFERENCE_TAG}"
+                    IMAGE_FORMATS_ARRAY["${INDEX}"]="${BUILD_REFERENCE_FORMATS}"
                 fi
             fi
             ;;
@@ -357,15 +349,11 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
         ${REFERENCE_OPERATION_UPDATE})
             # Ensure something to do for the current deployment unit
             if [[ "${CODE_COMMIT}" == "?" ]]; then continue; fi
-            if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" != "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
-                warning "Ignoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
-                continue
-            fi
 
             # Preserve the format if none provided
             if [[ ("${IMAGE_FORMATS}" == "?") &&
-                    (-f ${NEW_BUILD_FILE}) ]]; then
-                getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
+                    (-f ${BUILD_FILE}) ]]; then
+                getBuildReferenceParts "$(cat ${BUILD_FILE})"
                 IMAGE_FORMATS="${BUILD_REFERENCE_FORMATS}"
             fi
 
@@ -374,18 +362,13 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
 
             # Update the build reference
             # Use newer naming and clean up legacy named build reference files
-            echo -n "${BUILD_REFERENCE}" > "${NEW_BUILD_FILE}"
-            [[ -e "${LEGACY_BUILD_FILE}" ]] && rm "${LEGACY_BUILD_FILE}"
+            echo -n "${BUILD_REFERENCE}" > "${BUILD_FILE}"
             ;;
 
         ${REFERENCE_OPERATION_VERIFY})
             # Ensure code repo defined if tag provided only if commit not provided
             if [[ "${CODE_COMMIT}" == "?" ]]; then
                 if [[ "${CODE_TAG}" != "?" ]]; then
-                    if [[ "${EFFECTIVE_DEPLOYMENT_UNIT}" != "${CURRENT_DEPLOYMENT_UNIT}" ]]; then
-                        warning "Ignoring the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - it contains a reference to the \"${EFFECTIVE_DEPLOYMENT_UNIT}\" deployment unit"
-                        continue
-                    fi
                     if [[ ("${CODE_REPO}" == "?") ||
                             ("${CODE_PROVIDER}" == "?") ]]; then
                         fatal "Ignoring tag for the \"${CURRENT_DEPLOYMENT_UNIT}\" deployment unit - no code repo and/or provider defined" && exit
@@ -421,8 +404,8 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
 
             # If no formats explicitly defined, use those in the build reference if defined
             if [[ ("${IMAGE_FORMATS}" == "?") &&
-                    (-f ${NEW_BUILD_FILE}) ]]; then
-                getBuildReferenceParts "$(cat ${NEW_BUILD_FILE})"
+                    (-f ${BUILD_FILE}) ]]; then
+                getBuildReferenceParts "$(cat ${BUILD_FILE})"
                 IMAGE_FORMATS="${BUILD_REFERENCE_FORMATS}"
                 IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra CODE_IMAGE_FORMATS_ARRAY <<< "${IMAGE_FORMATS}"
             fi
@@ -440,39 +423,39 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                 FROM_IMAGE_PROVIDER="${!FROM_IMAGE_PROVIDER_VAR}"
                 case ${IMAGE_FORMAT,,} in
                     dataset)
-                        ${AUTOMATION_DIR}/manageDataSetS3.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageDataSetS3.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     rdssnapshot)
-                        ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     docker)
-                        ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     lambda)
-                        ${AUTOMATION_DIR}/manageLambda.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageLambda.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     pipeline)
-                        ${AUTOMATION_DIR}/managePipeline.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/managePipeline.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     scripts)
-                        ${AUTOMATION_DIR}/manageScripts.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageScripts.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     swagger)
-                        ${AUTOMATION_DIR}/manageSwagger.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageSwagger.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     spa)
-                        ${AUTOMATION_DIR}/manageSpa.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageSpa.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     contentnode)
-                        ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     *)
@@ -484,40 +467,40 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                         # Attempt to pull image in from remote provider
                         case ${IMAGE_FORMAT,,} in
                             dataset)
-                                ${AUTOMATION_DIR}/manageDataSetS3.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -b "REGISTRY_CONTENT"
+                                ${AUTOMATION_DIR}/manageDataSetS3.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -b "REGISTRY_CONTENT"
                                 RESULT=$?
                                 ;;
                             rdssnapshot)
-                                ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -g "${CODE_COMMIT}"
+                                ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -g "${CODE_COMMIT}"
                                 RESULT=$?
                                 ;;
                             docker)
-                                ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                 RESULT=$?
                                 ;;
                             lambda)
-                                ${AUTOMATION_DIR}/manageLambda.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageLambda.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                 RESULT=$?
                                 ;;
                             pipeline)
-                                ${AUTOMATION_DIR}/managePipeline.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/managePipeline.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                 RESULT=$?
                                 ;;
                             scripts)
-                                ${AUTOMATION_DIR}/manageScripts.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageScripts.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                 RESULT=$?
                                 ;;
                             swagger)
-                                ${AUTOMATION_DIR}/manageSwagger.sh -x -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
-                                ${AUTOMATION_DIR}/manageSwagger.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -f "apidoc.zip"
+                                ${AUTOMATION_DIR}/manageSwagger.sh -x -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageSwagger.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -f "apidoc.zip"
                                 RESULT=$?
                                 ;;
                             spa)
-                                ${AUTOMATION_DIR}/manageSpa.sh -p -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageSpa.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                 RESULT=$?
                                 ;;
                             contentnode)
-                                ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${CURRENT_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                                ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                                 RESULT=$?
                                 ;;
                             *)

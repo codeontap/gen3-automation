@@ -360,6 +360,10 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
             # Construct the build reference
             formatBuildReference "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMATS}"
 
+            # Update the build reference
+            # Use newer naming and clean up legacy named build reference files
+            echo -n "${BUILD_REFERENCE}" > "${BUILD_FILE}"
+            ;;
 
         ${REFERENCE_OPERATION_VERIFY})
             # Ensure code repo defined if tag provided only if commit not provided

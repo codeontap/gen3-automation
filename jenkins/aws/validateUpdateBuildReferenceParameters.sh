@@ -4,7 +4,7 @@
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 . "${AUTOMATION_BASE_DIR}/common.sh"
 
-[[ -z ${GIT_COMMIT} ]] &&
+[[ -z ${GIT_COMMIT} && ${DEPLOYMENT_UNIT_LIST} != *"!"* ]] &&
     fatal "This job requires a GIT_COMMIT value" && exit
 
 # Ensure at least one deployment unit has been provided

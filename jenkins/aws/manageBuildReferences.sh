@@ -492,7 +492,6 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                 ;;
                             swagger)
                                 ${AUTOMATION_DIR}/manageSwagger.sh -x -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
-                                ${AUTOMATION_DIR}/manageSwagger.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -f "apidoc.zip"
                                 RESULT=$?
                                 ;;
                             spa)

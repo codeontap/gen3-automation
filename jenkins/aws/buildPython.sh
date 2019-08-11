@@ -7,7 +7,7 @@ trap '[[ (-z "${AUTOMATION_DEBUG}") && (-d "${venv_dir}") ]] && rm -rf "${venv_d
 function main() {
   # Make sure we are in the build source directory
   cd ${AUTOMATION_BUILD_SRC_DIR}
-  
+
   # Update git origin url for product code repo to specify automation user credentials for successful push
   [[ -n "${PRODUCT_CODE_REPO}" ]] && git remote set-url origin https://${GITHUB_CREDENTIALS}@${GITHUB_GIT_DNS}/${GITHUB_GIT_ORG}/${PRODUCT_CODE_REPO}.git
 
@@ -42,7 +42,7 @@ function main() {
     else
         [[ -f requirements.txt ]] && REQUIREMENTS_FILES=( requirements*.txt ) || REQUIREMENTS_FILES=( requirements/*.txt )
     fi
-    
+
     for REQUIREMENTS_FILE in "${REQUIREMENTS_FILES[@]}"; do
       pip install -r ${REQUIREMENTS_FILE} --upgrade ||
       { exit_status=$?; fatal "Installation of requirements failed"; return ${exit_status}; }
@@ -53,10 +53,12 @@ function main() {
     # packages into dist-packages. Remove this patch once zappa is fixed
     if [[ -n ${VIRTUAL_ENV} ]]; then
       for lib in "lib" "lib64"; do
-        SITE_PACKAGES_DIR=$(find ${VIRTUAL_ENV}/${lib} -name site-packages)
-        if [[ -n ${SITE_PACKAGES_DIR} ]]; then
-          if [[ $(find ${SITE_PACKAGES_DIR} -type d | wc -l) < 2 ]]; then
-            cp -rp ${SITE_PACKAGES_DIR}/../dist-packages/*  ${SITE_PACKAGES_DIR}
+        if [[ -d "${VIRTUAL_ENV}/${lib}" ]]; then
+          SITE_PACKAGES_DIR=$(find ${VIRTUAL_ENV}/${lib} -name site-packages)
+          if [[ -n ${SITE_PACKAGES_DIR} ]]; then
+            if [[ $(find ${SITE_PACKAGES_DIR} -type d | wc -l) < 2 ]]; then
+              cp -rp ${SITE_PACKAGES_DIR}/../dist-packages/*  ${SITE_PACKAGES_DIR}
+            fi
           fi
         fi
       done
@@ -145,7 +147,7 @@ function main() {
       cd ${AUTOMATION_BUILD_SRC_DIR}
     fi
   fi
-  
+
   if inArray "REQUIRED_TASKS" "testviafile"; then
     # Run tests with a script file
     TEST_SCRIPT_FILE="${TEST_SCRIPT_FILE:-run_tests_ci.sh}"
@@ -169,7 +171,7 @@ function main() {
       # Iterate component instance list if it is specified. Case for the projects with different API channels.
       # COMPONENT_INSTANCE must be environment variable
         for COMPONENT_INSTANCE in ${COMPONENT_INSTANCES}; do
-            # spec directory is on the same level with the build directory 
+            # spec directory is on the same level with the build directory
             SWAGGER_TARGET_FILE="${AUTOMATION_BUILD_DIR}"/../spec/${COMPONENT_INSTANCE}/swagger.yaml
             ENV_FILE=${PYTHON_SWAGGER_ENV_FILE} COMPONENT_INSTANCE=${COMPONENT_INSTANCE} python manage.py swagger ${SWAGGER_TARGET_FILE} ${MANAGE_OPTIONS} ||
               { exit_status=$?; fatal "Generate swagger documents failed"; return ${exit_status}; }
@@ -188,7 +190,7 @@ function main() {
   fi
 
   if inArray "REQUIRED_TASKS" "build"; then
-    # Clean up pyc files before packaging into zappa 
+    # Clean up pyc files before packaging into zappa
     find ${AUTOMATION_BUILD_SRC_DIR} -name '*.pyc' -delete
 
     # Package for lambda if required

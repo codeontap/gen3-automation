@@ -417,15 +417,19 @@ function main() {
   AUTOMATION_DIR="${AUTOMATION_PROVIDER_DIR}/${ACCOUNT_PROVIDER}"
 
   # - access credentials
-  case "${ACCOUNT_PROVIDER}" in
-      aws)
-          . ${AUTOMATION_DIR}/setCredentials.sh "${ACCOUNT}"
-          save_context_property ACCOUNT_AWS_ACCESS_KEY_ID_VAR      "${AWS_CRED_AWS_ACCESS_KEY_ID_VAR}"
-          save_context_property ACCOUNT_AWS_SECRET_ACCESS_KEY_VAR  "${AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}"
-          save_context_property ACCOUNT_TEMP_AWS_ACCESS_KEY_ID     "${AWS_CRED_TEMP_AWS_ACCESS_KEY_ID}"
-          save_context_property ACCOUNT_TEMP_AWS_SECRET_ACCESS_KEY "${AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY}"
-          save_context_property ACCOUNT_TEMP_AWS_SESSION_TOKEN     "${AWS_CRED_TEMP_AWS_SESSION_TOKEN}"
-          ;;
+  case "${ACCOUNT_PROVIDER^^}" in
+      AWS)
+        . ${AUTOMATION_DIR}/setCredentials.sh "${ACCOUNT}"
+        save_context_property ACCOUNT_AWS_ACCESS_KEY_ID_VAR      "${AWS_CRED_AWS_ACCESS_KEY_ID_VAR}"
+        save_context_property ACCOUNT_AWS_SECRET_ACCESS_KEY_VAR  "${AWS_CRED_AWS_SECRET_ACCESS_KEY_VAR}"
+        save_context_property ACCOUNT_TEMP_AWS_ACCESS_KEY_ID     "${AWS_CRED_TEMP_AWS_ACCESS_KEY_ID}"
+        save_context_property ACCOUNT_TEMP_AWS_SECRET_ACCESS_KEY "${AWS_CRED_TEMP_AWS_SECRET_ACCESS_KEY}"
+        save_context_property ACCOUNT_TEMP_AWS_SESSION_TOKEN     "${AWS_CRED_TEMP_AWS_SESSION_TOKEN}"
+        ;;
+      AZURE)
+        # "ACCOUNT" here is an Azure "subscription".
+        . ${AUTOMATION_DIR}/setCredentials.sh "${ACCOUNT}"
+        ;;
   esac
 
   # - cmdb git provider

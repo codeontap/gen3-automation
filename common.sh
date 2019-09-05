@@ -51,6 +51,9 @@ function save_context_property() {
   local name="$1"; shift
   local value="$1"; shift
   local file="${1:-${AUTOMATION_DATA_DIR}/context.properties}"; shift
+
+  local AUTOMATION_ENGINE_DEFAULT="jenkins"
+  local engine="${${AUTOMATION_ENGINE}:-${AUTOMATION_ENGINE_DEFAULT}}"
   
   if [[ -n "${value}" ]]; then
     local property_value="${value}"
@@ -62,7 +65,14 @@ function save_context_property() {
     fi
   fi
 
-  echo "${name}=${property_value}" >> "${file}"
+  case "${AUTOMATION_ENGINE}" in
+    jenkins)
+      echo "${name}=${property_value}" >> "${file}"
+      ;;
+    azurePipelines)
+      echo "##vso[task.setvariable variable=${name}]${property_value}"
+      ;;
+  esac
 }
 
 function save_chain_property() {

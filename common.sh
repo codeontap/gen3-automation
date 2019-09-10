@@ -67,9 +67,11 @@ function save_context_property() {
       echo "${name}=${property_value}" >> "${file}"
       ;;
     azurepipelines)
-      export ${name}="${property_value}"
+      # remove trailing whitespace from any var about to be set
+      property_value_nospace=$(echo "${property_value}" | sed -e 's/[[:space:]]*$//')
+      export ${name}="${property_value_nospace}"
       set +x
-      echo "##vso[task.setvariable variable=${name}]${property_value}"
+      echo "##vso[task.setvariable variable=${name}]${property_value_nospace}"
       set -x
       ;;
   esac

@@ -161,7 +161,8 @@ function main() {
       # - Currently the blueprint only generates a segment level blueprin
       if [[ "${level}" != "account" && "${level}" != "product" && "${GENERATION_DOCS_BLUEPRINT}" == "true" ]]; then
           info "Generating deployment blueprint... \n"
-          ${GENERATION_DIR}/createTemplate.sh -l blueprint || return $?
+          ${GENERATION_DIR}/createTemplate.sh -l blueprint  2>/dev/null || 
+              { warning "An issue occurred generating the blueprint - This will not break things but could be an issue" }
       fi
     done
   done

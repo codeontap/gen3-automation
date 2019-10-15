@@ -20,6 +20,10 @@ TEMP_SWAGGER_SPEC_FILE="${tmpdir}/swagger.json"
 # Determine build dir in case of multiple specs in subdirs
 BUILD_DIR="$(fileName "${AUTOMATION_BUILD_DIR}" )"
 
+# All the possible files making up the spec are collected into a directory tree
+SWAGGER_BUNDLE_DIR="${tmpdir}/bundle"
+mkdir "${SWAGGER_BUNDLE_DIR}"
+
 # Possible input files
 SWAGGER_SPEC_FILE=$(findFile \
                     "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/swagger.json" \
@@ -36,45 +40,61 @@ SWAGGER_SPEC_FILE=$(findFile \
                     "${AUTOMATION_BUILD_DIR}/../**/*spec/openapi.json" \
                     "${AUTOMATION_BUILD_DIR}/../../**/*spec/openapi.json" \
                     "${AUTOMATION_BUILD_DIR}/../../../**/*spec/openapi.json")
-SWAGGER_SPEC_YAML_FILE=$(findFile \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/openapi.yaml")
-# TODO(mfl) Remove once confirmed it is not used - see comment below
-# SWAGGER_SPEC_YAML_EXTENSIONS_FILE=$(findFile \
-#                    "${AUTOMATION_BUILD_DIR}/swagger_extensions.yaml" \
-#                    "${AUTOMATION_BUILD_DEVOPS_DIR}/swagger_extensions.yaml" \
-#                    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/swagger_extensions.yaml" \
-#                    "${AUTOMATION_BUILD_DIR}/openapi_extensions.yaml" \
-#                    "${AUTOMATION_BUILD_DEVOPS_DIR}/openapi_extensions.yaml" \
-#                    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/openapi_extensions.yaml")
-
-
-# Collect all the possible files making up the spec into a directory tree
-# Files could be anywhere in the repo
-SWAGGER_BUNDLE_DIR="${tmpdir}/bundle"
-mkdir "${SWAGGER_BUNDLE_DIR}"
-pushd "${AUTOMATION_DATA_DIR}" > /dev/null 2>&1
-find . -name "*.json*" -exec cp -p --parents {} "${SWAGGER_BUNDLE_DIR}" ";"
-find . -name "*.yaml" -exec cp -p --parents {} "${SWAGGER_BUNDLE_DIR}" ";"
-popd > /dev/null
-
-# Make a local copy of the swagger json file and bundle in a single file
 if [[ -f "${SWAGGER_SPEC_FILE}" ]]; then
+    # Allow for the bundle context to be broadened
+    if [[ -n "${BUNDLE_CONTEXT_DIR}" ]]; then
+        SWAGGER_BUNDLE_CONTEXT_DIR="${AUTOMATION_DATA_DIR}/${BUNDLE_CONTEXT_DIR}"
+    else
+        SWAGGER_BUNDLE_CONTEXT_DIR="$(filePath "${SWAGGER_SPEC_FILE}")"
+    fi
 
-    # Determine filename relative to AUTOMATION_DATA_DIR
-    SWAGGER_SPEC_FILE_NAME="${SWAGGER_SPEC_FILE#${AUTOMATION_DATA_DIR}}"
+    # Collect the potential files
+    pushd "${SWAGGER_BUNDLE_CONTEXT_DIR}" > /dev/null 2>&1
+    find . -name "*.json*" -exec cp -p --parents {} "${SWAGGER_BUNDLE_DIR}" ";"
+    popd > /dev/null
+
+else
+    SWAGGER_SPEC_YAML_FILE=$(findFile \
+                        "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/swagger.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/swagger.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/swagger.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/swagger.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/openapi.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/openapi.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/openapi.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/openapi.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../**/*spec/openapi.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../../**/*spec/openapi.yaml" \
+                        "${AUTOMATION_BUILD_DIR}/../../../**/*spec/openapi.yaml")
+    # TODO(mfl) Remove once confirmed it is not used - see comment below
+    # SWAGGER_SPEC_YAML_EXTENSIONS_FILE=$(findFile \
+    #                    "${AUTOMATION_BUILD_DIR}/swagger_extensions.yaml" \
+    #                    "${AUTOMATION_BUILD_DEVOPS_DIR}/swagger_extensions.yaml" \
+    #                    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/swagger_extensions.yaml" \
+    #                    "${AUTOMATION_BUILD_DIR}/openapi_extensions.yaml" \
+    #                    "${AUTOMATION_BUILD_DEVOPS_DIR}/openapi_extensions.yaml" \
+    #                    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/openapi_extensions.yaml")
+    # Allow for the bundle context to be broadened
+    if [[ -n "${BUNDLE_CONTEXT_DIR}" ]]; then
+        SWAGGER_BUNDLE_CONTEXT_DIR="${AUTOMATION_DATA_DIR}/${BUNDLE_CONTEXT_DIR}"
+    else
+        SWAGGER_BUNDLE_CONTEXT_DIR="$(filePath "${SWAGGER_SPEC_YAML_FILE}")"
+    fi
+
+    # Collect the potential files
+    pushd "${SWAGGER_BUNDLE_CONTEXT_DIR}" > /dev/null 2>&1
+    find . -name "*.yaml" -exec cp -p --parents {} "${SWAGGER_BUNDLE_DIR}" ";"
+    popd > /dev/null
+fi
+
+if [[ -f "${SWAGGER_SPEC_FILE}" ]]; then
+    # Bundle a json file
+
+    # Determine filename relative to SWAGGER_BUNDLE_CONTEXT_DIR
+    SWAGGER_SPEC_FILE_NAME="${SWAGGER_SPEC_FILE#${SWAGGER_BUNDLE_CONTEXT_DIR}}"
 
     docker run --rm \
         -v "${SWAGGER_BUNDLE_DIR}:/app/indir" \
@@ -83,48 +103,48 @@ if [[ -f "${SWAGGER_SPEC_FILE}" ]]; then
         --outfile "/app/outdir/swagger.json" \
         "/app/indir/${SWAGGER_SPEC_FILE_NAME}" ||
       { exit_status=$?; fatal "Unable to bundle ${SWAGGER_SPEC_FILE}"; exit ${exit_status}; }
+else
+    if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
+        # Convert yaml files to json after bundling into a single file
+
+        # TODO(mfl) Remove this commented out code once confirm functioj not used
+        # The inclusion mechanism in operapi3 should be used in preference to this
+        # home grown alternative
+        #    cp "${SWAGGER_SPEC_YAML_FILE}" "${TEMP_SWAGGER_SPEC_YAML_FILE}"
+        #    if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
+        #        # Combine the two
+        #        cp "${TEMP_SWAGGER_SPEC_YAML_FILE}" "${tmpdir}/swagger_copy.yaml"
+        #        cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${tmpdir}/swagger_extensions.yaml"
+        #        docker run --rm \
+        #            -v "${tmpdir}:/app/indir" -v "${tmpdir}:/app/outdir" \
+        #            codeontap/utilities sme merge \
+        #            /app/indir/swagger_copy.yaml \
+        #            /app/indir/swagger_extensions.yaml \
+        #            /app/outdir/$(fileName "${TEMP_SWAGGER_SPEC_YAML_FILE}")
+        #    fi
+
+        # Determine filename relative to SWAGGER_BUNDLE_CONTEXT_DIR
+        SWAGGER_SPEC_YAML_FILE_NAME="${SWAGGER_SPEC_YAML_FILE#${SWAGGER_BUNDLE_CONTEXT_DIR}}"
+
+        docker run --rm \
+            -v "${SWAGGER_BUNDLE_DIR}:/app/indir" \
+            -v "${tmpdir}:/app/outdir" \
+            codeontap/utilities swagger-cli bundle \
+            --outfile "/app/outdir/swagger.yaml" \
+            "/app/indir/${SWAGGER_SPEC_YAML_FILE_NAME}" ||
+        { exit_status=$?; fatal "Unable to bundle ${SWAGGER_SPEC_YAML_FILE}"; exit ${exit_status}; }
+
+        # Need to use a yaml to json converter that preserves comments in YAML multi-line blocks, as
+        # AWS uses these are directives in API Gateway templates
+        COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/swagger.yaml','r')), open('/app/outdir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})','w'), indent=4)"
+        docker run --rm \
+            -v "${tmpdir}:/app/indir" -v "${tmpdir}:/app/outdir" \
+            codeontap/python-utilities \
+            -c "${COMBINE_COMMAND}"
+    fi
 fi
 
-# Convert yaml files to json after bundling into a single file
-if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
-
-    # TODO(mfl) Remove this commented out code once confirm functioj not used
-    # The inclusion mechanism in operapi3 should be used in preference to this
-    # home grown alternative
-#    cp "${SWAGGER_SPEC_YAML_FILE}" "${TEMP_SWAGGER_SPEC_YAML_FILE}"
-#    if [[ -f "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" ]]; then
-#        # Combine the two
-#        cp "${TEMP_SWAGGER_SPEC_YAML_FILE}" "${tmpdir}/swagger_copy.yaml"
-#        cp "${SWAGGER_SPEC_YAML_EXTENSIONS_FILE}" "${tmpdir}/swagger_extensions.yaml"
-#        docker run --rm \
-#            -v "${tmpdir}:/app/indir" -v "${tmpdir}:/app/outdir" \
-#            codeontap/utilities sme merge \
-#            /app/indir/swagger_copy.yaml \
-#            /app/indir/swagger_extensions.yaml \
-#            /app/outdir/$(fileName "${TEMP_SWAGGER_SPEC_YAML_FILE}")
-#    fi
-
-    # Determine filename relative to AUTOMATION_DATA_DIR
-    SWAGGER_SPEC_YAML_FILE_NAME="${SWAGGER_SPEC_YAML_FILE#${AUTOMATION_DATA_DIR}}"
-
-    docker run --rm \
-        -v "${SWAGGER_BUNDLE_DIR}:/app/indir" \
-        -v "${tmpdir}:/app/outdir" \
-        codeontap/utilities swagger-cli bundle \
-        --outfile "/app/outdir/swagger.yaml" \
-        "/app/indir/${SWAGGER_SPEC_YAML_FILE_NAME}" ||
-      { exit_status=$?; fatal "Unable to bundle ${SWAGGER_SPEC_YAML_FILE}"; exit ${exit_status}; }
-
-    # Need to use a yaml to json converter that preserves comments in YAML multi-line blocks, as
-    # AWS uses these are directives in API Gateway templates
-    COMBINE_COMMAND="import sys, yaml, json; json.dump(yaml.load(open('/app/indir/swagger.yaml','r')), open('/app/outdir/$(fileName ${TEMP_SWAGGER_SPEC_FILE})','w'), indent=4)"
-    docker run --rm \
-        -v "${tmpdir}:/app/indir" -v "${tmpdir}:/app/outdir" \
-        codeontap/python-utilities \
-        -c "${COMBINE_COMMAND}"
-fi
-
-[[ ! -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && fatal "Can't find source swagger file" && exit 1
+[[ ! -f "${TEMP_SWAGGER_SPEC_FILE}" ]] && fatal "Can't find source swagger/openapi file" && exit 1
 
 # Validate it
 # We use swagger-cli because it supports openapi3 and bundling

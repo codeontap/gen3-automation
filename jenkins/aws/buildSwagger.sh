@@ -60,18 +60,24 @@ SWAGGER_SPEC_YAML_FILE=$(findFile \
 #                    "${AUTOMATION_BUILD_DEVOPS_DIR}/openapi_extensions.yaml" \
 #                    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/openapi_extensions.yaml")
 
+
+# Collect all the possible files making up the spec into a directory tree
+# Files could be anywhere in the repo
+SWAGGER_BUNDLE_DIR="${tmpdir}/bundle"
+mkdir "${SWAGGER_BUNDLE_DIR}"
+pushd "${AUTOMATION_DATA_DIR}" > /dev/null 2>&1
+find . -name "*.json*" -exec cp -p --parents {} "${SWAGGER_BUNDLE_DIR}" ";"
+find . -name "*.yaml" -exec cp -p --parents {} "${SWAGGER_BUNDLE_DIR}" ";"
+popd > /dev/null
+
 # Make a local copy of the swagger json file and bundle in a single file
 if [[ -f "${SWAGGER_SPEC_FILE}" ]]; then
 
-    SWAGGER_SPEC_FILE_NAME="$(fileName "${SWAGGER_SPEC_FILE}")"
-    SWAGGER_SPEC_FILE_DIR="$(filePath "${SWAGGER_SPEC_FILE}")"
-
-    # Copy the swagger spec to a directory docker can get to
-    cp -rp "${SWAGGER_SPEC_FILE_DIR}" "${tmpdir}/bundle"
-    SWAGGER_SPEC_FILE_DIR="${tmpdir}/bundle"
+    # Determine filename relative to AUTOMATION_DATA_DIR
+    SWAGGER_SPEC_FILE_NAME="${SWAGGER_SPEC_FILE#${AUTOMATION_DATA_DIR}}"
 
     docker run --rm \
-        -v "${SWAGGER_SPEC_FILE_DIR}:/app/indir" \
+        -v "${SWAGGER_BUNDLE_DIR}:/app/indir" \
         -v "${tmpdir}:/app/outdir" \
         codeontap/utilities swagger-cli bundle \
         --outfile "/app/outdir/swagger.json" \
@@ -98,16 +104,11 @@ if [[ -f "${SWAGGER_SPEC_YAML_FILE}" ]]; then
 #            /app/outdir/$(fileName "${TEMP_SWAGGER_SPEC_YAML_FILE}")
 #    fi
 
-    # Bundle into single yaml file
-    SWAGGER_SPEC_YAML_FILE_NAME="$(fileName "${SWAGGER_SPEC_YAML_FILE}")"
-    SWAGGER_SPEC_YAML_FILE_DIR="$(filePath "${SWAGGER_SPEC_YAML_FILE}")"
-
-    # Copy the swagger spec to a directory docker can get to
-    cp -rp "${SWAGGER_SPEC_YAML_FILE_DIR}" "${tmpdir}/bundle"
-    SWAGGER_SPEC_YAML_FILE_DIR="${tmpdir}/bundle"
+    # Determine filename relative to AUTOMATION_DATA_DIR
+    SWAGGER_SPEC_YAML_FILE_NAME="${SWAGGER_SPEC_YAML_FILE#${AUTOMATION_DATA_DIR}}"
 
     docker run --rm \
-        -v "${SWAGGER_SPEC_YAML_FILE_DIR}:/app/indir" \
+        -v "${SWAGGER_BUNDLE_DIR}:/app/indir" \
         -v "${tmpdir}:/app/outdir" \
         codeontap/utilities swagger-cli bundle \
         --outfile "/app/outdir/swagger.yaml" \

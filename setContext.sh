@@ -301,8 +301,8 @@ function main() {
       # Build source directory
       AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}"
 
-      if [[ -n "${BUILD_SRC_DIR}" ]]; then 
-        [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_SRC_DIR}" ]] && 
+      if [[ -n "${BUILD_SRC_DIR}" ]]; then
+        [[ -d "${AUTOMATION_BUILD_DIR}/${BUILD_SRC_DIR}" ]] &&
             AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/${BUILD_SRC_DIR}" ||
             { fatal "Build source directory ${BUILD_SRC_DIR} not found"; exit; }
       else
@@ -314,6 +314,9 @@ function main() {
 
         [[ -d "${AUTOMATION_BUILD_DIR}/content" ]] &&
             AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/content"
+
+        [[ -d "${AUTOMATION_BUILD_DIR}/pkg" ]] &&
+            AUTOMATION_BUILD_SRC_DIR="${AUTOMATION_BUILD_DIR}/pkg"
       fi
 
       # Build devops directory

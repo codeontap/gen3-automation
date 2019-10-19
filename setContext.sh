@@ -256,11 +256,14 @@ function main() {
     AUTOMATION_PROVIDER="${AUTOMATION_PROVIDER:-jenkins}"
   fi
   AUTOMATION_PROVIDER="${AUTOMATION_PROVIDER,,}"
-  AUTOMATION_PROVIDER_DIR="${AUTOMATION_BASE_DIR}/${AUTOMATION_PROVIDER}"
+  # TODO(rossmurr4y): Update to use AUTOMATION_PROVIDER once there is more than the jenkins provider dir.
+  # AUTOMATION_PROVIDER_DIR="${AUTOMATION_BASE_DIR}/${AUTOMATION_PROVIDER}"
+  AUTOMATION_PROVIDER_DIR="${AUTOMATION_BASE_DIR}/jenkins"
 
 
   ### Context from automation provider ###
 
+  # TODO(rossmurr4y): seperate out azure pipelines
   case "${AUTOMATION_PROVIDER}" in
     jenkins)
       # Determine the aggregator/integrator/tenant/product/environment/segment from
@@ -329,6 +332,22 @@ function main() {
       # Job identifier
       AUTOMATION_JOB_IDENTIFIER="${BUILD_NUMBER}"
       ;;
+    azurepipelines)
+      save_context_property GIT_USER "${GIT_USER:-$BUILD_USER}"
+      save_context_property GIT_EMAIL "${GIT_EMAIL:-$BUILD_USER_EMAIL}"
+      save_context_property AUTOMATION_DATA_DIR "${WORKSPACE}"
+
+      # Build devops directory
+      [[ -d "${WORKSPACE}/devops" ]] && 
+        save_context_property AUTOMATION_BUILD_DIR "${WORKSPACE}/devops"
+      [[ -d "${WORKSPACE}/deploy" ]] &&
+        save_context_property AUTOMATION_BUILD_DIR "${WORKSPACE}/deploy"
+      [[ -z "${WORKSPACE}" ]] &&
+        save_context_property AUTOMATION_BUILD_DIR "${WORKSPACE}"
+
+      save_context_property AUTOMATION_BUILD_SRC_DIR "${WORKSPACE}"
+      save_context_property AUTOMATION_BUILD_DEVOPS_DIR "${WORKSPACE}"
+    ;;
   esac
 
   # Parse options
@@ -418,6 +437,7 @@ function main() {
   # - provider
   findAndDefineSetting "ACCOUNT_PROVIDER" "ACCOUNT_PROVIDER" "${ACCOUNT}" "" "value" "aws"
   AUTOMATION_DIR="${AUTOMATION_PROVIDER_DIR}/${ACCOUNT_PROVIDER}"
+  
 
   # - access credentials
   case "${ACCOUNT_PROVIDER}" in
@@ -523,7 +543,7 @@ function main() {
 
   # Capture any provided git commit
   case ${AUTOMATION_PROVIDER} in
-      jenkins)
+      jenkins | azurepipelines)
           [[ -n "${GIT_COMMIT}" ]] && CODE_COMMIT_ARRAY[0]="${GIT_COMMIT}"
           ;;
   esac

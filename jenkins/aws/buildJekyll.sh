@@ -35,7 +35,11 @@ function main() {
     JEKYLL_ENV="production"
   fi
 
-  mkdir "${dockerstagedir}/indir"
+  #TODO(rossmurr4y): There is an issue in Jekyll where it may not create
+  # the cache dir correctly. This is listed as resolved in the next Jekyll
+  # version. At that point, this should be returned to creating the empty
+  # indir directory.
+  mkdir -p "${dockerstagedir}/indir/.jekyll-cache"
   cp -r "${AUTOMATION_BUILD_SRC_DIR}"/*  "${dockerstagedir}/indir/"
 
   # Create Build folders for Jenkins Permissions

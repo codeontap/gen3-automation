@@ -62,7 +62,19 @@ function save_context_property() {
     fi
   fi
 
-  echo "${name}=${property_value}" >> "${file}"
+  case "${AUTOMATION_PROVIDER}" in
+    jenkins)
+      echo "${name}=${property_value}" >> "${file}"
+      ;;
+    azurepipelines)
+      # remove trailing whitespace from any var about to be set
+      property_value_nospace=$(echo "${property_value}" | sed -e 's/[[:space:]]*$//')
+      export ${name}="${property_value_nospace}"
+      set +x
+      echo "##vso[task.setvariable variable=${name}]${property_value_nospace}"
+      set -x
+      ;;
+  esac
 }
 
 function save_chain_property() {
@@ -70,6 +82,7 @@ function save_chain_property() {
   local value="$1"; shift
 
   save_context_property "${name}" "${value}" "${AUTOMATION_DATA_DIR}/chain.properties"
+  
 }
 
 function define_context_property() {

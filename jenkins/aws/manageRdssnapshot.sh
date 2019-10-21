@@ -45,7 +45,7 @@ where
 (o) -l SNAPSHOT_REPO                    is the local repository
 (o) -p                                  pull image from a remote to a local registry
                                         (SNAPSHOT_OPERATION=${SNAPSHOT_OPERATION_PULL})
-(o) -q SNAPSHOT_SOURCE_SNAPHOST         is the source RDS snapshot for ${SNAPSHOT_OPERATION_BUILD} operations         
+(o) -q SNAPSHOT_SOURCE_SNAPHOST         is the source RDS snapshot for ${SNAPSHOT_OPERATION_BUILD} operations
 (o) -r REMOTE_SNAPSHOT_TAG              is the tag to pull
 (o) -s                                  save an image to the local registry
                                         (SNAPSHOT_OPERATION=${REGISRTY_OPERATION_SAVE})
@@ -62,7 +62,7 @@ DEFAULTS:
 
 SNAPSHOT_PROVIDER=${PRODUCT_${SNAPSHOT_TYPE}_PROVIDER}
 SNAPSHOT_TYPE=${SNAPSHOT_TYPE_DEFAULT}
-SNAPSHOT_REPO="SNAPSHOT_PRODUCT/SNAPSHOT_DEPLOYMENT_UNIT/SNAPSHOT_CODE_COMMIT" or 
+SNAPSHOT_REPO="SNAPSHOT_PRODUCT/SNAPSHOT_DEPLOYMENT_UNIT/SNAPSHOT_CODE_COMMIT" or
             "SNAPSHOT_PRODUCT/SNAPSHOT_CODE_COMMIT" if no SNAPSHOT_DEPLOYMENT_UNIT defined
 SNAPSHOT_TAG=${SNAPSHOT_TAG_DEFAULT}
 REMOTE_SNAPSHOT_PROVIDER=${PRODUCT_REMOTE_${SNAPSHOT_TYPE}_PROVIDER}
@@ -161,7 +161,7 @@ PROVIDER_AWS_SESSION_TOKENS=()
 # Set credentials for S3 access
 # $1 = provider
 function setCredentials() {
-    
+
     # Key variables
     local SC_PROVIDER="${1^^}"
 
@@ -204,7 +204,7 @@ SNAPSHOT_OPERATION="${SNAPSHOT_OPERATION:-${SNAPSHOT_OPERATION_DEFAULT}}"
 SNAPSHOT_PRODUCT="${SNAPSHOT_PRODUCT:-${PRODUCT}}"
 
 # Default local repository is based on standard image naming conventions
-if [[ (-n "${SNAPSHOT_PRODUCT}") && 
+if [[ (-n "${SNAPSHOT_PRODUCT}") &&
         (-n "${SNAPSHOT_CODE_COMMIT}") ]]; then
     if [[ (-n "${SNAPSHOT_DEPLOYMENT_UNIT}" ) ]]; then
         SNAPSHOT_REPO="${SNAPSHOT_REPO:-${SNAPSHOT_PRODUCT}-${SNAPSHOT_DEPLOYMENT_UNIT}-${SNAPSHOT_CODE_COMMIT}}"
@@ -214,8 +214,8 @@ if [[ (-n "${SNAPSHOT_PRODUCT}") &&
 fi
 
 # Make sure we have a source instance
-if [[ "${SNAPSHOT_OPERATION}" == "${SNAPSHOT_OPERATION_SAVE}" && -z "${SNAPSHOT_SOURCE}" ]]; then 
-    fatal "Registry source RDS instance was not defined for ${SNAPSHOT_OPERATION_BUILD} operation" 
+if [[ "${SNAPSHOT_OPERATION}" == "${SNAPSHOT_OPERATION_SAVE}" && -z "${SNAPSHOT_SOURCE}" ]]; then
+    fatal "Registry source RDS instance was not defined for ${SNAPSHOT_OPERATION_BUILD} operation"
     exit 255
 fi
 
@@ -226,7 +226,7 @@ defineRegistryProviderAttributes "${SNAPSHOT_PROVIDER}" "${SNAPSHOT_TYPE}" "SNAP
 SNAPSHOT_IMAGE="${SNAPSHOT_PROVIDER_PREFIX}-${SNAPSHOT_TYPE}-${SNAPSHOT_REPO}"
 
 # Ensure the local repository has been determined
-if [[ -z "${SNAPSHOT_REPO}" ]]; then 
+if [[ -z "${SNAPSHOT_REPO}" ]]; then
     fatal "Job requires the local repository name, or the product/deployment unit/commit"
     exit 255
 fi
@@ -266,28 +266,27 @@ case ${SNAPSHOT_OPERATION} in
         info "Copying Snapshot from: ${SNAPSHOT_SOURCE} to: ${SNAPSHOT_IMAGE}"
 
         # A build will create a new snapshot we just need to bring it into the registry
-        aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SOURCE}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --no-copy-tags || exit $?
+        aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SOURCE}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --no-copy-tags --tags Key=RegistrySnapshot,Value="true"  || exit $?
 
         info "Waiting for snapshot to become available..."
         sleep 2
-        aws --region "${SNAPSHOT_PROVIDER_REGION}" rds wait db-snapshot-completed --db-snapshot-identifier "${SNAPSHOT_IMAGE}" 
+        aws --region "${SNAPSHOT_PROVIDER_REGION}" rds wait db-snapshot-completed --db-snapshot-identifier "${SNAPSHOT_IMAGE}"
 
         # remove the source snapshot once we have it in the registry - This makes sure a new build will be ok
         info "Deleting Snapshot ${SNAPSHOT_SOURCE}"
-        aws --region "${SNAPSHOT_PROVIDER_REGION}" rds delete-db-snapshot --db-snapshot-identifier "${SNAPSHOT_SOURCE}" ||  exit $? 
+        aws --region "${SNAPSHOT_PROVIDER_REGION}" rds delete-db-snapshot --db-snapshot-identifier "${SNAPSHOT_SOURCE}" ||  exit $?
         info "Waiting for snapshot to delete"
         sleep 2
         aws --region "${SNAPSHOT_PROVIDER_REGION}" rds wait db-snapshot-deleted --db-snapshot-identifier "${SNAPSHOT_SOURCE}"
-
         ;;
 
     ${SNAPSHOT_OPERATION_VERIFY})
         # Check whether the image is already in the local registry
         SNAPSHOT_ARN="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds describe-db-snapshots --db-snapshot-identifier "${SNAPSHOT_IMAGE}" --query "DBSnapshots[0].DBSnapshotArn" --output text)"
         if [[ -n "${SNAPSHOT_ARN}" ]]; then
-            SNAPSHOT_TAG="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds list-tags-for-resource --resource-name "${SNAPSHOT_ARN}" --query "TagList[?Key==\`RegistryTag\`].Value|[0]" --output text)"  
-            if [[ "${SNAPSHOT_TAG}" == "${SNAPSHOT_TAG}" ]]; then 
-                info "${SNAPSHOT_TYPE^} image ${SNAPSHOT} present in the local registry" 
+            SNAPSHOT_TAG="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds list-tags-for-resource --resource-name "${SNAPSHOT_ARN}" --query "TagList[?Key==\`RegistryTag\`].Value|[0]" --output text)"
+            if [[ "${SNAPSHOT_TAG}" == "${SNAPSHOT_TAG}" ]]; then
+                info "${SNAPSHOT_TYPE^} image ${SNAPSHOT} present in the local registry"
                 RESULT=0
                 exit
             fi
@@ -305,14 +304,14 @@ case ${SNAPSHOT_OPERATION} in
             fatal "Can't find ${SNAPSHOT_IMAGE} in ${SNAPSHOT_PROVIDER}"
             exit
         else
-            aws --region "${SNAPSHOT_PROVIDER_REGION}" rds add-tags-to-resource --resource-name "${SNAPSHOT_ARN}" --tags Key=RegistryTag,Value="${REMOTE_SNAPSHOT_TAG}" 
+            aws --region "${SNAPSHOT_PROVIDER_REGION}" rds add-tags-to-resource --resource-name "${SNAPSHOT_ARN}" --tags Key=RegistryTag,Value="${REMOTE_SNAPSHOT_TAG}"
             RESULT=$?
-            if [[ "${RESULT}" -ne 0 ]]; then 
+            if [[ "${RESULT}" -ne 0 ]]; then
              fatal "Couldn't tag image ${SNAPSHOT_IMAGE} with tag ${REMOTE_SNAPSHOT_TAG}"
              exit $RESULT
             fi
         fi
-        ;;        
+        ;;
 
     ${SNAPSHOT_OPERATION_PULL})
         # Get access to the remote registry
@@ -322,47 +321,47 @@ case ${SNAPSHOT_OPERATION} in
         SNAPSHOT_SNAPSHOT_ARN="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds describe-db-snapshots --db-snapshot-identifier "${SNAPSHOT_IMAGE}" --query "DBSnapshots[0].DBSnapshotArn" --output text )"
         RESULT=$?
         if [[ "$RESULT" -ne 0 ]]; then
-            fatal "Can't find ${SNAPSHOT_IMAGE} in ${REMOTE_SNAPSHOT_PROVIDER}" 
+            fatal "Can't find ${SNAPSHOT_IMAGE} in ${REMOTE_SNAPSHOT_PROVIDER}"
             exit 255
         else
-            
-            # Now see if its available in the local registry 
+
+            # Now see if its available in the local registry
             setCredentials "${SNAPSHOT_PROVIDER}"
             aws --region "${SNAPSHOT_PROVIDER_REGION}" rds describe-db-snapshots --db-snapshot-identifier "${SNAPSHOT_IMAGE}" >/dev/null 2>&1
             RESULT=$?
             if [[ "$RESULT" -eq 0 ]]; then
-                info "Image ${SNAPSHOT_IMAGE} already available" 
+                info "Image ${SNAPSHOT_IMAGE} already available"
                 exit 0
             else
-                # share the snapshot from the remote registry to the local registry 
+                # share the snapshot from the remote registry to the local registry
                 setCredentials "${REMOTE_SNAPSHOT_PROVIDER}"
                 aws --region "${REMOTE_SNAPSHOT_PROVIDER_REGION}" rds modify-db-snapshot-attribute --db-snapshot-identifier "${REMOTE_SNAPSHOT_IMAGE}" --attribute-name restore --values-to-add "${!SNAPSHOT_PROVIDER_AWS_ACCOUNT_ID_VAR}" >/dev/null 2>&1
-                
+
                 RESULT=$?
                 if [[ "${RESULT}" -ne 0 ]]; then
                     fatal "Could not share image ${REMOTE_SNAPSHOT_IMAGE} with account ${AWS_CRED_AWS_ACCOUNT_ID_VAR}"
                     exit $RESULT
                 fi
 
-                # now copy the snapshot to the local registry so we have our own copy 
+                # now copy the snapshot to the local registry so we have our own copy
                 setCredentials "${SNAPSHOT_PROVIDER}"
 
                 # A build will create a new snapshot we just need to bring it into the registry
-                LOCAL_SNAPSHOT_IMAGE_ARN="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SNAPSHOT_ARN}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --no-copy-tags --query 'DBSnapshot.DBSnapshotArn' --output text || exit $?)"
+                LOCAL_SNAPSHOT_IMAGE_ARN="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SNAPSHOT_ARN}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --no-copy-tags --tags Key=RegistrySnapshot,Value="true" --query 'DBSnapshot.DBSnapshotArn' --output text || exit $?)"
 
-                if [[ -n "${LOCAL_SNAPSHOT_IMAGE_ARN}" ]]; then 
+                if [[ -n "${LOCAL_SNAPSHOT_IMAGE_ARN}" ]]; then
                     info "Waiting for snapshot to become available..."
                     sleep 2
                     aws --region "${REMOTE_SNAPSHOT_PROVIDER_REGION}" rds wait db-snapshot-completed --db-snapshot-identifier "${LOCAL_SNAPSHOT_IMAGE_ARN}" || exit $?
                     info "Registry image ${SNAPSHOT_IMAGE} should now be available"
-                else   
+                else
                     fatal "Registry image ${SNAPSHOT_IMAGE} could not be copied"
                     exit 255
                 fi
             fi
         fi
-        ;;        
-        
+        ;;
+
     *)
         fatal "Unknown operation \"${SNAPSHOT_OPERATION}\"" && exit
         ;;

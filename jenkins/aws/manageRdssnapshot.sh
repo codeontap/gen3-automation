@@ -266,7 +266,7 @@ case ${SNAPSHOT_OPERATION} in
         info "Copying Snapshot from: ${SNAPSHOT_SOURCE} to: ${SNAPSHOT_IMAGE}"
 
         # A build will create a new snapshot we just need to bring it into the registry
-        aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SOURCE}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --no-copy-tags --tags Key=RegistrySnapshot,Value="true"  || exit $?
+        aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SOURCE}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --copy-tags || exit $?
 
         info "Waiting for snapshot to become available..."
         sleep 2
@@ -278,6 +278,7 @@ case ${SNAPSHOT_OPERATION} in
         info "Waiting for snapshot to delete"
         sleep 2
         aws --region "${SNAPSHOT_PROVIDER_REGION}" rds wait db-snapshot-deleted --db-snapshot-identifier "${SNAPSHOT_SOURCE}"
+
         ;;
 
     ${SNAPSHOT_OPERATION_VERIFY})
@@ -347,7 +348,7 @@ case ${SNAPSHOT_OPERATION} in
                 setCredentials "${SNAPSHOT_PROVIDER}"
 
                 # A build will create a new snapshot we just need to bring it into the registry
-                LOCAL_SNAPSHOT_IMAGE_ARN="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SNAPSHOT_ARN}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --no-copy-tags --tags Key=RegistrySnapshot,Value="true" --query 'DBSnapshot.DBSnapshotArn' --output text || exit $?)"
+                LOCAL_SNAPSHOT_IMAGE_ARN="$(aws --region "${SNAPSHOT_PROVIDER_REGION}" rds copy-db-snapshot --source-db-snapshot-identifier "${SNAPSHOT_SNAPSHOT_ARN}" --target-db-snapshot-identifier "${SNAPSHOT_IMAGE}" --query 'DBSnapshot.DBSnapshotArn' --copy-tags --output text || exit $?)"
 
                 if [[ -n "${LOCAL_SNAPSHOT_IMAGE_ARN}" ]]; then
                     info "Waiting for snapshot to become available..."

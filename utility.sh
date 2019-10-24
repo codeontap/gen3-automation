@@ -1539,8 +1539,6 @@ function invalidate_distribution() {
 }
 
 # -- ENI interface removal  --
-
-# -- ENI interface removal  --
 function release_enis() {
     local region="$1"; shift
     local requester_id="$1"; shift

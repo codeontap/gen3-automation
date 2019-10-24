@@ -1238,11 +1238,11 @@ function create_snapshot() {
 
   if [[ -n "${db_info}" ]]; then
     aws --region "${region}" rds create-db-snapshot --db-snapshot-identifier "${db_snapshot_identifier}" --db-instance-identifier "${db_identifier}" 1> /dev/null || return $?
-    
+
   sleep 2s
   while [ "${exit_status}" != "0" ]
   do
-      SNAPSHOT_STATE="$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" --query 'DBSnapshots[0].Status' || return $? )" 
+      SNAPSHOT_STATE="$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" --query 'DBSnapshots[0].Status' || return $? )"
       SNAPSHOT_PROGRESS="$(aws --region "${region}" rds describe-db-snapshots --db-snapshot-identifier "${db_snapshot_identifier}" --query 'DBSnapshots[0].PercentProgress' || return $? )"
       info "Snapshot id ${db_snapshot_identifier} creation: state is ${SNAPSHOT_STATE}, ${SNAPSHOT_PROGRESS}%..."
 
@@ -1540,24 +1540,24 @@ function invalidate_distribution() {
 
 # -- ENI interface removal  --
 
+# -- ENI interface removal  --
 function release_enis() {
     local region="$1"; shift
     local requester_id="$1"; shift
-    local eni_list_file="$( getTempFile eni_list_XXXXXX.json)"
 
-    aws --region "${region}" ec2 describe-network-interfaces --filters Name=requester-id,Values="*${requester_id}" > "${eni_list_file}" || return $?
+    eni_interfaces = "$( aws --region "${region}" ec2 describe-network-interfaces --filters Name=requester-id,Values="*${requester_id}" || return $? )"
 
-    for attachment_id in $( jq -r '.NetworkInterfaces[].Attachment.AttachmentId' < "${eni_list_file}" ) ; do
+    if [[ -n "${eni_interfaces}" ]]; then
+      for attachment_id in $( echo "${eni_interfaces}" | jq -r '.NetworkInterfaces[].Attachment.AttachmentId | select (.!=null)' ) ; do
         if [[ -n "${attachment_id}" ]]; then
             info "Detaching ${attachment_id} ..."
-            aws --region "${region}" ec2 detach-network-interface --attachment-id "${attachment_id}" || return $?
+            aws --region "${region}" ec2 detach-network-interface --attachment-id "${attachment_id}"
         fi
-    done
-    for network_interface_id in $( jq -r '.NetworkInterfaces[].NetworkInterfaceId' < "${eni_list_file}" ) ; do
-        if [[ -n "${network_interface_id}" ]]; then
-            info "Deleting ${network_interface_id} ..."
-            aws --region "${region}" ec2 wait network-interface-available --network-interface-id "${network_interface_id}" || return $?
-            aws --region "${region}" ec2 delete-network-interface --network-interface-id "${network_interface_id}" || return $?
-        fi
-    done
+      done
+      for network_interface_id in $( echo "${eni_interfaces}" | jq -r '.NetworkInterfaces[].NetworkInterfaceId | select (.!=null)' ) ; do
+        info "Deleting ${network_interface_id} ..."
+        aws --region "${region}" ec2 wait network-interface-available --network-interface-id "${network_interface_id}"
+        aws --region "${region}" ec2 delete-network-interface --network-interface-id "${network_interface_id}"
+      done
+    fi
 }

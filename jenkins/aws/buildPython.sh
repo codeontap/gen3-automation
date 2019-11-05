@@ -17,7 +17,7 @@ function main() {
   # virtual environment is needed not only for build, but for unit and swagger tasks
   if inArray "REQUIRED_TASKS" "build|unit|swagger"; then
     # Is this really a python based project
-    [[ ! -f requirements.txt ]] && [[ ! -d requirements ]] &&
+    [[ ! -f requirements.txt ]] && [[ ! -d requirements ]] && [[ ! -n "${PYTHON_REQUIREMENTS_FILES}" ]] &&
       { fatal "No requirements.txt or requirements - is this really a python base repo?"; return 1; }
 
     # Set up the virtual build environment

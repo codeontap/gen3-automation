@@ -45,7 +45,7 @@ where
 DEFAULTS:
 
 DOCKER_PROVIDER=${PRODUCT_DOCKER_PROVIDER}
-DOCKER_REPO="DOCKER_PRODUCT/DOCKER_DEPLOYMENT_UNIT-DOCKER_CODE_COMMIT" or 
+DOCKER_REPO="DOCKER_PRODUCT/DOCKER_DEPLOYMENT_UNIT-DOCKER_CODE_COMMIT" or
             "DOCKER_PRODUCT/DOCKER_CODE_COMMIT" if no DOCKER_DEPLOYMENT_UNIT defined
 DOCKER_TAG=${DOCKER_TAG_DEFAULT}
 REMOTE_DOCKER_PROVIDER=${PRODUCT_REMOTE_DOCKER_PROVIDER}
@@ -135,7 +135,7 @@ function isAWSRegistry() {
         # Determine the registry account id and region
         AWS_REGISTRY_ID=$(cut -d '.' -f 1 <<< "${1}")
         AWS_REGISTRY_REGION=$(cut -d '.' -f 4 <<< "${1}")
-        
+
         for INDEX in $(seq 0 $((${#PROVIDER_REGISTRY_IDS[@]}-1 )) ); do
             if [[ "${PROVIDER_REGISTRY_IDS[$INDEX]}" == "${AWS_REGISTRY_ID}" ]]; then
                 # Use cached credentials
@@ -234,15 +234,15 @@ DOCKER_IMAGE_SOURCE="${DOCKER_IMAGE_SOURCE:-${DOCKER_IMAGE_SOURCE_DEFAULT}}"
 DOCKER_OPERATION="${DOCKER_OPERATION:-${DOCKER_OPERATION_DEFAULT}}"
 DOCKER_PRODUCT="${DOCKER_PRODUCT:-${PRODUCT}}"
 
-# Allow for the docker context to be overriden for shared dependices
+# Allow for the docker context to be overriden for shared dependencies
 if [[ -n "${DOCKER_CONTEXT_DIR}" ]]; then
     DOCKER_CONTEXT_DIR="${AUTOMATION_DATA_DIR}/${DOCKER_CONTEXT_DIR}"
-else   
+else
     DOCKER_CONTEXT_DIR="${DOCKER_CONTEXT_DIR_DEFAULT}"
 fi
 
 # Default local repository is based on standard image naming conventions
-if [[ (-n "${DOCKER_PRODUCT}") && 
+if [[ (-n "${DOCKER_PRODUCT}") &&
         (-n "${DOCKER_CODE_COMMIT}") ]]; then
     if [[ (-n "${DOCKER_DEPLOYMENT_UNIT}" ) ]]; then
         DOCKER_REPO="${DOCKER_REPO:-${DOCKER_PRODUCT}/${DOCKER_DEPLOYMENT_UNIT}-${DOCKER_CODE_COMMIT}}"
@@ -289,6 +289,11 @@ case ${DOCKER_OPERATION} in
         DOCKERFILE="./Dockerfile"
         if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile" ]]; then
             DOCKERFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
+        fi
+
+        # Permit an explicit override relative to the AUTOMATION_BUILD_SRC_DIR
+        if [[ -n "${DOCKER_FILE}" && -f "${AUTOMATION_DATA_DIR}/${DOCKER_FILE}" ]]; then
+            DOCKERFILE="${AUTOMATION_DATA_DIR}/${DOCKER_FILE}"
         fi
 
         if [[ -n ${DOCKER_GITHUB_SSH_KEY_FILE} ]]; then
@@ -368,7 +373,7 @@ case ${DOCKER_OPERATION} in
                 fi
             fi
         fi
-        ;;        
+        ;;
 
     ${DOCKER_OPERATION_PULL})
         # Formulate the remote registry details
@@ -384,13 +389,13 @@ case ${DOCKER_OPERATION} in
                 [[ "$RESULT" -ne 0 ]] &&
                     fatal "Can't log in to ${REMOTE_DOCKER_PROVIDER_DNS}" && exit
                 ;;
-                
+
             *)
                 # Docker utility defaults to dockerhub if no registry provided to a pull command
                 FULL_REMOTE_DOCKER_IMAGE="${REMOTE_DOCKER_IMAGE}"
                 ;;
         esac
-    
+
         # Pull in the remote image
         docker pull ${FULL_REMOTE_DOCKER_IMAGE}
         RESULT=$?
@@ -416,8 +421,8 @@ case ${DOCKER_OPERATION} in
                 fi
             fi
         fi
-        ;;        
-        
+        ;;
+
     *)
         fatal "Unknown operation \"${DOCKER_OPERATION}\"" && exit
         ;;

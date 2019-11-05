@@ -105,6 +105,9 @@ for FORMAT in "${FORMATS[@]}"; do
             if [[ -f "${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile" ]]; then
                 DOCKERFILE="${AUTOMATION_BUILD_DEVOPS_DIR}/docker/Dockerfile"
             fi
+            if [[ -n "${DOCKER_FILE}" && -f "${AUTOMATION_DATA_DIR}/${DOCKER_FILE}" ]]; then
+                DOCKERFILE="${AUTOMATION_DATA_DIR}/${DOCKER_FILE}"
+            fi
             if [[ -f "${DOCKERFILE}" ]]; then
                 ${AUTOMATION_DIR}/manageDocker.sh -b -s "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit

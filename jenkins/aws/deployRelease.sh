@@ -12,8 +12,11 @@ function main() {
   DETAIL_MESSAGE="deployment=${DEPLOYMENT_TAG}, release=${RELEASE_TAG}, ${DETAIL_MESSAGE}"
   save_context_property DETAIL_MESSAGE
 
-  return 0
+  # All ok so tag the config repo
+  save_product_config "${DETAIL_MESSAGE}" "${PRODUCT_CONFIG_REFERENCE}" "${DEPLOYMENT_TAG}" || return $?
+
+  # Commit the generated application templates
+  save_product_infrastructure "${DETAIL_MESSAGE}" "${PRODUCT_INFRASTRUCTURE_REFERENCE}" "${DEPLOYMENT_TAG}" || return $?
 }
 
 main "$@"
-

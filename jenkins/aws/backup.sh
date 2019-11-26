@@ -2,7 +2,7 @@
 
 [[ -n "${AUTOMATION_DEBUG}" ]] && set ${AUTOMATION_DEBUG}
 trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
-. "${GENERATION_DIR}/common.sh"
+. "${GENERATION_BASE_DIR}/execution/common.sh"
 
 # Formulate parameters - any provided to this script are also passed trhough
 SNAPSHOT_OPTS=
@@ -22,4 +22,3 @@ cd "${SEGMENT_SOLUTIONS_DIR}"
 ${GENERATION_DIR}/snapshotRDSDatabase.sh -s b${AUTOMATION_JOB_IDENTIFIER} ${SNAPSHOT_OPTS} "$@"
 RESULT=$?
 [[ ${RESULT} -ne 0 ]] && fatal "Snapshot of ${ENVIRONMENT}/${SEGMENT} failed"
-

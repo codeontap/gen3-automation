@@ -16,7 +16,7 @@ if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
         if [[ -f "${DU_FILE}" ]]; then
             case "${DU_FILE##*.}" in
                 json)
-                    for ATTRIBUTE in units slices formats; do 
+                    for ATTRIBUTE in units slices formats; do
                         ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null) | .[]" < "${DU_FILE}" | tr -s "\r\n" " ")
                         if [[ -z "${ATTRIBUTE_VALUE}" ]]; then
                             ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null) | .[]" < "${DU_FILE}" | tr -s "\r\n" " ")
@@ -26,7 +26,7 @@ if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
                     export DEPLOYMENT_UNIT_LIST="${UNITS:-${SLICES}}"
                     break
                     ;;
-    
+
                 ref)
                     export DEPLOYMENT_UNIT_LIST=$(cat "${DU_FILE}")
                     break
@@ -67,7 +67,7 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
-        
+
         rdssnapshot)
             ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "undefined"
             RESULT=$?
@@ -85,7 +85,7 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
-        
+
         pipeline)
             ${AUTOMATION_DIR}/managePipeline.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
@@ -98,8 +98,10 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
-        swagger)
-            ${AUTOMATION_DIR}/manageSwagger.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+        openapi|swagger)
+            ${AUTOMATION_DIR}/manageOpenapi.sh -v \
+                -y "${IMAGE_FORMAT,,}" -f "${IMAGE_FORMAT,,}.zip" \
+                -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
@@ -109,7 +111,7 @@ for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
-        
+
         contentnode)
             ${AUTOMATION_DIR}/manageContentNode.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
             RESULT=$?

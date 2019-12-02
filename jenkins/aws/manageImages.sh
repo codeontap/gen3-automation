@@ -158,14 +158,14 @@ for FORMAT in "${FORMATS[@]}"; do
             fi
             ;;
 
-        swagger)
-            IMAGE_FILE="${AUTOMATION_BUILD_SRC_DIR}/dist/swagger.zip"
-
+        openapi|swagger)
+            IMAGE_FILE="${IMAGE_FILE:-${AUTOMATION_BUILD_SRC_DIR}/dist/${FORMAT,,}.zip}"
             if [[ -f "${IMAGE_FILE}" ]]; then
-                ${AUTOMATION_DIR}/manageSwagger.sh -s \
+                ${AUTOMATION_DIR}/manageOpenapi.sh -s \
+                        -y "${FORMAT,,}" \
+                        -f "${IMAGE_FILE}" \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
-                        -f "${IMAGE_FILE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             else
                 RESULT=1 && fatal "${IMAGE_FILE} missing" && exit

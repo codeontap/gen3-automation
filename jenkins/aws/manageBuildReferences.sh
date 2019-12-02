@@ -289,11 +289,11 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
 
     # Allow for building a new build.json with a reference to a shared build
     SHARED_BUILD_FILE="${CURRENT_DEPLOYMENT_UNIT}/shared_build.json"
-    if [[ -f "${SHARED_BUILD_FILE}" ]]; then 
+    if [[ -f "${SHARED_BUILD_FILE}" ]]; then
         REGISTRY_DEPLOYMENT_UNIT="$(jq -r '.Reference' < ${SHARED_BUILD_FILE})"
-    else 
+    else
         REGISTRY_DEPLOYMENT_UNIT="${CURRENT_DEPLOYMENT_UNIT}"
-    fi 
+    fi
 
     # Ensure appsettings directories exist
     if [[ -n "${SEGMENT_BUILDS_DIR}" ]]; then
@@ -315,8 +315,15 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                             RESULT=$?
                             [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
-                        lambda|swagger|spa|contentnode|scripts|pipeline|dataset|rdssnapshot)
+                        lambda|spa|contentnode|scripts|pipeline|dataset|rdssnapshot)
                             ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
+                                -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                            RESULT=$?
+                            [[ "${RESULT}" -ne 0 ]] && exit
+                            ;;
+                        openapi|swagger)
+                            ${AUTOMATION_DIR}/manageOpenapi.sh -k -a "${IMAGE_PROVIDER}" \
+                                -y "${IMAGE_FORMAT_LOWER}" -f "${IMAGE_FORMAT_LOWER}.zip" \
                                 -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
                             RESULT=$?
                             [[ "${RESULT}" -ne 0 ]] && exit
@@ -446,8 +453,10 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                         ${AUTOMATION_DIR}/manageScripts.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
-                    swagger)
-                        ${AUTOMATION_DIR}/manageSwagger.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                    openapi|swagger)
+                        ${AUTOMATION_DIR}/manageOpenapi.sh -v \
+                            -y "${IMAGE_FORMAT,,}" -f "${IMAGE_FORMAT,,}.zip" \
+                            -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
                         RESULT=$?
                         ;;
                     spa)
@@ -490,8 +499,10 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                                 ${AUTOMATION_DIR}/manageScripts.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                 RESULT=$?
                                 ;;
-                            swagger)
-                                ${AUTOMATION_DIR}/manageSwagger.sh -x -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                            openapi|swagger)
+                                ${AUTOMATION_DIR}/manageOpenapi.sh -x -p -a "${IMAGE_PROVIDER}" \
+                                    -y "${IMAGE_FORMAT,,}" -f "${IMAGE_FORMAT,,}.zip" \
+                                    -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
                                 RESULT=$?
                                 ;;
                             spa)

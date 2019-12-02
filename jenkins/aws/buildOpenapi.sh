@@ -95,7 +95,7 @@ TEMP_OPENAPI_SPEC_FILE="${tmpdir}/openapi.json"
 docker run --rm \
     -v "${OPENAPI_BUNDLE_DIR}:/app/indir" \
     -v "${tmpdir}:/app/outdir" \
-    codeontap/utilities swagger-cli bundle \
+    codeontap/utilities swagger-cli bundle -r \
     --outfile "/app/outdir/openapi.${OPENAPI_SPEC_FILE_EXTENSION}" \
     "/app/indir/${OPENAPI_SPEC_FILE_RELATIVE_PATH}" ||
     { exit_status=$?; fatal "Unable to bundle ${OPENAPI_SPEC_FILE}"; exit ${exit_status}; }

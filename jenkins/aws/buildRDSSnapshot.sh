@@ -14,7 +14,8 @@ function main() {
     for DEPLOYMENT_UNIT in ${DEPLOYMENT_UNIT_LIST[0]}; do
 
         # Generate a build blueprint so that we can find out the source S3 bucket
-        . "${GENERATION_DIR}/createBuildblueprint.sh" -u "${DEPLOYMENT_UNIT}"
+        info "Generating build blueprint..."
+        "${GENERATION_DIR}/createBuildblueprint.sh" -u "${DEPLOYMENT_UNIT}"  -o "${AUTOMATION_DATA_DIR}" >/dev/null || return $?
         BUILD_BLUEPRINT="${AUTOMATION_DATA_DIR}/build_blueprint-${DEPLOYMENT_UNIT}-.json"
 
         info "Checking out the contents of ${BUILD_BLUEPRINT}"

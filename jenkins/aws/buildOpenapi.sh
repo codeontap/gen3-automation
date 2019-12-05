@@ -17,63 +17,82 @@ chmod a+rwx "${tmpdir}"
 # Determine build dir in case of multiple specs in subdirs
 BUILD_DIR="$(fileName "${AUTOMATION_BUILD_DIR}" )"
 
+# If a bundle context is provided, it defines the subtree in which the
+# spec file can be located. The search for files thus needs to be limited
+# to the bundle context if it is provided.
+#
+# The logic used may result in the repeated searching of the same directory if
+# a bundle context is specified, but its a once off process and it keeps the
+# search logic the same regardless of bundle context.
+AUTOMATION_BUILD_DIR_PARENT="$(cd ${AUTOMATION_BUILD_DIR}/..; pwd)"
+AUTOMATION_BUILD_DIR_GPARENT="$(cd ${AUTOMATION_BUILD_DIR}/../..; pwd)"
+AUTOMATION_BUILD_DIR_GGPARENT="$(cd ${AUTOMATION_BUILD_DIR}/../../..; pwd)"
+if [[ -n "${BUNDLE_CONTEXT_DIR}" ]]; then
+    OPENAPI_BUNDLE_CONTEXT_DIR="${AUTOMATION_DATA_DIR}/${BUNDLE_CONTEXT_DIR}"
+
+    if [[ "${AUTOMATION_BUILD_DIR_PARENT#${OPENAPI_BUNDLE_CONTEXT_DIR}}" == "${AUTOMATION_BUILD_DIR_PARENT}" ]]; then
+        AUTOMATION_BUILD_DIR_PARENT="${OPENAPI_BUNDLE_CONTEXT_DIR}"
+    fi
+    if [[ "${AUTOMATION_BUILD_DIR_GPARENT#${OPENAPI_BUNDLE_CONTEXT_DIR}}" == "${AUTOMATION_BUILD_DIR_GPARENT}" ]]; then
+        AUTOMATION_BUILD_DIR_GPARENT="${OPENAPI_BUNDLE_CONTEXT_DIR}"
+    fi
+    if [[ "${AUTOMATION_BUILD_DIR_GGPARENT#${OPENAPI_BUNDLE_CONTEXT_DIR}}" == "${AUTOMATION_BUILD_DIR_GGPARENT}" ]]; then
+        AUTOMATION_BUILD_DIR_GGPARENT="${OPENAPI_BUNDLE_CONTEXT_DIR}"
+    fi
+fi
+
 # Possible input files
 OPENAPI_SPEC_FILE=$(findFile \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/openapi.json" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/openapi.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/swagger.json" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/swagger.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/${BUILD_DIR}/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/openapi.json" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/openapi.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/swagger.json" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/swagger.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/${BUILD_DIR}/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/openapi.json" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/openapi.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/swagger.json" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/swagger.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/${BUILD_DIR}/swagger.yaml" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/${BUILD_DIR}/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/${BUILD_DIR}/openapi.yml" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/${BUILD_DIR}/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/${BUILD_DIR}/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/${BUILD_DIR}/swagger.yml" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/${BUILD_DIR}/swagger.yaml" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/${BUILD_DIR}/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/${BUILD_DIR}/openapi.yml" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/${BUILD_DIR}/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/${BUILD_DIR}/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/${BUILD_DIR}/swagger.yml" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/${BUILD_DIR}/swagger.yaml" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/${BUILD_DIR}/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/${BUILD_DIR}/openapi.yml" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/${BUILD_DIR}/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/${BUILD_DIR}/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/${BUILD_DIR}/swagger.yml" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/${BUILD_DIR}/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR}/openapi.json" \
                     "${AUTOMATION_BUILD_DIR}/openapi.yml" \
                     "${AUTOMATION_BUILD_DIR}/openapi.yaml" \
                     "${AUTOMATION_BUILD_DIR}/swagger.json" \
                     "${AUTOMATION_BUILD_DIR}/swagger.yml" \
                     "${AUTOMATION_BUILD_DIR}/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/openapi.json" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/openapi.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.json" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../**/*spec/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/openapi.json" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/openapi.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/openapi.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.json" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../../**/*spec/swagger.yaml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/openapi.json" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/openapi.yml"\
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/openapi.yaml"\
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.json" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.yml" \
-                    "${AUTOMATION_BUILD_DIR}/../../../**/*spec/swagger.yaml")
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/openapi.yml" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/swagger.yml" \
+                    "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/swagger.yaml" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/openapi.yml" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/swagger.yml" \
+                    "${AUTOMATION_BUILD_DIR_GPARENT}/**/*spec/swagger.yaml" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/openapi.yml"\
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/openapi.yaml"\
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/swagger.yml" \
+                    "${AUTOMATION_BUILD_DIR_GGPARENT}/**/*spec/swagger.yaml")
 
 # Was a spec file found?
-[[ ! -f "${OPENAPI_SPEC_FILE}" ]] && fatal "Can't find source openAPI file" && exit 1
+[[ ! -f "${OPENAPI_SPEC_FILE}" ]] && fatal "Can't find source openAPI file within the bundle context" && exit 1
 
-# Allow for the bundle context to be broadened
-if [[ -n "${BUNDLE_CONTEXT_DIR}" ]]; then
-    OPENAPI_BUNDLE_CONTEXT_DIR="${AUTOMATION_DATA_DIR}/${BUNDLE_CONTEXT_DIR}"
-else
+# Bundle context if not explicitly defined starts where the spec file is
+if [[ -z "${BUNDLE_CONTEXT_DIR}" ]]; then
     OPENAPI_BUNDLE_CONTEXT_DIR="$(filePath "${OPENAPI_SPEC_FILE}")"
 fi
-
-# Ensure found file is within the bundle context
-[[ "${OPENAPI_SPEC_FILE}" != ${OPENAPI_BUNDLE_CONTEXT_DIR}* ]] && fatal "OpenAPI file not within bundle context" && exit 1
 
 # Determine attributes of spec file
 OPENAPI_SPEC_FILE_BASE="$(fileBase "${OPENAPI_SPEC_FILE}")"

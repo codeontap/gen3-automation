@@ -93,12 +93,20 @@ function trace() {
   message "${LOG_LEVEL_TRACE}" "$@"
 }
 
-function info() {
+function information() {
   message "${LOG_LEVEL_INFORMATION}" "$@"
+}
+
+function info() {
+  information "$@"
 }
 
 function warning() {
   message "${LOG_LEVEL_WARNING}" "$@"
+}
+
+function warn() {
+  warning "$@"
 }
 
 function error() {
@@ -578,7 +586,6 @@ function getTempFile() {
 }
 
 # -- Cli file generation --
-
 function split_cli_file() {
   local cli_file="$1"; shift
   local outdir="$1"; shift
@@ -679,18 +686,18 @@ function addJSONAncestorObjects() {
 }
 
 # -- KMS --
-
 function decrypt_kms_string() {
   local region="$1"; shift
   local value="$1"; shift
 
-  local tmp_file="$(getTempFile)"
+  pushTempDir "${FUNCNAME[0]}_XXXXXX"
+  local tmp_file="$(getTopTempDir)/value"
   local return_status
 
   echo "${value}" | base64 --decode > "${tmp_file}"
   aws --region "${region}" kms decrypt --ciphertext-blob "fileb://${tmp_file}" --output text --query Plaintext | base64 --decode; return_status=$?
 
-  rm ${tmp_file}
+  popTempDir
   return ${return_status}
 }
 
@@ -703,7 +710,6 @@ function encrypt_kms_string() {
 }
 
 # -- IAM --
-
 function create_iam_accesskey() {
   local region="$1"; shift
   local username="$1"; shift
@@ -739,13 +745,171 @@ function manage_iam_userpassword() {
 
   login_profile="$(aws --region "${region}" iam get-login-profile --user-name "${username}" --query 'LoginProfile.UserName' --output text 2>/dev/null )"
 
-  if [[ "${action}" == "delete" && "${login_profile}" == "${username}" ]]; then
-    aws --region "${region}" iam delete-login-profile --user-name "${username}" || return $?
-  elif [[ "${login_profile}" != "${username}" ]]; then
-    aws --region "${region}" iam create-login-profile --user-name "${username}" --password "${password}" --no-password-reset-required || return $?
+  case "${action}" in
+    delete)
+      if [[ "${login_profile}" == "${username}" ]]; then
+        aws --region "${region}" iam delete-login-profile --user-name "${username}" || return $?
+      fi
+      ;;
+
+    *)
+      if [[ "${login_profile}" != "${username}" ]]; then
+        aws --region "${region}" iam create-login-profile --user-name "${username}" --password "${password}" --no-password-reset-required || return $?
+      else
+        aws --region "${region}" iam update-login-profile --user-name "${username}" --password "${password}" --no-password-reset-required || return $?
+      fi
+      ;;
+  esac
+  return 0
+}
+
+# -- CloudWatch Events --
+function delete_cloudwatch_event() {
+    local region="$1"; shift
+    local ruleName="$1"; shift
+    local includeRule="$1"; shift
+
+    local return_status=0
+
+    if [[ -n "$(aws --region "${region}" events list-rules --query "Rules[?Name == '$ruleName'].Name" --output text)" ]]; then
+
+      rule_targets="$( aws --region "${region}" events list-targets-by-rule --rule "${ruleName}" --query "Targets[*].Id | join(' ',@)" --output text)"
+      if [[ -n "${rule_targets}" ]]; then
+        aws --region "${region}" events remove-targets --rule "${ruleName}" --ids ${rule_targets} || return $?
+      fi
+
+      if [[ "${includeRule}" == "true" ]]; then
+        aws --region "${region}" events delete-rule --name "${ruleName}" || return $?
+      fi
+
+    fi
+
+    return ${return_status}
+}
+
+function create_cloudwatch_event () {
+  local region="$1"; shift
+  local ruleName="$1"; shift
+  local eventRoleId="$1"; shift
+  local ruleConfigFile="$1"; shift
+  local targetConfigFile="$1"; shift
+
+  local return_status=0
+
+  if [[ "${eventRoleId}" != arn:* ]]; then
+    eventRoleArn="$(get_cloudformation_stack_output "${region}" "${cfnStackName}" "${eventRoleId}" "arn" || return $?)"
   else
-    aws --region "${region}" iam update-login-profile --user-name "${username}" --password "${password}" --no-password-reset-required || return $?
+    eventRoleArn="${eventRoleId}"
   fi
+
+  arnLookupTargetConfigFile="$(filePath ${targetConfigFile})/ArnLookup-$(fileBase ${targetConfigFile})"
+  jq --arg eventRoleArn "${eventRoleArn}" '.Targets[0].RoleArn= $eventRoleArn' < "${targetConfigFile}" > "${arnLookupTargetConfigFile}"
+
+  delete_cloudwatch_event "${region}" "${ruleName}" "false" || return $?
+  aws --region "${region}" events put-rule --name "${ruleName}" --cli-input-json "file://${ruleConfigFile}" || return $?
+  aws --region "${region}" events put-targets --rule "${ruleName}" --cli-input-json "file://${arnLookupTargetConfigFile}" || return $?
+
+  return ${return_status}
+}
+
+# -- CloudFormation --
+function get_cloudformation_stack_output() {
+  local region="$1"; shift
+  local stackName="$1"; shift
+  local resourceId="$1"; shift
+  local attributeType="$1"; shift
+
+  if [[ -z "${attributeType}" || "${attributeType}" == "ref" ]]; then
+    stackOutputKey="${resourceId}"
+  else
+    stackOutputKey="${resourceId}X${attributeType}"
+  fi
+
+  stack_id="$(aws --region "${region}" cloudformation list-stacks --stack-status-filter "CREATE_COMPLETE" "UPDATE_COMPLETE" --query "StackSummaries[?StackName == '$stackName'].StackId" --output text || return $?)"
+  if [[ -n "${stack_id}" ]]; then
+    aws --region "${region}" cloudformation describe-stacks --stack-name "${stackName}" --query "Stacks[*].Outputs[?OutputKey == '${stackOutputKey}'].OutputValue" --output text || return $?
+  fi
+}
+
+# -- Content Node --
+function copy_contentnode_file() {
+  local files="$1"; shift
+  local engine="$1"; shift
+  local path="$1"; shift
+  local prefix="$1"; shift
+  local nodepath="$1"; shift
+  local branch="$1"; shift
+  local copymode="$1"; shift
+
+  local contentnodedir="${tmp_dir}/contentnode"
+  local contenthubdir="${tmp_dir}/contenthub"
+  local hubpath="${contenthubdir}/${prefix}${nodepath}"
+
+  # Copy files into repo
+  if [[ -f "${files}" ]]; then
+
+    case ${engine} in
+      github)
+
+        # Copy files locally so we can synch with git
+        for file in "${files[@]}" ; do
+          if [[ -f "${file}" ]]; then
+            case "$(fileExtension "${file}")" in
+              zip)
+                unzip "${file}" -d "${contentnodedir}" || return $?
+                ;;
+              *)
+                if [[ ! -d "${contentnodedir}" ]]; then
+                  mkdir -p "${contentnodedir}"
+                fi
+                cp "${file}" "${contentnodedir}" || return $?
+                ;;
+            esac
+          fi
+        done
+
+        # Clone the Repo
+        local host="github.com"
+        clone_git_repo "${engine}" "${host}" "${path}" "${branch}" "${contenthubdir}" || return $?
+
+        case ${STACK_OPERATION} in
+
+          delete)
+            if [[ -n "${hubpath}" ]]; then
+              rm -rf "${hubpath}" || return $?
+            else
+              fatal "Hub path not defined"
+              return 1
+            fi
+          ;;
+
+          create|update)
+            if [[ -n "${hubpath}" ]]; then
+              if [[ -d "${hubpath}" && "${copymode}" == "replace" ]]; then
+                rm -rf "${hubpath}" || return $?
+              fi
+              mkdir -p "${hubpath}"
+              cp -R ${contentnodedir}/* ${hubpath} || return $?
+            else
+              fatal "Hub path not defined"
+              return 1
+            fi
+          ;;
+        esac
+
+        # Commit Repo
+        cd "${contenthubdir}"
+        push_git_repo "${host}/${path}" "${branch}" "origin" \
+            "ContentNodeDeployment-${PRODUCT}-${SEGMENT}-${DEPLOYMENT_UNIT}" \
+            "${GIT_USER}" "${GIT_EMAIL}" || return $?
+
+      ;;
+    esac
+  else
+    info "No files found to copy"
+  fi
+
+  return 0
 }
 
 # -- Cognito --
@@ -758,7 +922,7 @@ function update_cognito_userpool() {
   aws --region "${region}" cognito-idp update-user-pool --user-pool-id "${userpoolid}" --cli-input-json "file://${configfile}"
 }
 
-function update_userpool_client() {
+function update_cognito_userpool_client() {
   local region="$1"; shift
   local userpoolid="$1"; shift
   local userpoolclientid="$1"; shift
@@ -767,24 +931,107 @@ function update_userpool_client() {
   aws --region "${region}" cognito-idp update-user-pool-client --user-pool-id "${userpoolid}" --client-id "${userpoolclientid}" --cli-input-json "file://${configfile}"
 }
 
-function manage_congnito_domain() {
+function update_cognito_userpool_authprovider() {
+  local region="$1"; shift
+  local userpoolid="$1"; shift
+  local authprovidername="$1"; shift
+  local authprovidertype="$1"; shift
+  local encryption_scheme="$1"; shift
+  local oidc_client_secret="$1"; shift
+  local configfile="$1"; shift
+
+  if [[ "${authprovidertype}" == "OIDC" ]]; then
+    if [[ "${oidc_client_secret}" == "${encryption_scheme}"* ]]; then
+        decrypted_oidc_client_secret="$( decrypt_kms_string "${region}" "${oidc_client_secret#${encryption_scheme}}" || return $? )"
+    else
+        decrypted_oidc_client_secret="${oidc_client_secret}"
+    fi
+
+    jq --arg client_secret "${decrypted_oidc_client_secret}" -r '.ProviderDetails.client_secret=$client_secret' < "${configfile}" > "${configfile}_clientsecret" || return $?
+
+    if [[ -f "${configfile}_clientsecret" ]]; then
+      mv "${configfile}_clientsecret" "${configfile}"
+    fi
+  fi
+
+  current_provider_type="$(aws --region "${region}" cognito-idp describe-identity-provider --user-pool-id "${userpoolid}" --provider-name "${authprovidername}" --query "IdentityProvider.ProviderType" --output text 2>/dev/null || true )"
+
+  if [[ -n "${current_provider_type}" && ( "${current_provider_type}" != "${authprovidertype}" ) ]]; then
+    # delete the provider if the type is different
+    aws --region "${region}" cognito-idp delete-identity-provider --user-pool-id "${userpoolid}" --provider-name "${authprovidername}" || return $?
+  fi
+
+  if [[ -z "${current_provider_type}" || ( "${current_provider_type}" != "${authprovidertype}" ) ]]; then
+    # create the provider
+    aws --region "${region}" cognito-idp create-identity-provider --user-pool-id "${userpoolid}" --provider-name "${authprovidername}" --provider-type "${authprovidertype}" --cli-input-json "file://${configfile}" || return $?
+  fi
+
+  if [[ "${current_provider_type}" == "${authprovidertype}" ]]; then
+    # update the provider
+    aws --region "${region}" cognito-idp update-identity-provider --user-pool-id "${userpoolid}" --provider-name "${authprovidername}" --cli-input-json "file://${configfile}" || return $?
+  fi
+
+}
+
+function cleanup_cognito_userpool_authproviders() {
+  local region="$1"; shift
+  local userpoolid="$1"; shift
+  local expectedproviders="$1"; shift
+  local removeall="$1"; shift
+
+  current_providers="$(aws --region "${region}" cognito-idp list-identity-providers --user-pool-id "${userpoolid}" --query "Providers[*].ProviderName" --output text)"
+
+  if [[ "${current_providers}" != "None" && -n "${current_providers}" ]]; then
+    arrayFromList expected_provider_list "${expectedproviders}"
+    arrayFromList current_provider_list "${current_providers}"
+
+    for provider in "${current_provider_list[@]}"; do
+      if [[ $( ! inArray "expected_provider_list" "${provider}" ) || "${removeall}" == "true" ]]; then
+        info "Removing auth provider ${provider} from ${userpoolid}"
+        aws --region "${region}" cognito-idp delete-identity-provider --user-pool-id "${userpoolid}" --provider-name "${provider}" || return $?
+      fi
+    done
+
+  else
+    info "No providers found moving on.."
+  fi
+}
+
+function manage_cognito_userpool_domain() {
   local region="$1"; shift
   local userpoolid="$1"; shift
   local configfile="$1"; shift
   local action="$1"; shift
+  local domaintype="$1"; shift
 
   local return_status=0
 
   domain="$( jq -r '.Domain' < $configfile )"
-  domain_userpool="$( aws --region ${region} cognito-idp describe-user-pool-domain --domain ${domain} | jq -r '.DomainDescription.UserPoolId | select (.!=null)' )"
+  domain_userpool="$( aws --region ${region} cognito-idp describe-user-pool-domain --domain ${domain} --query "DomainDescription.UserPoolId" --output text )"
 
-  if [[ -z "${domain_userpool}" ]]; then
+  if [[ "${domain_userpool}" == "None" ]]; then
 
     case "${action}" in
         create)
             info "Adding domain to userpool"
-            aws --region "${region}" cognito-idp create-user-pool-domain --user-pool-id "${userpoolid}" --cli-input-json "file://${configfile}" || return $?
-            return_status=$?
+
+            case "${domaintype}" in
+              internal)
+                userpool_domain="$(aws --region ${region} cognito-idp describe-user-pool --user-pool-id "${userpoolid}" --query "UserPool.Domain" --output text)"
+                ;;
+              custom)
+                userpool_domain="$(aws --region ${region} cognito-idp describe-user-pool --user-pool-id "${userpoolid}" --query "UserPool.CustomDomain" --output text)"
+                ;;
+            esac
+
+            if [[ "${userpool_domain}" != "${domain}" && "${userpool_domain}" != "None" && -n "${userpool_domain}" ]]; then
+              aws --region "${region}" cognito-idp delete-user-pool-domain --user-pool-id "${userpoolid}" --domain "${userpool_domain}" || return $?
+            fi
+
+            if [[ ( "${userpool_domain}" == "None" || "${userpool_domain}" != "${domain}" ) && -n "${userpool_domain}" ]]; then
+              aws --region "${region}" cognito-idp create-user-pool-domain --user-pool-id "${userpoolid}" --cli-input-json "file://${configfile}" || return $?
+              return_status=$?
+            fi
             ;;
         delete)
             info "Domain not assigned to a userpool. Nothing to do"
@@ -810,8 +1057,14 @@ function manage_congnito_domain() {
   return ${return_status}
 }
 
-# -- Data Pipeline --
+function get_cognito_userpool_custom_distribution() {
+  local region="$1"; shift
+  local domain="${1}"; shift
 
+  aws --region "${region}" cognito-idp describe-user-pool-domain --domain ${domain} --query "DomainDescription.CloudFrontDistribution" --output text || return $?
+}
+
+# -- Data Pipeline --
 function create_data_pipeline() {
   local region="$1"; shift
   local configfile="$1"; shift
@@ -833,8 +1086,16 @@ function update_data_pipeline() {
   local definitionfile="$1"; shift
   local parameterobjectfile="$1"; shift
   local parametervaluefile="$1"; shift
+  local cfnStackName="$1"; shift
+  local securityGroupId="$1"; shift
 
-  pipeline_details="$(aws --region "${region}" datapipeline put-pipeline-definition --pipeline-id "${pipelineid}" --pipeline-definition "file://${definitionfile}" --parameter-objects "file://${parameterobjectfile}" --parameter-values-uri "file://${parametervaluefile}" )"
+  # Add resources created during stack creation
+  securityGroup="$(get_cloudformation_stack_output "${region}" "${cfnStackName}" "${securityGroupId}" "ref" || return $?)"
+
+  arnLookupValueFile="$(filePath ${parametervaluefile})/ArnLookup-$(fileBase ${parametervaluefile})"
+  jq --arg pipelineRole "${pipelineRole}" --arg resourceRole "${resourceRole}" --arg securityGroup "${securityGroup}" '.values.my_SECURITY_GROUP_ID = $securityGroup ' < "${parametervaluefile}" > "${arnLookupValueFile}"
+
+  pipeline_details="$(aws --region "${region}" datapipeline put-pipeline-definition --pipeline-id "${pipelineid}" --pipeline-definition "file://${definitionfile}" --parameter-objects "file://${parameterobjectfile}" --parameter-values-uri "file://${arnLookupValueFile}" )"
   pipeline_errored="$(echo "${pipeline_details}" | jq -r '.errored ')"
 
   if [[ "${pipeline_errored}" == "false" ]]; then
@@ -848,8 +1109,70 @@ function update_data_pipeline() {
   fi
 }
 
-# -- ElasticSearch --
+#-- DynamoDB --
+function upsert_dynamodb_item() {
+  local region="$1"; shift
+  local tableName="$1"; shift
+  local configfile="$1"; shift
+  local cfnStackName="$1"; shift
 
+  aws --region "${region}" dynamodb update-item --table-name "${tableName}" --return-values "UPDATED_NEW" --cli-input-json "file://${configfile}" || return $?
+
+  return 0
+}
+
+function scan_dynamodb_table() {
+  local region="$1"; shift
+  local tableName="$1"; shift
+  local configfile="$1"; shift
+  local cfnStackName="$1"; shift
+
+  items="$(aws --region "${region}" dynamodb scan --table-name "${tableName}" --cli-input-json "file://${configfile}" --query "Items[*]" --output json || return $? )"
+
+  # return each item as a new line
+  items="$( echo "${items}" | jq -c '.[]' )"
+
+  echo "${items}"
+
+  return 0
+}
+
+function delete_dynamodb_items() {
+  local region="$1"; shift
+  local tableName="$1"; shift
+  local itemKeys="$1"; shift
+  local cfnStackName="$1"; shift
+
+  arrayFromList items_to_delete "${itemKeys}"
+
+  for item in "${items_to_delete[@]}"; do
+    aws --region "${region}" dynamodb delete-item --table-name "${tableName}" --key "${item}" || return $?
+  done
+}
+
+#-- ECS --
+function create_ecs_scheduled_task() {
+  local region="$1"; shift
+  local ruleName="$1"; shift
+  local ruleConfigFile="$1"; shift
+  local targetConfigFile="$1"; shift
+  local cfnStackName="$1"; shift
+  local taskId="$1"; shift
+  local eventRoleId="$1"; shift
+  local securityGroupId="$1"; shift
+
+  ecsTaskArn="$(get_cloudformation_stack_output "${region}" "${cfnStackName}" "${taskId}" "arn" || return $?)"
+  securityGroup="$(get_cloudformation_stack_output "${region}" "${cfnStackName}" "${securityGroupId}" "ref" || return $?)"
+
+  arnLookupConfigFile="$(filePath ${targetConfigFile})/ArnLookup-$(fileBase ${targetConfigFile})"
+  jq --arg ecsTaskArn "${ecsTaskArn}" --arg securityGroup "$securityGroup" '.Targets[0].EcsParameters.TaskDefinitionArn = $ecsTaskArn | .Targets[0].EcsParameters.NetworkConfiguration.awsvpcConfiguration.SecurityGroups = [ $securityGroup ]' < "${targetConfigFile}" > "${arnLookupConfigFile}"
+
+  create_cloudwatch_event "${region}" "${ruleName}" "${eventRoleId}" "${ruleConfigFile}" "${arnLookupConfigFile}"  || return $?
+
+  return 0
+}
+
+# -- ElasticSearch --
 function update_es_domain() {
   local region="$1"; shift
   local esid="$1"; shift
@@ -859,7 +1182,6 @@ function update_es_domain() {
 }
 
 # -- Elastic Load Balancing --
-
 function create_elbv2_rule() {
   local region="$1"; shift
   local listenerid="$1"; shift
@@ -898,6 +1220,7 @@ function cleanup_elbv2_rules() {
   return 0
 }
 
+
 # -- S3 --
 
 function isBucketAccessible() {
@@ -907,7 +1230,7 @@ function isBucketAccessible() {
 
   local result_file="$(getTopTempDir)/is_bucket_accessible_XXXXXX.txt"
 
-  aws --region ${region} s3 ls "s3://${bucket}/${prefix}${prefix:+/}" > "${result_file}"
+  aws --region ${region} s3 ls "s3://${bucket}/${prefix}${prefix:+/}" > "${result_file}" 2>&1
 }
 
 function copyFilesFromBucket() {
@@ -931,31 +1254,35 @@ function syncFilesToBucket() {
   fi
   local optional_arguments=("$@")
 
-  pushTempDir "${FUNCNAME[0]}_XXXXXX"
-  local tmp_dir="$(getTopTempDir)"
-  local return_status
+  # Does the bucket/prefix exist?
+  if isBucketAccessible "${region}" "${bucket}"; then
+    pushTempDir "${FUNCNAME[0]}_XXXXXX"
+    local tmp_dir="$(getTopTempDir)"
+    local return_status
 
-  # Copy files locally so we can synch with S3, potentially including deletes
-  for file in "${syncFiles[@]}" ; do
-    if [[ -f "${file}" ]]; then
-      case "$(fileExtension "${file}")" in
-        zip)
-          # Always use local time to force redeploy of files
-          # in case we are reverting to an earlier version
-          unzip -DD "${file}" -d "${tmp_dir}"
-          ;;
-        *)
-          cp "${file}" "${tmp_dir}"
-          ;;
-      esac
-    fi
-  done
+    # Copy files locally so we can synch with S3, potentially including deletes
+    for file in "${syncFiles[@]}" ; do
+      if [[ -f "${file}" ]]; then
+        case "$(fileExtension "${file}")" in
+          zip)
+            # Always use local time to force redeploy of files
+            # in case we are reverting to an earlier version
+            unzip -DD "${file}" -d "${tmp_dir}"
+            ;;
+          *)
+            cp "${file}" "${tmp_dir}"
+            ;;
+        esac
+      fi
+    done
 
-  # Now synch with s3
-  aws --region ${region} s3 sync "${optional_arguments[@]}" "${tmp_dir}/" "s3://${bucket}/${prefix}${prefix:+/}"; return_status=$?
+    # Now synch with s3
+    aws --region ${region} s3 sync "${optional_arguments[@]}" "${tmp_dir}/" "s3://${bucket}/${prefix}${prefix:+/}"; return_status=$?
 
-  popTempDir
-  return ${return_status}
+    popTempDir
+    return ${return_status}
+  fi
+  return 0
 }
 
 function deleteTreeFromBucket() {
@@ -963,6 +1290,9 @@ function deleteTreeFromBucket() {
   local bucket="$1"; shift
   local prefix="$1"; shift
   local optional_arguments=("$@")
+
+  # Does the bucket/prefix exist?
+  isBucketAccessible "${region}" "${bucket}" "${prefix}" || return 0
 
   # Delete everything below the prefix
   aws --region "${region}" s3 rm "${optional_arguments[@]}" --recursive "s3://${bucket}/${prefix}${prefix:+/}"
@@ -973,12 +1303,14 @@ function deleteBucket() {
   local bucket="$1"; shift
   local optional_arguments=("$@")
 
+  # Does the bucket exist?
+  isBucketAccessible "${region}" "${bucket}" || return 0
+
   # Delete the bucket
   aws --region "${region}" s3 rb "${optional_arguments[@]}" "s3://${bucket}" --force
 }
 
 # -- SNS --
-
 function deploy_sns_platformapp() {
   local region="$1"; shift
   local name="$1"; shift
@@ -1011,7 +1343,7 @@ function deploy_sns_platformapp() {
   else
     platform_app_arn="$(aws --region "${region}" sns create-platform-application --name "${name}" \
       --attributes PlatformPrincipal="${decrypted_platform_principal}",PlatformCredential="${decrypted_platform_credential}" \
-      --platform="${engine}" --query .PlatformApplicationArn --output text )"
+      --platform="${engine}" --query 'PlatformApplicationArn' --output text )"
   fi
 
   update_platform_app="$(aws --region "${region}" sns set-platform-application-attributes --platform-application-arn "${platform_app_arn}" --cli-input-json "file://${configfile}_decrypted"  || return $? )"
@@ -1067,11 +1399,12 @@ function update_sms_account_attributes() {
 }
 
 # -- PKI --
-
 function create_pki_credentials() {
   local dir="$1"; shift
   local region="$1"; shift
   local account="$1"; shift
+  local publickeyname="$1"; shift
+  local privatekeyname="$1"; shift
 
   if [[ (! -f "${dir}/aws-ssh-crt.pem") &&
         (! -f "${dir}/aws-ssh-prv.pem") &&
@@ -1079,8 +1412,8 @@ function create_pki_credentials() {
         (! -f "${dir}/.aws-ssh-prv.pem") &&
         (! -f "${dir}/.aws-${account}-${region}-ssh-crt.pem") &&
         (! -f "${dir}/.aws-${account}-${region}-ssh-prv.pem") ]]; then
-      openssl genrsa -out "${dir}/.aws-${account}-${region}-ssh-prv.pem.plaintext" 2048 || return $?
-      openssl rsa -in "${dir}/.aws-${account}-${region}-ssh-prv.pem.plaintext" -pubout > "${dir}/.aws-${account}-${region}-ssh-crt.pem" || return $?
+      openssl genrsa -out "${dir}/${privatekeyname}.plaintext" 2048 || return $?
+      openssl rsa -in "${dir}/${privatekeyname}.plaintext" -pubout > "${dir}/${publickeyname}" || return $?
   fi
 
   if [[ ! -f "${dir}/.gitignore" ]]; then
@@ -1098,15 +1431,16 @@ function delete_pki_credentials() {
   local dir="$1"; shift
   local region="$1"; shift
   local account="$1"; shift
+  local publickeyname="$1"; shift
+  local privatekeyname="$1"; shift
 
   local restore_nullglob="$(shopt -p nullglob)"
   shopt -s nullglob
 
-  rm -f "${dir}"/.aws-${account}-${region}-ssh-crt* "${dir}"/.aws-${account}-${region}-ssh-prv*
+  rm -f "${dir}"/.aws-${account}-${region}-ssh-crt* "${dir}"/.aws-${account}-${region}-ssh-prv* "${dir}"/${publickeyname}* "${dir}"/${privatekeyname}*
 
   ${restore_nullglob}
 }
-
 # -- SSH --
 
 function check_ssh_credentials() {
@@ -1141,6 +1475,7 @@ function delete_ssh_credentials() {
 
   return 0
 }
+
 
 # -- SSM --
 
@@ -1501,7 +1836,6 @@ function update_rds_ca_identifier() {
   aws --region "${region}" rds modify-db-instance --apply-immediately --db-instance-identifier ${db_identifier} --ca-certificate-identifier "${ca_identifier}" 1> /dev/null || return $?
 }
 
-
 # -- Git Repo Management --
 
 function in_git_repo() {
@@ -1586,13 +1920,16 @@ function git_rm() {
 }
 
 # -- semver handling --
+# Comparisons/naming roughly aligned to https://github.com/npm/node-semver
+# in case we want to replace these routines with calls to this package via
+# docker
 
-# From github.com/fsaintjacques/semver-tool
+function semver_valid {
+  local version="$1"
 
-function semver_validate {
-  local version=$1
+  [[ "$version" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-([^+]+))?(\+(.*))?$ ]] ||
+    { echo -n "?"; return 1; }
 
-[[ "$version" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-([^+]+))?(\+(.*))?$ ]] || return 1
   local major=${BASH_REMATCH[1]}
   local minor=${BASH_REMATCH[2]}
   local patch=${BASH_REMATCH[3]}
@@ -1603,17 +1940,59 @@ function semver_validate {
   return 0
 }
 
-function semver_compare {
-  local v1="$(semver_validate "$1")"; shift
-  local v2="$(semver_validate "$1")"; shift
+# Strip any leading "v" (note we handle leading = in semver_satisfies)
+# Convert any range indicators ("x" or "X") to 0
+# * not supported as substitute for x
+function semver_clean {
+  local version="$1"
 
-  if [[ (-z "${v1}") || (-z "${v2}") ]]; then
-    echo -n "?"
-    return 1
+  # Handle the full format
+  if [[ "$version" =~ ^v?(0|[1-9][0-9]*|x|X)\.(0|[1-9][0-9]*|x|X)\.(0|[1-9][0-9]*|x|X)(\-([^+]+))?(\+(.*))?$ ]]; then
+
+    local major="$(echo ${BASH_REMATCH[1]} | tr "xX" "0")"
+    local minor="$(echo ${BASH_REMATCH[2]} | tr "xX" "0")"
+    local patch="$(echo ${BASH_REMATCH[3]} | tr "xX" "0")"
+    local prere=${BASH_REMATCH[5]}
+    local build=${BASH_REMATCH[7]}
+
+    echo -n "${major}.${minor}.${patch}${prere:+-}${prere}${build:++}${build}"
+    return 0
   fi
 
-  local v1_components=(${v1})
-  local v2_components=(${v2})
+  # Handle major.minor
+  if [[ "$version" =~ ^v?(0|[1-9][0-9]*|x|X)\.(0|[1-9][0-9]*|x|X)$ ]]; then
+
+    local major="$(echo ${BASH_REMATCH[1]} | tr "xX" "0")"
+    local minor="$(echo ${BASH_REMATCH[2]} | tr "xX" "0")"
+
+    echo -n "${major}.${minor}.0"
+    return 0
+  fi
+
+  # Handle major
+  if [[ "$version" =~ ^v?(0|[1-9][0-9]*|x|X)$ ]]; then
+
+    local major="$(echo ${BASH_REMATCH[1]} | tr "xX" "0")"
+
+    echo -n "${major}.0.0"
+    return 0
+  fi
+
+  # Not valid
+  echo -n "?"
+  return 1
+}
+
+function semver_compare {
+  local v1="$(semver_clean "$1")"; shift
+  local v2="$(semver_clean "$1")"; shift
+
+  semver_valid "${v1}" > /dev/null &&
+      semver_valid "${v2}" > /dev/null ||
+      { echo -n "?"; return 1; }
+
+  local v1_components=($(semver_valid "${v1}"))
+  local v2_components=($(semver_valid "${v2}"))
 
   # MAJOR, MINOR and PATCH should compare numericaly
   for i in 0 1 2; do
@@ -1641,8 +2020,81 @@ function semver_compare {
   echo -n 0
 }
 
-# -- Cloudfront handling --
+# a range is a list of comparator sets joined by "||"" or "|", true if one of sets is true
+# a comparator set is a list of comparators, true if all comparators are true
+# a comparator is an operator and a version
+function semver_satisfies {
+  local version="$1"; shift
+  local range=$@
 
+  # First determine the comparator sets
+  # Standardise on single "|" as separator
+  declare -a comparator_sets
+  arrayFromList comparator_sets "${range//||/|}" "|"
+
+  for comparator_set in "${comparator_sets[@]}"; do
+    debug "Checking comparator set \"${comparator_set}\" ..."
+
+    # Now determine the comparators for each set
+    declare -a comparators
+    arrayFromList comparators "${comparator_set}"
+
+    # Assume all comparators will match
+    local match=0
+
+    for comparator in "${comparators[@]}"; do
+      debug "Checking comparator \"${comparator}\" ..."
+
+      # Split into operator and version
+      [[ "$comparator" =~ ^(<|<=|>|>=|=)(.+)$ ]] || return 1
+      local operator="${BASH_REMATCH[1]}"
+      local comparator_version="$(semver_clean "${BASH_REMATCH[2]}")"
+
+      # Do the version comparison
+      comparator_result="$(semver_compare "${version}" "${comparator_version}")"
+      [[ "${comparator_result}" == "?" ]] && return 1
+
+      debug "Comparing \"${version}\" to \"${comparator_version}\", result=${comparator_result}"
+
+      # Process the operator
+      case "${operator}" in
+        \<)
+          [[ "${comparator_result}" -lt 0 ]] && continue
+          ;;
+
+        \<=)
+          [[ "${comparator_result}" -le 0 ]] && continue
+          ;;
+
+        \>)
+          [[ "${comparator_result}" -gt 0 ]] && continue
+          ;;
+
+        \>=)
+          [[ "${comparator_result}" -ge 0 ]] && continue
+          ;;
+
+        =)
+          [[ "${comparator_result}" -eq 0 ]] && continue
+          ;;
+
+        *)
+          match=1
+          ;;
+      esac
+      match=1
+      break
+    done
+
+    # All comparators matched so success (this comparator set is true)
+    [[ ${match} -eq 0 ]] && return 0
+
+  done
+
+  return 1
+}
+
+# -- Cloudfront handling --
 function invalidate_distribution() {
     local region="$1"; shift
     local distribution_id="$1"; shift
@@ -1659,7 +2111,7 @@ function release_enis() {
     local region="$1"; shift
     local requester_id="$1"; shift
 
-    eni_interfaces = "$( aws --region "${region}" ec2 describe-network-interfaces --filters Name=requester-id,Values="*${requester_id}" || return $? )"
+    eni_interfaces="$( aws --region "${region}" ec2 describe-network-interfaces --filters Name=requester-id,Values="*${requester_id}" || return $? )"
 
     if [[ -n "${eni_interfaces}" ]]; then
       for attachment_id in $( echo "${eni_interfaces}" | jq -r '.NetworkInterfaces[].Attachment.AttachmentId | select (.!=null)' ) ; do

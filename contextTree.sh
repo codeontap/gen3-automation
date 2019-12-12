@@ -36,36 +36,6 @@ function parse_stack_filename() {
   return 1
 }
 
-function add_standard_pairs_to_stack() {
-  local account="$1"; shift
-  local region="$1"; shift
-  local level="$1"; shift
-  local deployment_unit="$1"; shift
-  local input_file="$1"; shift
-  local output_file="$1"; shift
-
-  pushTempDir "${FUNCNAME[0]}_XXXXXX"
-  local result_file="$(getTopTempDir)/add_standard_pairs_to_stack.json"
-  local return_status
-
-  runJQ -f ${GENERATION_DIR}/formatOutputs.jq \
-    --arg Account "${account}" \
-    --arg Region "${region}" \
-    --arg Level "${level}" \
-    --arg DeploymentUnit "${deployment_unit}" \
-    < "${input_file}" > "${result_file}"; return_status=$?
-
-  if [[ ${return_status} -eq 0 ]]; then
-    # Copy/overwrite the output
-    [[ -n "${output_file}" ]] && \
-      cp "${result_file}" "${output_file}" ||
-      cp "${result_file}" "${input_file}"; return_status=$?
-  fi
-
-  popTempDir
-  return ${return_status}
-}
-
 function create_pseudo_stack() {
   local comment="$1"; shift
   local file="$1"; shift
@@ -194,7 +164,7 @@ function assemble_settings() {
     -name account.json \
     -and -not -path "*/.*/*" \) | sort)
 
-#  debug "Account=${account_files[@]}"
+  # debug "Account=${account_files[@]}"
 
   # Settings
   for account_file in "${account_files[@]}"; do
@@ -220,7 +190,7 @@ function assemble_settings() {
     -name product.json \
     -and -not -path "*/.*/*" \) | sort)
 
-#  debug "Products=${product_files[@]}"
+  # debug "Products=${product_files[@]}"
 
   for product_file in "${product_files[@]}"; do
 
@@ -367,37 +337,42 @@ function assemble_composite_definitions() {
 
 function assemble_composite_stack_outputs() {
 
+  pushTempDir "${FUNCNAME[0]}_XXXXXX"
+  local tmp_dir="$(getTopTempDir)"
+
   # Create the composite stack outputs
   local restore_nullglob=$(shopt -p nullglob)
   shopt -s nullglob
 
   local stack_array=()
   [[ (-n "${ACCOUNT}") ]] &&
-      addToArray "stack_array" "${ACCOUNT_STATE_DIR}"/cf/shared/acc*-stack.json
-  [[ (-n "${PRODUCT}") && (-n "${REGION}") ]] &&
-      addToArray "stack_array" "${PRODUCT_STATE_DIR}"/cf/shared/product*-"${REGION}"*-stack.json
+      addToArray "stack_array" "${ACCOUNT_STATE_DIR}"/*/shared/acc*-stack.json
   [[ (-n "${ENVIRONMENT}") && (-n "${SEGMENT}") && (-n "${REGION}") ]] &&
-      addToArray "stack_array" "${PRODUCT_STATE_DIR}/cf/${ENVIRONMENT}/${SEGMENT}"/*-stack.json
+      addToArray "stack_array" "${PRODUCT_STATE_DIR}"/*/"${ENVIRONMENT}/${SEGMENT}"/*-stack.json
 
   ${restore_nullglob}
 
   debug "STACK_OUTPUTS=${stack_array[*]}"
-  composite_stack_output_values="[]"
 
   export COMPOSITE_STACK_OUTPUTS="${CACHE_DIR}/composite_stack_outputs.json"
+  local composite_stack_array=()
 
-  # Load all files into a a single array of objects with the filename as key so we can determine level
+  # Create standardised versions of the stack output files
   if [[ $(arraySize "stack_array") -ne 0 ]]; then
     for stack_output in "${stack_array[@]}"; do
-      composite_stack_output_values="$( echo '{}' | jq \
-          --argjson composite_stack "${composite_stack_output_values}" \
-          --slurpfile stack_output "${stack_output}" \
-          --arg stack_name "$( fileName ${stack_output} )" \
-          '$composite_stack + [  { "FileName" : $stack_name, "Content" : $stack_output } ]' )"
+      stack_file_name="$( fileName ${stack_output} )"
+      tmp_stack_file="${tmp_dir}/${stack_file_name}"
+      addToArray "composite_stack_array" "${tmp_stack_file}"
+      jq --arg stack_name "${stack_file_name}" \
+          '{ "FileName" : $stack_name, "Content" : [.] }' < "${stack_output}" >> "${tmp_stack_file}"
     done
   fi
 
-  echo "${composite_stack_output_values}" > "${COMPOSITE_STACK_OUTPUTS}"
+  # Slurp all of the standardised files and put them into a single file as an array
+  jq -s '.' ${composite_stack_array[*]} > "${COMPOSITE_STACK_OUTPUTS}"
+
+  popTempDir
+  return 0
 }
 
 function getBluePrintParameter() {
@@ -405,6 +380,7 @@ function getBluePrintParameter() {
 
   getJSONValue "${COMPOSITE_BLUEPRINT}" "${patterns[@]}"
 }
+
 
 # -- GEN3 directory structure --
 
@@ -1620,6 +1596,13 @@ function process_cmdb() {
     fi
 
     [[ -z "${current_version}" ]] && current_version="v0.0.0"
+
+    # Most of the time we expect no upgrade to be required
+    local last_check="$(semver_compare "${current_version}" "${versions[-1]}")"
+    if [[ "${last_check}" != "-1" ]]; then
+      debug "${action^} of repo "${cmdb_repo}" to ${versions[-1]} is not required - skipping all version checks"
+      continue
+    fi
 
     for version in "${versions[@]}"; do
       # Nothing to do if not less than version being checked

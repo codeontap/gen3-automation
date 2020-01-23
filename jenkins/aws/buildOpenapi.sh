@@ -43,6 +43,12 @@ fi
 
 # Possible input files
 OPENAPI_SPEC_FILE=$(findFile \
+                    "${AUTOMATION_BUILD_DIR}/build/openapi.json" \
+                    "${AUTOMATION_BUILD_DIR}/build/openapi.yml" \
+                    "${AUTOMATION_BUILD_DIR}/build/openapi.yaml" \
+                    "${AUTOMATION_BUILD_DIR}/build/swagger.json" \
+                    "${AUTOMATION_BUILD_DIR}/build/swagger.yml" \
+                    "${AUTOMATION_BUILD_DIR}/build/swagger.yaml" \
                     "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/${BUILD_DIR}/openapi.json" \
                     "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/${BUILD_DIR}/openapi.yml" \
                     "${AUTOMATION_BUILD_DIR_PARENT}/**/*spec/${BUILD_DIR}/openapi.yaml" \

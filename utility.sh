@@ -262,6 +262,9 @@ function findDir() {
   local matches=()
   for pattern in "${patterns[@]}"; do
     matches+=("${root_dir}"/**/${pattern})
+    if [[ "${#matches[@]}" -gt 0 ]]; then
+      break
+    fi
   done
 
   ${restore_nullglob}
@@ -707,8 +710,6 @@ function encrypt_kms_string() {
   local kms_key_id="$1"; shift
 
   aws --region "${region}" kms encrypt --key-id "${kms_key_id}" --plaintext "${value}" --query CiphertextBlob --output text
-
-  return $?
 }
 
 function encrypt_kms_file() {
@@ -721,11 +722,13 @@ function encrypt_kms_file() {
   local tmp_dir="$(getTopTempDir)"
   local return_status
 
-  cp "${input_file}" "${tmp_dir}/encrypt_file"
+  cp "${input_file}" "${tmp_dir}/encrypt_file" || return_status=255
 
-  (cd "${tmp_dir}"; aws --region "${region}" --output text kms encrypt \
-    --key-id "${kms_key_id}" --query CiphertextBlob \
-    --plaintext "fileb://encrypt_file" > "${output_file}"; return_status=$?)
+  if [[ -z "${return_status}" ]]; then
+    (cd "${tmp_dir}"; aws --region "${region}" --output text kms encrypt \
+      --key-id "${kms_key_id}" --query CiphertextBlob \
+      --plaintext "fileb://encrypt_file" > "${output_file}"; return_status=$?)
+  fi
 
   popTempDir
 
@@ -1839,14 +1842,14 @@ function check_rds_snapshot_username() {
 }
 
 function get_rds_url() {
-  local engine="$1"; shift
+  local scheme="$1"; shift
   local username="$1"; shift
   local password="$1"; shift
   local fqdn="$1"; shift
   local port="$1"; shift
   local database_name="$1"; shift
 
-  echo "${engine}://${username}:${password}@${fqdn}:${port}/${database_name}"
+  echo "${scheme}://${username}:${password}@${fqdn}:${port}/${database_name}"
 }
 
 function update_rds_ca_identifier() {
@@ -2116,6 +2119,39 @@ function semver_satisfies {
 
   return 1
 }
+
+function semver_upgrade_list() {
+  local upgrade_list=($1);shift
+  local maximum_version="$1";shift
+
+  local required_upgrades=()
+
+
+  # assume upgrade list is ordered
+  case "$(semver_compare "${maximum_version}" "${upgrade_list[-1]}")" in
+    1|0)
+      # Simple optimisation for the common case of all versions being required
+      echo -n "${upgrade_list[*]}"
+      ;;
+
+    *)
+      for upgrade_version in "${upgrade_list[@]}"; do
+        if [[ "$(semver_compare "${upgrade_version}" "${maximum_version}")" == "1" ]]; then
+          # Ignore all higher versions
+          break
+        else
+          required_upgrades+=("${upgrade_version}")
+          continue
+        fi
+      done
+
+      echo -n "${required_upgrades[*]}"
+      ;;
+  esac
+
+  return 0
+}
+
 
 # -- Cloudfront handling --
 function invalidate_distribution() {

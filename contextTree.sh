@@ -83,65 +83,89 @@ EOF
   return ${return_status}
 }
 
-function convertFilesToJSONObject() {
-  local base_ancestors=($1); shift
-  local prefixes=($1); shift
-  local root_dir="$1";shift
-  local as_file="$1";shift
+function getFilesAsJSON() {
+  local result_file="$1";shift
   local files=("$@")
+
+  local file_array=()
+  local return_status
 
   pushTempDir "${FUNCNAME[0]}_XXXXXX"
   local tmp_dir="$(getTopTempDir)"
-  local base_file="${tmp_dir}/base.json"
-  local processed_files=("${base_file}")
+
+  # Create standardised versions of the files
+  if [[ $(arraySize "files") -ne 0 ]]; then
+    for file in "${files[@]}"; do
+      local file_name="$( fileName ${file} )"
+      local relative_file_path="$( filePath ${file} )"
+      local file_path="$( cd "${relative_file_path}"; pwd )"
+      local tmp_file="$( getTempFile "XXXXXX" "${tmp_dir}" )"
+      addToArray "file_array" "${tmp_file}"
+      if $(contains "${file}" "asFile"); then
+        # Only want the filename
+        echo {} | jq --arg file_name "${file_name}" --arg file_path "${file_path}" \
+            '{ "FileName" : $file_name, "FilePath" : $file_path, "Content" : [] }' >> "${tmp_file}"
+      else
+        # Want file content - handle a few content variants
+        case "$(fileExtension "${file_name}")" in
+          json)
+            jq --arg file_name "${file_name}" --arg file_path "${file_path}" \
+                '{ "FileName" : $file_name, "FilePath" : $file_path, "Content" : [.] }' < "${file}" > "${tmp_file}"
+            ;;
+
+          escjson)
+            jq --arg file_name "${file_name}" --arg file_path "${file_path}" \
+                '{ "FileName" : $file_name, "FilePath" : $file_path, "Content" : [tojson] }' < "${file}" > "${tmp_file}"
+            ;;
+
+          *)
+            # Assume raw input
+            jq -sR --arg file_name "${file_name}" --arg file_path "${file_path}" \
+                '{ "FileName" : $file_name, "FilePath" : $file_path, "Content" : [.] }' < "${file}" > "${tmp_file}"
+            ;;
+
+        esac
+      fi
+    done
+
+    # Slurp all of the standardised files and put them into a single file as an array
+    # Freemarker doesn't support the null json value in ?eval so we need to remove any null values
+    runJQ --indent 2 -s -f "${GENERATION_BASE_DIR}/execution/nullStrip.jq" "${file_array[@]}" > "${result_file}"; return_status=$?
+  else
+    echo "[]" > "${result_file}"; return_status=0
+  fi
+
+  popTempDir
+  return ${return_status}
+}
+
+function convertFilesToJSONObject() {
+  local ancestors=($1); shift
+  local root_dir="$1";shift
+  local base_dir="$1";shift
+  local result_file="$1";shift
+  local files=("$@")
+
+  local filter='{ "RootDirectory" : $root_dir, "BaseDirectory" : $base_dir, "Files" : . }'
   local return_status
 
-  echo -n "{}" > "${base_file}"
+  pushTempDir "${FUNCNAME[0]}_XXXXXX"
+  local tmp_dir="$(getTopTempDir)"
 
-  for file in "${files[@]}"; do
+  # First assemble all the files
+  getFilesAsJSON "${tmp_dir}/files.json" "${files[@]}"; return_status=$?
+  if [[ $return_status -eq 0 ]]; then
 
-    local file_name="$(fileName "${file}")"
-    local file_path="$(filePath "${file}")"
-    local file_absolute_path="$(cd "${file_path}"; pwd)"
-    local file_root_relative_path="${file_absolute_path##${root_dir}/}"
-    local relative_file="${file_root_relative_path}/${file_name}"
+    # Add any ancestors
+    for (( index=${#ancestors[@]}-1 ; index >= 0 ; index-- )) ; do
+      filter="{\"${ancestors[index]}\" : ${filter} }"
+    done
 
-    local source_file="${file}"
-    local attribute="$( fileBase "${file}" | tr "-" "_" )"
+    # Add the root and base directories
+    jq --arg root_dir "${root_dir}" --arg base_dir "${base_dir}" \
+      "${filter}" < "${tmp_dir}/files.json" > "${result_file}"; return_status=$?
+  fi
 
-    if [[ "${as_file}" == "true" ]]; then
-      source_file="$(getTempFile "asfile_${attribute,,}_XXXXXX.json" "${tmp_dir}")"
-      echo -n "{\"${attribute^^}\" : {\"Value\" : \"$(fileName "${file}")\", \"AsFile\" : \"${relative_file}\" }}" > "${source_file}" || return 1
-    else
-      case "$(fileExtension "${file}")" in
-        json)
-          ;;
-
-        escjson)
-          source_file="$(getTempFile "escjson_${attribute,,}_XXXXXX.json" "${tmp_dir}")"
-          runJQ \
-            "{\"${attribute^^}\" : {\"Value\" : tojson, \"FromFile\" : \"${relative_file}\" }}" \
-            "${file}" > "${source_file}" || return 1
-          ;;
-
-        *)
-          # Assume raw input
-          source_file="$(getTempFile "raw_${attribute,,}_XXXXXX.json" "${tmp_dir}")"
-          runJQ -sR \
-            "{\"${attribute^^}\" : {\"Value\" : ., \"FromFile\" : \"${relative_file}\" }}" \
-            "${file}" > "${source_file}" || return 1
-          ;;
-
-      esac
-    fi
-
-    local file_ancestors=("${prefixes[@]}" $(filePath "${file}" | tr "./" " ") )
-    local processed_file="$(getTempFile "processed_XXXXXX.json" "${tmp_dir}")"
-    addJSONAncestorObjects "${source_file}" "${base_ancestors[@]}" $(join "-" "${file_ancestors[@]}" | tr "[:upper:]" "[:lower:]") > "${processed_file}" || return 1
-    processed_files+=("${processed_file}")
-  done
-
-  jqMerge "${processed_files[@]}"; return_status=$?
   popTempDir
   return ${return_status}
 }
@@ -178,10 +202,12 @@ function assemble_settings() {
     debug "Processing account dir ${account_dir} ..."
     pushd "${account_dir}" > /dev/null 2>&1 || continue
 
-    tmp_file="$( getTempFile "account_settings_XXXXXX.json" "${tmp_dir}")"
     readarray -t setting_files < <(find . -type f -name "*.json" )
-    convertFilesToJSONObject "Settings Accounts" "${name}" "${root_dir}" "false" "${setting_files[@]}" > "${tmp_file}" || return 1
-    tmp_file_list+=("${tmp_file}")
+    if ! arrayIsEmpty "setting_files" ; then
+      tmp_file="${tmp_dir}/accounts_settings_${name}.json"
+      convertFilesToJSONObject "Accounts Settings ${name}" "${root_dir}" "${account_dir}" "${tmp_file}" "${setting_files[@]}" || return 1
+      tmp_file_list+=("${tmp_file}")
+    fi
     popd > /dev/null
   done
 
@@ -205,35 +231,11 @@ function assemble_settings() {
       debug "Processing settings dir ${settings_dir} ..."
       pushd "${settings_dir}" > /dev/null 2>&1 || continue
 
-      # Settings
       readarray -t setting_files < <(find . -type f \( \
-        -not \( -name "*build.json" -or -name "*credentials.json" -or -name "*sensitive.json" \) \
-        -and -not \( -path "*/asfile/*" -or -path "*/asFile/*" \) \
-        -and -not \( -name ".*" -or -path "*/.*/*" \) \) )
+        -not \( -name ".*" -or -path "*/.*/*" \) \) )
       if ! arrayIsEmpty "setting_files" ; then
-        tmp_file="$( getTempFile "product_settings_XXXXXX.json" "${tmp_dir}")"
-        convertFilesToJSONObject "Settings Products" "${name}" "${root_dir}" "false" "${setting_files[@]}" > "${tmp_file}" || return 1
-        tmp_file_list+=("${tmp_file}")
-      fi
-
-      # Sensitive
-      readarray -t setting_files < <(find . -type f \( \
-        \( -name "*credentials.json" -or -name "*sensitive.json" \) \
-        -and -not \( -path "*/asfile/*" -or -path "*/asFile/*" \) \
-        -and -not \( -name ".*" -or -path "*/.*/*" \) \) )
-      if ! arrayIsEmpty "setting_files" ; then
-        tmp_file="$( getTempFile "product_sensitive_XXXXXX.json" "${tmp_dir}")"
-        convertFilesToJSONObject "Sensitive Products" "${name}" "${root_dir}" "false" "${setting_files[@]}" > "${tmp_file}" || return 1
-        tmp_file_list+=("${tmp_file}")
-      fi
-
-      # asFiles
-      readarray -t setting_files < <(find . -type f \( \
-        \( -path "*/asfile/*" -or -path "*/asFile/*" \) \
-        -and -not \( -name ".*" -or -path "*/.*/*" \) \) )
-      if ! arrayIsEmpty "setting_files" ; then
-        tmp_file="$( getTempFile "product_settings_asfile_XXXXXX.json" "${tmp_dir}")"
-        convertFilesToJSONObject "Settings Products" "${name}" "${root_dir}" "true" "${setting_files[@]}" > "${tmp_file}" || return 1
+        tmp_file="${tmp_dir}/products_settings_${name}.json"
+        convertFilesToJSONObject "Products Settings ${name}" "${root_dir}" "${settings_dir}" "${tmp_file}" "${setting_files[@]}"  || return 1
         tmp_file_list+=("${tmp_file}")
       fi
 
@@ -242,17 +244,15 @@ function assemble_settings() {
 
     # Builds
     local builds_dir="$(findGen3ProductBuildsDir "${root_dir}" "${name}")"
-    if [[ -d "${builds_dir}" ]]; then
+    if [[ (-d "${builds_dir}") && ("${settings_dir}" != "${builds_dir}") ]]; then
       debug "Processing builds dir ${builds_dir} ..."
       pushd "${builds_dir}" > /dev/null
 
       readarray -t build_files < <(find . -type f \( \
-        -name "*build.json" \
-        -and -not \( -path "*/asfile/*" -or -path "*/asFile/*" \) \
-        -and -not \( -name ".*" -or -path "*/.*/*" \) \) )
+        -not \( -name ".*" -or -path "*/.*/*" \) \) )
       if ! arrayIsEmpty "build_files" ; then
-        tmp_file="$( getTempFile "builds_builds_XXXXXX.json" "${tmp_dir}")"
-        convertFilesToJSONObject "Builds Products" "${name}" "${root_dir}" "false" "${build_files[@]}" > "${tmp_file}" || return 1
+        tmp_file="${tmp_dir}/products_builds_${name}.json"
+        convertFilesToJSONObject "Products Builds ${name}" "${root_dir}" "${builds_dir}" "${tmp_file}" "${build_files[@]}"  || return 1
         tmp_file_list+=("${tmp_file}")
       fi
 
@@ -265,35 +265,11 @@ function assemble_settings() {
       debug "Processing operations dir ${operations_dir} ..."
       pushd "${operations_dir}" > /dev/null
 
-      # Settings
-      readarray -t setting_files < <(find . -type f \( \
-        -not \( -name "*build.json" -or -name "*credentials.json" -or -name "*sensitive.json" \) \
-        -and -not \( -path "*/asfile/*" -or -path "*/asFile/*" \) \
-        -and -not \( -name ".*" -or -path "*/.*/*" \) \) )
-      if ! arrayIsEmpty "setting_files" ; then
-        tmp_file="$( getTempFile "operations_settings_XXXXXX.json" "${tmp_dir}")"
-        convertFilesToJSONObject "Settings Products" "${name}" "${root_dir}" "false" "${setting_files[@]}" > "${tmp_file}" || return 1
-        tmp_file_list+=("${tmp_file}")
-      fi
-
-      # Sensitive
-      readarray -t setting_files < <(find . -type f \( \
-        \( -name "*credentials.json" -or -name "*sensitive.json" \) \
-        -and -not \( -path "*/asfile/*" -or -path "*/asFile/*" \) \
-        -and -not \( -name ".*" -or -path "*/.*/*" \) \) )
-      if ! arrayIsEmpty "setting_files" ; then
-        tmp_file="$( getTempFile "operations_sensitive_XXXXXX.json" "${tmp_dir}")"
-        convertFilesToJSONObject "Sensitive Products" "${name}" "${root_dir}" "false" "${setting_files[@]}" > "${tmp_file}" || return 1
-        tmp_file_list+=("${tmp_file}")
-      fi
-
-      # asFiles
-      readarray -t setting_files < <(find . -type f \( \
-        \( -path "*/asfile/*" -or -path "*/asFile/*" \) \
-        -and -not \( -name ".*" -or -path "*/.*/*" \) \) )
-      if ! arrayIsEmpty "setting_files" ; then
-        tmp_file="$( getTempFile "operations_settings_asfile_XXXXXX.json" "${tmp_dir}")"
-        convertFilesToJSONObject "Settings Products" "${name}" "${root_dir}" "true" "${setting_files[@]}" > "${tmp_file}" || return 1
+      readarray -t operations_files < <(find . -type f \( \
+        -not \( -name ".*" -or -path "*/.*/*" \) \) )
+      if ! arrayIsEmpty "operations_files" ; then
+        tmp_file="${tmp_dir}/products_operations_${name}.json"
+        convertFilesToJSONObject "Products Operations ${name}" "${root_dir}" "${operations_dir}" "${tmp_file}" "${operations_files[@]}"  || return 1
         tmp_file_list+=("${tmp_file}")
       fi
 
@@ -315,16 +291,19 @@ function assemble_composite_definitions() {
 
   # Gather the relevant definitions
   local restore_nullglob=$(shopt -p nullglob)
+  local restore_globstar=$(shopt -p globstar)
   shopt -s nullglob
+  shopt -s globstar
 
   local definitions_array=()
   [[ (-n "${ACCOUNT}") ]] &&
-      addToArray "definitions_array" "${ACCOUNT_STATE_DIR}"/cf/shared/defn*-definition.json
+      addToArray "definitions_array" "${ACCOUNT_STATE_DIR}"/cf/shared/**/defn*-definition.json
   [[ (-n "${PRODUCT}") && (-n "${REGION}") ]] &&
-      addToArray "definitions_array" "${PRODUCT_STATE_DIR}"/cf/shared/defn*-"${REGION}"*-definition.json
+      addToArray "definitions_array" "${PRODUCT_STATE_DIR}"/cf/shared/**/defn*-"${REGION}"*-definition.json
   [[ (-n "${ENVIRONMENT}") && (-n "${SEGMENT}") && (-n "${REGION}") ]] &&
-      addToArray "definitions_array" "${PRODUCT_STATE_DIR}/cf/${ENVIRONMENT}/${SEGMENT}"/*-definition.json
+      addToArray "definitions_array" "${PRODUCT_STATE_DIR}/cf/${ENVIRONMENT}/${SEGMENT}"/**/*${ACCOUNT}*-definition.json
 
+  ${restore_globstar}
   ${restore_nullglob}
 
   debug "DEFINITIONS=${definitions_array[*]}"
@@ -342,37 +321,27 @@ function assemble_composite_stack_outputs() {
 
   # Create the composite stack outputs
   local restore_nullglob=$(shopt -p nullglob)
+  local restore_globstar=$(shopt -p globstar)
   shopt -s nullglob
+  shopt -s globstar
 
   local stack_array=()
   [[ (-n "${ACCOUNT}") ]] &&
-      addToArray "stack_array" "${ACCOUNT_STATE_DIR}"/*/shared/acc*-stack.json
+      addToArray "stack_array" "${ACCOUNT_STATE_DIR}"/*/shared/**/acc*-stack.json
   [[ (-n "${ENVIRONMENT}") && (-n "${SEGMENT}") && (-n "${REGION}") ]] &&
-      addToArray "stack_array" "${PRODUCT_STATE_DIR}"/*/"${ENVIRONMENT}/${SEGMENT}"/*-stack.json
+      addToArray "stack_array" "${PRODUCT_STATE_DIR}"/*/"${ENVIRONMENT}/${SEGMENT}"/**/*${ACCOUNT}*-stack.json
 
+  ${restore_globstar}
   ${restore_nullglob}
 
   debug "STACK_OUTPUTS=${stack_array[*]}"
 
   export COMPOSITE_STACK_OUTPUTS="${CACHE_DIR}/composite_stack_outputs.json"
-  local composite_stack_array=()
 
-  # Create standardised versions of the stack output files
-  if [[ $(arraySize "stack_array") -ne 0 ]]; then
-    for stack_output in "${stack_array[@]}"; do
-      stack_file_name="$( fileName ${stack_output} )"
-      tmp_stack_file="${tmp_dir}/${stack_file_name}"
-      addToArray "composite_stack_array" "${tmp_stack_file}"
-      jq --arg stack_name "${stack_file_name}" \
-          '{ "FileName" : $stack_name, "Content" : [.] }' < "${stack_output}" >> "${tmp_stack_file}"
-    done
-  fi
-
-  # Slurp all of the standardised files and put them into a single file as an array
-  jq -s '.' ${composite_stack_array[*]} > "${COMPOSITE_STACK_OUTPUTS}"
+  getFilesAsJSON "${COMPOSITE_STACK_OUTPUTS}" "${stack_array[@]}"; return_status=$?
 
   popTempDir
-  return 0
+  return ${return_status}
 }
 
 function getBluePrintParameter() {
@@ -445,8 +414,8 @@ function findGen3AccountInfrastructureDir() {
   local account="$1"; shift
 
   findDir "${root_dir}" \
-    "infrastructure/**/${account}" \
-    "${account}/infrastructure"
+    "${account}/infrastructure" \
+    "infrastructure/**/${account}"
 }
 
 # It would be very rare that accounts would have standard settings and operations
@@ -460,10 +429,10 @@ function findGen3AccountOperationsDir() {
 
   # TODO(mfl): Remove infrastructure checks when all repos converted to >=v2.0.0
   findDir "${root_dir}" \
-    "operations/**/${account}/settings" \
     "${account}/operations/settings" \
-    "infrastructure/**/${account}/operations" \
-    "${account}/infrastructure/operations"
+    "operations/**/${account}/settings" \
+    "${account}/infrastructure/operations" \
+    "infrastructure/**/${account}/operations"
 }
 
 function findGen3AccountStateDir() {
@@ -472,10 +441,10 @@ function findGen3AccountStateDir() {
 
   # TODO(mfl): Remove infrastructure checks when all repos converted to >=v2.0.0
   findDir "${root_dir}" \
-    "state/**/${account}" \
     "${account}/state" \
-    "infrastructure/**/${account}" \
-    "${account}/infrastructure"
+    "state/**/${account}" \
+    "${account}/infrastructure" \
+    "infrastructure/**/${account}"
 }
 
 function findGen3ProductDir() {
@@ -504,8 +473,8 @@ function findGen3ProductInfrastructureDir() {
   local product="$1"; shift
 
   findDir "${root_dir}" \
-    "infrastructure/**/${product}" \
-    "${product}/infrastructure"
+    "${product}/infrastructure" \
+    "infrastructure/**/${product}"
 }
 
 function findGen3ProductOperationsDir() {
@@ -514,10 +483,10 @@ function findGen3ProductOperationsDir() {
 
   # TODO(mfl): Remove infrastructure checks when all repos converted to >=v2.0.0
   findDir "${root_dir}" \
-    "operations/**/${product}/settings" \
     "${product}/operations/settings" \
-    "infrastructure/**/${product}/operations" \
-    "${product}/infrastructure/operations"
+    "operations/**/${product}/settings" \
+    "${product}/infrastructure/operations" \
+    "infrastructure/**/${product}/operations"
 }
 
 function findGen3ProductSolutionsDir() {
@@ -526,10 +495,10 @@ function findGen3ProductSolutionsDir() {
 
   # TODO(mfl): Remove config checks when all repos converted to >=v2.0.0
   findDir "${root_dir}" \
-    "infrastructure/**/${product}/solutions" \
     "${product}/infrastructure/solutions" \
-    "config/**/${product}/solutionsv2" \
-    "${product}/config/solutionsv2"
+    "infrastructure/**/${product}/solutions" \
+    "${product}/config/solutionsv2" \
+    "config/**/${product}/solutionsv2"
 }
 
 function findGen3ProductBuildsDir() {
@@ -538,10 +507,10 @@ function findGen3ProductBuildsDir() {
 
   # TODO(mfl): Remove config checks when all repos converted to >=v2.0.0
   findDir "${root_dir}" \
-    "infrastructure/**/${product}/builds" \
     "${product}/infrastructure/builds" \
-    "config/**/${product}/settings" \
-    "${product}/config/settings"
+    "infrastructure/**/${product}/builds" \
+    "${product}/config/settings" \
+    "config/**/${product}/settings"
 }
 
 function findGen3ProductStateDir() {
@@ -550,10 +519,10 @@ function findGen3ProductStateDir() {
 
   # TODO(mfl): Remove infrastructure checks when all repos converted to >=v2.0.0
   findDir "${root_dir}" \
-    "state/**/${product}" \
     "${product}/state" \
-    "infrastructure/**/${product}" \
-    "${product}/infrastructure"
+    "state/**/${product}" \
+    "${product}/infrastructure" \
+    "infrastructure/**/${product}"
 }
 
 function findGen3ProductEnvironmentDir() {
@@ -741,6 +710,7 @@ function isValidUnit() {
 
   # Known levels
   declare -gA unit_required=( \
+    ["unitlist"]="false" \
     ["blueprint"]="false" \
     ["buildblueprint"]="true" \
     ["account"]="true" \
@@ -781,6 +751,78 @@ function isValidUnit() {
     result=$?
   fi
   return ${result}
+}
+
+function formatUnitCFDir() {
+  local base_dir="${1}"; shift
+  local level="${1,,}"; shift
+  local unit="${1,,}"; shift
+  local placement="${1,,}"; shift
+  local region="${1,,}"; shift
+
+  # Determine placement by region if not explicitly provided
+  if [[ -z "${placement}" ]]; then
+    case "${region}" in
+      us-east-1)
+        local placement="global"
+        ;;
+      *)
+        local placement="default"
+        ;;
+    esac
+  fi
+
+  echo -n "${base_dir}/${unit}/${placement}"
+  return 0
+}
+
+function getUnitCFDir() {
+  local base_dir="${1}"; shift
+  local level="${1,,}"; shift
+  local unit="${1,,}"; shift
+  local placement="${1,,}"; shift
+  local region="${1,,}"; shift
+
+  # Check for legacy files that don't contain the deployment unit
+  case "${level}" in
+    account)
+      if [[
+          ("${unit}" == "s3") && (-f "${base_dir}/account-${region}-template.json") ]]; then
+        echo -n "${base_dir}" && return 0
+      fi
+      ;;
+
+    product)
+      if [[
+          ("${unit}" == "cmk") && (-f "${base_dir}/product-${region}-template.json") ]]; then
+        echo -n "${base_dir}" && return 0
+      fi
+      ;;
+
+    solution)
+      if [[ -f "${base_dir}/solution-${region}-template.json" ]]; then
+        echo -n "${base_dir}" && return 0
+      fi
+      ;;
+
+    segment)
+      if [[
+          (!("${unit}" =~ cmk|cert|dns )) &&
+          (-f "${base_dir}/container-${region}-template.json") ]]; then
+        echo -n "${base_dir}" && return 0
+      fi
+      if [[
+          ("${unit}" == "cmk") &&
+          (
+            (-f "${base_dir}/seg-key-${region}-template.json") ||
+            (-f "${base_dir}/cont-key-${region}-template.json")
+          ) ]]; then
+        echo -n "${base_dir}" && return 0
+      fi
+      ;;
+  esac
+
+  formatUnitCFDir "${base_dir}" "${level}" "${unit}" "${placement}" "${region}"
 }
 
 # -- Upgrade CMDB --
@@ -1536,11 +1578,127 @@ function upgrade_cmdb_repo_to_v2_0_0() {
   return $return_status
 }
 
+function upgrade_cmdb_repo_to_v2_0_1() {
+  # Reorganise state files into a directory tree based on deployment unit and placement
+  #
+  # The format of the state tree will follow the pattern
+  # state/{df}/{env}/{seg}/{du}/{placement}
+  #
+  # Delete definition files because their file name contains the occurrence name not the
+  # deployment unit. They will be regenerated into the correct dir on the next build.
+  local root_dir="$1";shift
+  local dry_run="$1";shift
+
+
+  pushTempDir "${FUNCNAME[0]}_$(fileName "${root_dir}")_XXXX"
+  local tmp_dir="$(getTopTempDir)"
+  local return_status=0
+
+  readarray -t state_dirs < <(find "${root_dir}" -type d -name "state" )
+  for state_dir in "${state_dirs[@]}"; do
+
+    readarray -t deployment_frameworks < <(find "${state_dir}" -mindepth 1 -maxdepth 1 -type d )
+    for df_dir in "${deployment_frameworks[@]}"; do
+      local deployment_framework="$(fileName "${df_dir}")"
+
+      debug "${dry_run}Checking ${deployment_framework} deployment framework ..."
+      readarray -t state_files < <(find "${df_dir}" -type f )
+      for state_file in "${state_files[@]}"; do
+
+        local state_filepath="$(filePath "${state_file}")"
+        local state_filename="$(fileName "${state_file}")"
+
+        local stack_deployment_unit=""
+
+        # Filename format varies with deployment framework
+        if
+          contains "${state_filename}" "([a-z0-9]+)-(.+)-([a-z][a-z0-9]+)-([a-z]{2}-[a-z]+-[1-9])(-pseudo)?-(.+)" ||
+          contains "${state_filename}" "([a-z0-9]+)-(.+)-([a-z][a-z0-9]+)-(eastus|australiaeast|australiasoutheast|australiacentral|australiacentral2)(-pseudo)?-(.+)"; then
+
+          local stack_level="${BASH_REMATCH[1]}"
+          local stack_deployment_unit="${BASH_REMATCH[2]}"
+          local stack_region="${BASH_REMATCH[4]}"
+        fi
+
+        if [[ -z "${stack_deployment_unit}" ]]; then
+          # Legacy account formats
+          if contains "${state_filename}" "account-([a-z][a-z0-9]+)-([a-z]{2}-[a-z]+-[1-9])-(.+)"; then
+            local stack_level="account"
+            local stack_deployment_unit="${BASH_REMATCH[1]}"
+            local stack_region="${BASH_REMATCH[2]}"
+          fi
+          if contains "${state_filename}" "account-([a-z]{2}-[a-z]+-[1-9])-(.+)"; then
+            local stack_level="account"
+            local stack_deployment_unit="s3"
+            local stack_region="${BASH_REMATCH[1]}"
+          fi
+        fi
+
+        if [[ -z "${stack_deployment_unit}" ]]; then
+          # Legacy product formats
+          if contains "${state_filename}" "product-([a-z]{2}-[a-z]+-[1-9])-(.+)"; then
+            local stack_level="product"
+            local stack_deployment_unit="cmk"
+            local stack_region="${BASH_REMATCH[1]}"
+          fi
+        fi
+
+        if [[ -z "${stack_deployment_unit}" ]]; then
+          # Legacy segment formats
+          if contains "${state_filename}" "seg-key-([a-z]{2}-[a-z]+-[1-9])-(.+)"; then
+            local stack_level="seg"
+            local stack_deployment_unit="cmk"
+            local stack_region="${BASH_REMATCH[1]}"
+          fi
+          if contains "${state_filename}" "cont-([a-z][a-z0-9]+)-([a-z]{2}-[a-z]+-[1-9])-(.+)"; then
+            local stack_level="seg"
+            local stack_deployment_unit="${BASH_REMATCH[1]}"
+            local stack_region="${BASH_REMATCH[2]}"
+          fi
+        fi
+
+        if [[ -z "${stack_deployment_unit}" ]]; then
+          warn "${dry_run}Ignoring ${state_file}, doesn't match one of the expected state filename formats ..."
+          continue
+        fi
+
+        case "${stack_level}" in
+          defn)
+            # Definition files are copied on every template creation
+            info "${dry_run}Deleting ${state_file} ..."
+            [[ -n "${dry_run}" ]] && continue
+            git_rm -f "${state_file}" || { return_status=1; }
+            ;;
+
+          *)
+            # Add deployment unit based subdirectories
+            if contains "${state_filepath}" "${stack_deployment_unit}"; then
+              debug "${dry_run}Ignoring ${state_file}, already moved ..."
+            else
+              local du_dir=$(formatUnitCFDir "${state_filepath}" "${stack_level}" "${stack_deployment_unit}" "" "${stack_region}" )
+              info "${dry_run}Moving ${state_file} to ${du_dir} ..."
+              [[ -n "${dry_run}" ]] && continue
+              if [[ ! -d "${du_dir}" ]]; then
+                mkdir -p "${du_dir}"
+              fi
+              git_mv "${state_file}" "${du_dir}" || { return_status=1; }
+            fi
+            ;;
+        esac
+      done
+      [[ "${return_status}" -ne 0 ]] && break
+    done
+    [[ "${return_status}" -ne 0 ]] && break
+  done
+
+  popTempDir
+
+  return $return_status
+}
+
 declare -A gen3_compatability
-# TODO: Align to GEN3 framework version where v2.0.0 format is to be introduced
-gen3_compatability=(
-  ["2.0.0"]=">=7.0.0"
-)
+# Entry example:  ["2.0.0"]=">=7.0.0"
+gen3_compatability=()
 
 function is_upgrade_compatible() {
   local cmdb_version="$(semver_clean "$1")"; shift
@@ -1587,9 +1745,11 @@ function process_cmdb() {
 
     local cmdb_version_file="${cmdb_repo}/.cmdb"
     local current_version=""
+    local pin_version=""
 
     if [[ -f "${cmdb_version_file}" ]]; then
       current_version="$(jq -r ".Version.${action^} | select(.!=null)" < "${cmdb_version_file}")"
+      pin_version="$(jq -r ".Pin.${action^} | select(.!=null)" < "${cmdb_version_file}")"
       debug "Repo is at ${action,,} version ${current_version:-<not initialised>}"
     else
       echo -n "{}" > "${cmdb_version_file}"
@@ -1613,6 +1773,17 @@ function process_cmdb() {
       else
         debug "${action^} of repo "${cmdb_repo}" to ${version} is not required"
         continue
+      fi
+
+      # Check if version is pinned
+      if [[ -n "${pin_version}" ]]; then
+        local pin_check="$(semver_compare "${version}" "${pin_version}")"
+        if [[ "${pin_check}" == "1" ]]; then
+          warn "${action^} of repo "${cmdb_repo}" to ${version} prevented by pin version ${pin_version}"
+          break
+        else
+          debug "${dry_run}${action^} of repo "${cmdb_repo}" to ${version} permitted by pin version ${pin_version} ..."
+        fi
       fi
 
       # Ensure current gen3 framework version is compatible with the upgrade
@@ -1660,22 +1831,32 @@ function upgrade_cmdb() {
   local root_dir="$1";shift
   local gen3_version="$1";shift
   local dry_run="$1";shift
-  local versions="$1";shift
+  local maximum_version="${1:-v1.3.2}";shift
 
-  local required_versions=(${versions})
-  [[ -z "${versions}" ]] && required_versions=("v1.0.0" "v1.1.0" "v1.2.0" "v1.3.0" "v1.3.1" "v1.3.2")
+  local upgrade_order=("v1.0.0" "v1.1.0" "v1.2.0" "v1.3.0" "v1.3.1" "v1.3.2" "v2.0.0" "v2.0.1")
 
-  process_cmdb "${root_dir}" "upgrade" "${gen3_version}" "${required_versions[*]}" ${dry_run}
+  debug "Maximum CMDB upgrade version required is ${maximum_version}"
+
+  local required_versions="$(semver_upgrade_list "${upgrade_order[*]}" "${maximum_version}")"
+
+  debug "Required CMDB upgrade order is ${required_versions}"
+
+  process_cmdb "${root_dir}" "upgrade" "${gen3_version}" "${required_versions}" ${dry_run}
 }
 
 function cleanup_cmdb() {
   local root_dir="$1";shift
   local gen3_version="$1";shift
   local dry_run="$1";shift
-  local versions="$1";shift
+  local maximum_version="${1:-v1.1.1}";shift
 
-  local required_versions=(${versions})
-  [[ -z "${versions}" ]] && required_versions=("v1.0.0" "v1.1.0" "v1.1.1")
+  local upgrade_order=("v1.0.0" "v1.1.0" "v1.1.1")
 
-  process_cmdb "${root_dir}" "cleanup" "${gen3_version}" "${required_versions[*]}" ${dry_run}
+  debug "Maximum CMDB cleanup version required is ${maximum_version}"
+
+  local required_versions="$(semver_upgrade_list "${upgrade_order[*]}" "${maximum_version}")"
+
+  debug "Required CMDB cleanup order is ${required_versions}"
+
+  process_cmdb "${root_dir}" "cleanup" "${gen3_version}" "${required_versions}" ${dry_run}
 }

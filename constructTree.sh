@@ -123,13 +123,13 @@ touch ${BASE_DIR}/root.json
 BASE_DIR_TEMP="${BASE_DIR}/temp"
 
 if [[ !("${EXCLUDE_PRODUCT_DIRECTORIES}" == "true") ]]; then
-    
+
     # Pull in the product config repo
     ${AUTOMATION_DIR}/manageRepo.sh -c -l "product config" \
         -n "${PRODUCT_CONFIG_REPO}" -v "${PRODUCT_GIT_PROVIDER}" \
         -d "${BASE_DIR_TEMP}" -b "${PRODUCT_CONFIG_REFERENCE}"
     RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
-    
+
     # Ensure temporary files are ignored
     [[ (! -f "${BASE_DIR_TEMP}/.gitignore") || ($(grep -q "temp_\*" "${BASE_DIR_TEMP}/.gitignore") -ne 0) ]] && \
       echo "temp_*" >> "${BASE_DIR_TEMP}/.gitignore"
@@ -267,7 +267,7 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         TENANT_INFRASTRUCTURE_DIR="${BASE_DIR}/${TENANT}"
         mkdir -p $(filePath "${TENANT_INFRASTRUCTURE_DIR}")
         mv "${BASE_DIR_TEMP}" "${TENANT_INFRASTRUCTURE_DIR}"
-    fi 
+    fi
 
 fi
 
@@ -330,6 +330,10 @@ fi
 
 findGen3Dirs "${BASE_DIR}"
 RESULT=$? && [[ ${RESULT} -ne 0 ]] && exit
+
+# A couple of the older upgrades need GENERATION_DATA_DIR set to
+# locate the AWS account number to account id mappings
+export GENERATION_DATA_DIR="${BASE_DIR}"
 
 # Check the cmdb doesn't need upgrading
 debug "Checking if cmdb upgrade needed ..."

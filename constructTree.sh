@@ -261,13 +261,19 @@ if [[ !("${EXCLUDE_ACCOUNT_DIRECTORIES}" == "true") ]]; then
         mv "${BASE_DIR_TEMP}" "${ACCOUNT_INFRASTRUCTURE_DIR}"
     fi
 
-    TENANT_INFRASTRUCTURE_DIR=$(findGen3TenantInfrastructureDir "${BASE_DIR}" "${TENANT}")
-    if [[ -z "${TENANT_INFRASTRUCTURE_DIR}" ]]; then
-
-        TENANT_INFRASTRUCTURE_DIR="${BASE_DIR}/${TENANT}"
-        mkdir -p $(filePath "${TENANT_INFRASTRUCTURE_DIR}")
-        mv "${BASE_DIR_TEMP}" "${TENANT_INFRASTRUCTURE_DIR}"
-    fi
+# TODO(mfl): 03/02/2020 Remove the following code once its confirmed its redundant
+# From the Jenkins logs it throws errors when TENANT is non-empty which makes sense
+# as BASE_DIR_TEMP has been cleared by processing of the ACCOUNT. However sometimes
+# it doesn't which suggests that it either is blank or contains a directory with an
+# infrastructure subdirectory.
+# Either way, without a temp dir to move, it seems unnecessary.
+#    TENANT_INFRASTRUCTURE_DIR=$(findGen3TenantInfrastructureDir "${BASE_DIR}" "${TENANT}")
+#    if [[ -z "${TENANT_INFRASTRUCTURE_DIR}" ]]; then
+#
+#        TENANT_INFRASTRUCTURE_DIR="${BASE_DIR}/${TENANT}"
+#        mkdir -p $(filePath "${TENANT_INFRASTRUCTURE_DIR}")
+#        mv "${BASE_DIR_TEMP}" "${TENANT_INFRASTRUCTURE_DIR}"
+#    fi
 
 fi
 

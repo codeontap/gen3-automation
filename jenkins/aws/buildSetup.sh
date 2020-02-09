@@ -7,12 +7,30 @@ trap 'exit ${RESULT:-1}' EXIT SIGHUP SIGINT SIGTERM
 # Ensure we are in the directory where the repo was checked out
 cd ${AUTOMATION_BUILD_DIR}
 
+# Check for a build qualifier
+BUILD_TASK_QUALIFIER=
+if [[ -n "${BUILD_TASKS}" ]]; then
+    REQUIRED_TASKS=( ${BUILD_TASKS} )
+    for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
+        REQUIRED_TASK_BASE="${REQUIRED_TASK%%:*}"
+        REQUIRED_TASK_QUALIFIER="${REQUIRED_TASK##*:}"
+        if [[ ("${REQUIRED_TASK_BASE}" == "build") &&
+            ("${REQUIRED_TASK}" != "${REQUIRED_TASK_BASE}") ]]; then
+            BUILD_TASK_QUALIFIER="${REQUIRED_TASK_QUALIFIER,,}_"
+        fi
+    done
+fi
+
+DU_FILES=(
+    "${AUTOMATION_BUILD_DEVOPS_DIR}/${BUILD_TASK_QUALIFIER}deployment_units.json" \
+    "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/${BUILD_TASK_QUALIFIER}deployment_units.json" \
+    "${BUILD_TASK_QUALIFIER}deployment_units.json" \
+    slices.json slices.ref slice.ref \
+)
 # Check for repo provided deployment unit list
 # slice(s).ref and slices.json are legacy - always use deployment_units.json
 if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
-    for DU_FILE in "${AUTOMATION_BUILD_DEVOPS_DIR}/deployment_units.json" \
-            "${AUTOMATION_BUILD_DEVOPS_DIR}/codeontap/deployment_units.json" \
-            deployment_units.json slices.json slices.ref slice.ref; do
+    for DU_FILE in "${DU_FILES[@]}"; do
         if [[ -f "${DU_FILE}" ]]; then
             case "${DU_FILE##*.}" in
                 json)

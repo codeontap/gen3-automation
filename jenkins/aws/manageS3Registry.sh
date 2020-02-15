@@ -23,6 +23,7 @@ Manage images in an S3 backed registry
 
 Usage: $(basename $0) -s -v -p -k -x
                         -y REGISTRY_TYPE
+                        -c REGISTRY_SCOPE
                         -a REGISTRY_PROVIDER
                         -l REGISTRY_REPO
                         -t REGISTRY_TAG
@@ -40,6 +41,7 @@ where
 
 (o) -a REGISTRY_PROVIDER                is the local registry provider
 (o) -b REGISTRY_ADDITIONAL_DIRECTORY    is an additonal directory that is stored with the image
+(o) -c REGISTRY_SCOPE                   is the scope of the registry
 (o) -d REGISTRY_PRODUCT                 is the product to use when defaulting REGISTRY_REPO
 (o) -e REGISTRY_REMOVE_SOURCE           remove the source data once the image is in the registry
 (o) -f REGISTRY_FILENAME                is the filename used when storing images
@@ -70,7 +72,7 @@ DEFAULTS:
 REGISTRY_PROVIDER=${PRODUCT_${REGISTRY_TYPE}_PROVIDER}
 REGISTRY_TYPE=${REGISTRY_TYPE_DEFAULT}
 REGISTRY_FILENAME=${REGISTRY_FILENAME_DEFAULT}
-REGISTRY_REPO="REGISTRY_PRODUCT/REGISTRY_DEPLOYMENT_UNIT/REGISTRY_CODE_COMMIT" or 
+REGISTRY_REPO="REGISTRY_PRODUCT/REGISTRY_DEPLOYMENT_UNIT/REGISTRY_CODE_COMMIT" or
             "REGISTRY_PRODUCT/REGISTRY_CODE_COMMIT" if no REGISTRY_DEPLOYMENT_UNIT defined
 REGISTRY_TAG=${REGISTRY_TAG_DEFAULT}
 REMOTE_REGISTRY_PROVIDER=${PRODUCT_REMOTE_${REGISTRY_TYPE}_PROVIDER}
@@ -83,18 +85,24 @@ REGISTRY_REMOVE_SOURCE=${REGISTRY_REMOVE_SOURCE_DEFAULT}
 
 NOTES:
 
+1. Currently "segment" is the only accepted value for registry scope. If not
+   provided, the account level registry is used by default.
+
 EOF
     exit
 }
 
 # Parse options
-while getopts ":a:b:d:e:f:g:hki:l:pr:st:u:vxy:z:" opt; do
+while getopts ":a:b:c:d:e:f:g:hki:l:pr:st:u:vxy:z:" opt; do
     case $opt in
         a)
             REGISTRY_PROVIDER="${OPTARG}"
             ;;
         b)
             REGISTRY_ADDITIONAL_DIRECTORY="${OPTARG}"
+            ;;
+        c)
+            REGISTRY_SCOPE="${OPTARG}"
             ;;
         d)
             REGISTRY_PRODUCT="${OPTARG}"
@@ -180,7 +188,7 @@ PROVIDER_AWS_SESSION_TOKENS=()
 # Set credentials for S3 access
 # $1 = provider
 function setCredentials() {
-    
+
     # Key variables
     local SC_PROVIDER="${1^^}"
 
@@ -263,20 +271,20 @@ function copyToRegistry() {
 }
 
 # Remove the source S3 content. This is used to keep the S3 Stage clean for new uploads
-function removeSource() { 
+function removeSource() {
     local FILE_TO_REMOVE="${1}"
 
     info "removing ${FILE_TO_REMOVE}"
 
     if [[ "${FILE_TO_REMOVE}" =~ ^s3:// ]]; then
-        
+
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FILE_TO_REMOVE}"  >/dev/null 2>&1
         RESULT=$?
         [[ "$RESULT" -ne 0 ]] &&
             fatal "Can't access ${FILE_TO_REMOVE}" && return 128
 
-        aws --region "${REGISTRY_PROVIDER_REGION}" s3 rm --recursive "${FILE_TO_REMOVE}" 
-    
+        aws --region "${REGISTRY_PROVIDER_REGION}" s3 rm --recursive "${FILE_TO_REMOVE}"
+
     else
         info "Local data not removed as it is temporary anyway"
     fi
@@ -293,13 +301,27 @@ REGISTRY_OPERATION="${REGISTRY_OPERATION:-${REGISTRY_OPERATION_DEFAULT}}"
 REGISTRY_PRODUCT="${REGISTRY_PRODUCT:-${PRODUCT}}"
 REGISTRY_REMOVE_SOURCE="${REGISTRY_REMOVE_SOURCE:-${REGISTRY_REMOVE_SOURCE_DEFAULT}}"
 
+# Handle registry scope values
+case "${REGISTRY_SCOPE}" in
+    segment)
+        if [[ -n "${SEGMENT}" ]]; then
+            REGISTRY_SUBTYPE="/${SEGMENT}"
+        else
+          fatal "Segment scoped registry required but SEGMENT not defined" && exit
+        fi
+        ;;
+    *)
+        REGISTRY_SUBTYPE=""
+        ;;
+esac
+
 # Default local repository is based on standard image naming conventions
-if [[ (-n "${REGISTRY_PRODUCT}") && 
+if [[ (-n "${REGISTRY_PRODUCT}") &&
         (-n "${REGISTRY_CODE_COMMIT}") ]]; then
     if [[ (-n "${REGISTRY_DEPLOYMENT_UNIT}" ) ]]; then
-        REGISTRY_REPO="${REGISTRY_REPO:-${REGISTRY_PRODUCT}/${REGISTRY_DEPLOYMENT_UNIT}/${REGISTRY_CODE_COMMIT}}"
+        REGISTRY_REPO="${REGISTRY_REPO:-${REGISTRY_PRODUCT}${REGISTRY_SUBTYPE}/${REGISTRY_DEPLOYMENT_UNIT}/${REGISTRY_CODE_COMMIT}}"
     else
-        REGISTRY_REPO="${REGISTRY_REPO:-${REGISTRY_PRODUCT}/${REGISTRY_CODE_COMMIT}}"
+        REGISTRY_REPO="${REGISTRY_REPO:-${REGISTRY_PRODUCT}${REGISTRY_SUBTYPE}/${REGISTRY_CODE_COMMIT}}"
     fi
 fi
 
@@ -351,15 +373,15 @@ case ${REGISTRY_OPERATION} in
     ${REGISTRY_OPERATION_SAVE})
         copyToRegistry "${REGISTRY_FILENAME}" "${BASE_REGISTRY_FILENAME}"
         if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then
-            copyToRegistry "${REGISTRY_ADDITIONAL_DIRECTORY}" 
+            copyToRegistry "${REGISTRY_ADDITIONAL_DIRECTORY}"
         fi
-        
+
         # Clean out the source staging directory
-        if [[ "${REGISTRY_REMOVE_SOURCE}" == "true" ]]; then 
+        if [[ "${REGISTRY_REMOVE_SOURCE}" == "true" ]]; then
             removeSource "${REGISTRY_FILENAME}"
-            if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then 
+            if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then
                 removeSource "${REGISTRY_ADDITIONAL_DIRECTORY}"
-            fi 
+            fi
         fi
         ;;
 
@@ -368,7 +390,7 @@ case ${REGISTRY_OPERATION} in
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FULL_TAGGED_REGISTRY_IMAGE}" >/dev/null 2>&1
         RESULT=$?
         if [[ "${RESULT}" -eq 0 ]]; then
-            info "${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} present in the local registry" 
+            info "${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} present in the local registry"
             exit
         else
             info "${REGISTRY_TYPE^} image ${REGISTRY_IMAGE} with tag ${REGISTRY_TAG} not present in the local registry"
@@ -380,7 +402,7 @@ case ${REGISTRY_OPERATION} in
         # Formulate the remote registry details
         REMOTE_TAGGED_REGISTRY_IMAGE="${REGISTRY_TYPE}/${REMOTE_REGISTRY_REPO}/tags/${REMOTE_REGISTRY_TAG}"
         FULL_REMOTE_TAGGED_REGISTRY_IMAGE="s3://${REGISTRY_PROVIDER_DNS}/${REMOTE_TAGGED_REGISTRY_IMAGE}"
-        
+
         # Check for the local image
         aws --region "${REGISTRY_PROVIDER_REGION}" s3 ls "${FULL_REGISTRY_IMAGE}" >/dev/null 2>&1
         RESULT=$?
@@ -393,7 +415,7 @@ case ${REGISTRY_OPERATION} in
             [[ "${RESULT}" -ne 0 ]] &&
                 fatal "Couldn't tag image ${FULL_REGISTRY_IMAGE} with tag ${REMOTE_REGISTRY_TAG}" && exit
         fi
-        ;;        
+        ;;
 
     ${REGISTRY_OPERATION_PULL})
         # Formulate the remote registry details
@@ -426,14 +448,14 @@ case ${REGISTRY_OPERATION} in
 
         copyToRegistry "${IMAGE_FILE}" "${BASE_REGISTRY_FILENAME}"
         if [[ -n "${REGISTRY_ADDITIONAL_DIRECTORY}" ]]; then
-            if [[ "${REGISTRY_ADDITIONAL_DIRECTORY}" == "REGISTRY_CONTENT" ]]; then 
+            if [[ "${REGISTRY_ADDITIONAL_DIRECTORY}" == "REGISTRY_CONTENT" ]]; then
                 copyToRegistry "${FULL_REMOTE_REGISTRY_PATH}"
-            else 
-                copyToRegistry "${REGISTRY_ADDITIONAL_DIRECTORY}" 
+            else
+                copyToRegistry "${REGISTRY_ADDITIONAL_DIRECTORY}"
             fi
         fi
-        ;;        
-        
+        ;;
+
     *)
         fatal "Unknown operation \"${REGISTRY_OPERATION}\"" && exit
         ;;

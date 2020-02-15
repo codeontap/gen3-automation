@@ -24,6 +24,7 @@ Usage: $(basename $0) -s -v -p -k -x
                         -y SNAPSHOT_TYPE
                         -q SNAPSHOT_SOURCE
                         -a SNAPSHOT_PROVIDER
+                        -c REGISTRY_SCOPE
                         -l SNAPSHOT_REPO
                         -t SNAPSHOT_TAG
                         -z REMOTE_SNAPSHOT_PROVIDER
@@ -36,6 +37,7 @@ Usage: $(basename $0) -s -v -p -k -x
 where
 
 (o) -a SNAPSHOT_PROVIDER                is the local registry provider
+(o) -c REGISTRY_SCOPE                   is the registry scope
 (o) -d SNAPSHOT_PRODUCT                 is the product to use when defaulting SNAPSHOT_REPO
 (o) -g SNAPSHOT_CODE_COMMIT             to use when defaulting SNAPSHOT_REPO
     -h                                  shows this text
@@ -78,10 +80,13 @@ EOF
 }
 
 # Parse options
-while getopts ":a:d:g:hki:l:pqr:st:u:vxy:z:" opt; do
+while getopts ":a:c:d:g:hki:l:pqr:st:u:vxy:z:" opt; do
     case $opt in
         a)
             SNAPSHOT_PROVIDER="${OPTARG}"
+            ;;
+        c)
+            REGISTRY_SCOPE="${OPTARG}"
             ;;
         d)
             SNAPSHOT_PRODUCT="${OPTARG}"
@@ -203,13 +208,28 @@ SNAPSHOT_TAG="${SNAPSHOT_TAG:-${SNAPSHOT_TAG_DEFAULT}}"
 SNAPSHOT_OPERATION="${SNAPSHOT_OPERATION:-${SNAPSHOT_OPERATION_DEFAULT}}"
 SNAPSHOT_PRODUCT="${SNAPSHOT_PRODUCT:-${PRODUCT}}"
 
+# Handle registry scope values
+case "${REGISTRY_SCOPE}" in
+    segment)
+        if [[ -n "${SEGMENT}" ]]; then
+            REGISTRY_SUBTYPE="-${SEGMENT}"
+        else
+          fatal "Segment scoped registry required but SEGMENT not defined" && exit
+        fi
+        ;;
+    *)
+        REGISTRY_SUBTYPE=""
+        ;;
+esac
+
+
 # Default local repository is based on standard image naming conventions
 if [[ (-n "${SNAPSHOT_PRODUCT}") &&
         (-n "${SNAPSHOT_CODE_COMMIT}") ]]; then
     if [[ (-n "${SNAPSHOT_DEPLOYMENT_UNIT}" ) ]]; then
-        SNAPSHOT_REPO="${SNAPSHOT_REPO:-${SNAPSHOT_PRODUCT}-${SNAPSHOT_DEPLOYMENT_UNIT}-${SNAPSHOT_CODE_COMMIT}}"
+        SNAPSHOT_REPO="${SNAPSHOT_REPO:-${SNAPSHOT_PRODUCT}${REGISTRY_SCOPE}-${SNAPSHOT_DEPLOYMENT_UNIT}-${SNAPSHOT_CODE_COMMIT}}"
     else
-        SNAPSHOT_REPO="${SNAPSHOT_REPO:-${SNAPSHOT_PRODUCT}-${SNAPSHOT_CODE_COMMIT}}"
+        SNAPSHOT_REPO="${SNAPSHOT_REPO:-${SNAPSHOT_PRODUCT}${REGISTRY_SCOPE}-${SNAPSHOT_CODE_COMMIT}}"
     fi
 fi
 

@@ -20,12 +20,24 @@ function usage() {
 
 Manage docker images
 
-Usage: $(basename $0) -b -v -p -k -a DOCKER_PROVIDER -l DOCKER_REPO -t DOCKER_TAG -z REMOTE_DOCKER_PROVIDER -i REMOTE_DOCKER_REPO -r REMOTE_DOCKER_TAG -u DOCKER_IMAGE_SOURCE  -d DOCKER_PRODUCT -s DOCKER_DEPLOYMENT_UNIT -g DOCKER_CODE_COMMIT
+Usage: $(basename $0) -b -v -p -k
+                        -a DOCKER_PROVIDER
+                        -c REGISTRY_SCOPE
+                        -l DOCKER_REPO
+                        -t DOCKER_TAG
+                        -z REMOTE_DOCKER_PROVIDER
+                        -i REMOTE_DOCKER_REPO
+                        -r REMOTE_DOCKER_TAG
+                        -u DOCKER_IMAGE_SOURCE
+                        -d DOCKER_PRODUCT
+                        -s DOCKER_DEPLOYMENT_UNIT
+                        -g DOCKER_CODE_COMMIT
 
 where
 
 (o) -a DOCKER_PROVIDER          is the local docker provider
 (o) -b                          perform docker build and save in local registry
+(o) -c REGISTRY_SCOPE           is the registry scope
 (o) -d DOCKER_PRODUCT           is the product to use when defaulting DOCKER_REPO
 (o) -g DOCKER_CODE_COMMIT       to use when defaulting DOCKER_REPO
     -h                          shows this text
@@ -65,13 +77,16 @@ EOF
 }
 
 # Parse options
-while getopts ":a:bd:g:hki:l:pr:s:t:u:vz:" opt; do
+while getopts ":a:bc:d:g:hki:l:pr:s:t:u:vz:" opt; do
     case $opt in
         a)
             DOCKER_PROVIDER="${OPTARG}"
             ;;
         b)
             DOCKER_OPERATION="${DOCKER_OPERATION_BUILD}"
+            ;;
+        c)
+            REGISTRY_SCOPE="${OPTARG}"
             ;;
         d)
             DOCKER_PRODUCT="${OPTARG}"
@@ -234,6 +249,21 @@ DOCKER_IMAGE_SOURCE="${DOCKER_IMAGE_SOURCE:-${DOCKER_IMAGE_SOURCE_DEFAULT}}"
 DOCKER_OPERATION="${DOCKER_OPERATION:-${DOCKER_OPERATION_DEFAULT}}"
 DOCKER_PRODUCT="${DOCKER_PRODUCT:-${PRODUCT}}"
 
+# Handle registry scope values
+case "${REGISTRY_SCOPE}" in
+    segment)
+        if [[ -n "${SEGMENT}" ]]; then
+            REGISTRY_SUBTYPE="-${SEGMENT}"
+        else
+          fatal "Segment scoped registry required but SEGMENT not defined" && exit
+        fi
+        ;;
+    *)
+        REGISTRY_SUBTYPE=""
+        ;;
+esac
+
+
 # Allow for the docker context to be overriden for shared dependencies
 if [[ -n "${DOCKER_CONTEXT_DIR}" ]]; then
     DOCKER_CONTEXT_DIR="${AUTOMATION_DATA_DIR}/${DOCKER_CONTEXT_DIR}"
@@ -245,9 +275,9 @@ fi
 if [[ (-n "${DOCKER_PRODUCT}") &&
         (-n "${DOCKER_CODE_COMMIT}") ]]; then
     if [[ (-n "${DOCKER_DEPLOYMENT_UNIT}" ) ]]; then
-        DOCKER_REPO="${DOCKER_REPO:-${DOCKER_PRODUCT}/${DOCKER_DEPLOYMENT_UNIT}-${DOCKER_CODE_COMMIT}}"
+        DOCKER_REPO="${DOCKER_REPO:-${DOCKER_PRODUCT}${REGISTRY_SUBTYPE}/${DOCKER_DEPLOYMENT_UNIT}-${DOCKER_CODE_COMMIT}}"
     else
-        DOCKER_REPO="${DOCKER_REPO:-${DOCKER_PRODUCT}/${DOCKER_CODE_COMMIT}}"
+        DOCKER_REPO="${DOCKER_REPO:-${DOCKER_PRODUCT}${REGISTRY_SUBTYPE}/${DOCKER_CODE_COMMIT}}"
     fi
 fi
 

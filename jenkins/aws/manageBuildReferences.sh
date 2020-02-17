@@ -17,10 +17,17 @@ function usage() {
 
 Manage build references for one or more deployment units
 
-Usage: $(basename $0)   -s DEPLOYMENT_UNIT_LIST -g SEGMENT_BUILDS_DIR
-                        -c CODE_COMMIT_LIST -t CODE_TAG_LIST -r CODE_REPO_LIST
-                        -p CODE_PROVIDER_LIST -i IMAGE_FORMATS_LIST
-                        -a ACCEPTANCE_TAG -v VERIFICATION_TAG -f -l -u
+Usage: $(basename $0)  -f -l -u
+                        -s DEPLOYMENT_UNIT_LIST
+                        -g SEGMENT_BUILDS_DIR
+                        -c CODE_COMMIT_LIST
+                        -t CODE_TAG_LIST
+                        -r CODE_REPO_LIST
+                        -o REGISTRY_SCOPE
+                        -p CODE_PROVIDER_LIST
+                        -i IMAGE_FORMATS_LIST
+                        -a ACCEPTANCE_TAG
+                        -v VERIFICATION_TAG
 where
 (o) -a ACCEPTANCE_TAG (REFERENCE_OPERATION=${REFERENCE_OPERATION_ACCEPT}) to tag all builds as accepted
 (o) -c CODE_COMMIT_LIST             is the commit for each deployment unit
@@ -29,6 +36,7 @@ where
     -h                              shows this text
 (o) -i IMAGE_FORMATS_LIST           is the list of image formats for each deployment unit
 (o) -l (REFERENCE_OPERATION=${REFERENCE_OPERATION_LIST}) to detail DEPLOYMENT_UNIT_LIST build info
+(o) -o REGISTRY_SCOPE               is the registry scope
 (o) -p CODE_PROVIDER_LIST           is the repo provider for each deployment unit
 (o) -r CODE_REPO_LIST               is the repo for each deployment unit
 (m) -s DEPLOYMENT_UNIT_LIST         is the list of deployment units to process
@@ -127,10 +135,14 @@ function formatBuildReference() {
     local FBR_COMMIT="${1,,}"
     local FBR_TAG="${2:-?}"
     local FBR_FORMATS="${3,,:-?}"
+    local FBR_SCOPE="${4,,:-?}"
 
     BUILD_REFERENCE="{\"Commit\": \"${FBR_COMMIT}\""
     if [[ "${FBR_TAG}" != "?" ]]; then
         BUILD_REFERENCE="${BUILD_REFERENCE}, \"Tag\": \"${FBR_TAG}\""
+    fi
+    if [[ "${FBR_SCOPE}" != "?" ]]; then
+        BUILD_REFERENCE="${BUILD_REFERENCE}, \"Scope\": \"${FBR_SCOPE}\""
     fi
     if [[ "${FBR_FORMATS}" == "?" ]]; then
         FBR_FORMATS="docker"
@@ -158,7 +170,7 @@ function defineGitProviderAttributes() {
 }
 
 # Parse options
-while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
+while getopts ":a:c:fg:hi:lo:p:r:s:t:uv:z:" opt; do
     case $opt in
         a)
             REFERENCE_OPERATION="${REFERENCE_OPERATION_ACCEPT}"
@@ -181,6 +193,9 @@ while getopts ":a:c:fg:hi:lp:r:s:t:uv:z:" opt; do
             ;;
         l)
             REFERENCE_OPERATION="${REFERENCE_OPERATION_LIST}"
+            ;;
+        o)
+            REGISTRY_SCOPE="${OPTARG}"
             ;;
         p)
             CODE_PROVIDER_LIST="${OPTARG}"
@@ -365,7 +380,7 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
             fi
 
             # Construct the build reference
-            formatBuildReference "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMATS}"
+            formatBuildReference "${CODE_COMMIT}" "${CODE_TAG}" "${IMAGE_FORMATS}" "${REGISTRY_SCOPE}"
 
             # Update the build reference
             # Use newer naming and clean up legacy named build reference files

@@ -14,13 +14,14 @@ function usage() {
 
 Manage images corresponding to the current build
 
-Usage: $(basename $0) -g CODE_COMMIT -u DEPLOYMENT_UNIT -f IMAGE_FORMATS
+Usage: $(basename $0) -c REGISTRY_SCOPE -g CODE_COMMIT -u DEPLOYMENT_UNIT -f IMAGE_FORMATS
 
 where
 
+(o) -c REGISTRY_SCOPE  is the registry scope for the image
 (m) -f IMAGE_FORMATS   is the comma separated list of image formats to manage
 (m) -g CODE_COMMIT     to use when defaulting REGISTRY_REPO
-(m) -u DEPLOYMENT_UNIT is the deployment unit associated with the imges
+(m) -u DEPLOYMENT_UNIT is the deployment unit associated with the images
 
 (m) mandatory, (o) optional, (d) deprecated
 
@@ -37,8 +38,11 @@ EOF
 }
 
 # Parse options
-while getopts ":f:g:hu:" opt; do
+while getopts ":c:f:g:hs:u:" opt; do
     case $opt in
+        c)
+            REGISTRY_SCOPE="${OPTARG}"
+            ;;
         f)
             IMAGE_FORMATS="${OPTARG}"
             ;;
@@ -85,7 +89,8 @@ for FORMAT in "${FORMATS[@]}"; do
                     -u "${DEPLOYMENT_UNIT}" \
                     -g "${CODE_COMMIT}" \
                     -f "${IMAGE_FILE}" \
-                    -b "${S3_DATA_STAGE}"
+                    -b "${S3_DATA_STAGE}" \
+                    -c "${REGISTRY_SCOPE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             else
                 RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
@@ -94,8 +99,9 @@ for FORMAT in "${FORMATS[@]}"; do
 
         rdssnapshot)
             ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -s \
-                    -u "$DEPLOYMENT_UNIT" \
+                    -u "${DEPLOYMENT_UNIT}" \
                     -g "${CODE_COMMIT}" \
+                    -c "${REGISTRY_SCOPE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             ;;
 
@@ -109,7 +115,10 @@ for FORMAT in "${FORMATS[@]}"; do
                 DOCKERFILE="${AUTOMATION_DATA_DIR}/${DOCKER_FILE}"
             fi
             if [[ -f "${DOCKERFILE}" ]]; then
-                ${AUTOMATION_DIR}/manageDocker.sh -b -s "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                ${AUTOMATION_DIR}/manageDocker.sh -b \
+                    -s "${DEPLOYMENT_UNIT}" \
+                    -g "${CODE_COMMIT}" \
+                    -c "${REGISTRY_SCOPE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             else
                 RESULT=1 && fatal "Dockerfile missing" && exit
@@ -123,7 +132,8 @@ for FORMAT in "${FORMATS[@]}"; do
                 ${AUTOMATION_DIR}/manageLambda.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
-                        -f "${IMAGE_FILE}"
+                        -f "${IMAGE_FILE}" \
+                        -c "${REGISTRY_SCOPE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             else
                 RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
@@ -137,7 +147,8 @@ for FORMAT in "${FORMATS[@]}"; do
                 ${AUTOMATION_DIR}/managePipeline.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
-                        -f "${IMAGE_FILE}"
+                        -f "${IMAGE_FILE}" \
+                        -c "${REGISTRY_SCOPE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]]&& exit
             else
                 RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
@@ -151,7 +162,8 @@ for FORMAT in "${FORMATS[@]}"; do
                 ${AUTOMATION_DIR}/manageScripts.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
-                        -f "${IMAGE_FILE}"
+                        -f "${IMAGE_FILE}" \
+                        -c "${REGISTRY_SCOPE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]]&& exit
             else
                 RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
@@ -166,6 +178,7 @@ for FORMAT in "${FORMATS[@]}"; do
                         -f "${IMAGE_FILE}" \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
+                        -c "${REGISTRY_SCOPE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]] && exit
             else
                 RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
@@ -179,7 +192,8 @@ for FORMAT in "${FORMATS[@]}"; do
                 ${AUTOMATION_DIR}/manageSpa.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
-                        -f "${IMAGE_FILE}"
+                        -f "${IMAGE_FILE}" \
+                        -c "${REGISTRY_SCOPE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]]&& exit
             else
                 RESULT=1 && fatal "${IMAGE_FILE} missing" && exit
@@ -193,7 +207,8 @@ for FORMAT in "${FORMATS[@]}"; do
                 ${AUTOMATION_DIR}/manageContentNode.sh -s \
                         -u "${DEPLOYMENT_UNIT}" \
                         -g "${CODE_COMMIT}" \
-                        -f "${IMAGE_FILE}"
+                        -f "${IMAGE_FILE}" \
+                        -c "${REGISTRY_SCOPE}"
                 RESULT=$? && [[ "${RESULT}" -ne 0 ]]&& exit
             else
                 RESULT=1 && fatal "${IMAGE_FILE} missing" && exit

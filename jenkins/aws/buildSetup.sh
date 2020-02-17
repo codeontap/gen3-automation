@@ -41,12 +41,21 @@ if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
                         fi
                         declare "${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE}"
                     done
+                    for ATTRIBUTE in scope; do
+                        ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE} | select(.!=null)" < "${DU_FILE}" | tr -d "\r\n")
+                        if [[ -z "${ATTRIBUTE_VALUE}" ]]; then
+                            ATTRIBUTE_VALUE=$(jq -r ".${ATTRIBUTE^} | select(.!=null)" < "${DU_FILE}" | tr -d "\r\n")
+                        fi
+                        declare "${ATTRIBUTE^^}"="${ATTRIBUTE_VALUE}"
+                    done
                     export DEPLOYMENT_UNIT_LIST="${UNITS:-${SLICES}}"
+                    export REGISTRY_SCOPE="${SCOPE,,}"
                     break
                     ;;
 
                 ref)
                     export DEPLOYMENT_UNIT_LIST=$(cat "${DU_FILE}")
+                    export REGISTRY_SCOPE=""
                     break
                     ;;
             esac
@@ -54,6 +63,7 @@ if [[ -z "${DEPLOYMENT_UNIT_LIST}" ]]; then
     done
 
     save_context_property DEPLOYMENT_UNIT_LIST
+    save_context_property REGISTRY_SCOPE
 fi
 
 # Already set image format overrides that in the repo
@@ -64,12 +74,15 @@ export IMAGE_FORMATS_LIST=$(IFS="${IMAGE_FORMAT_SEPARATORS}"; echo "${IMAGE_FORM
 save_context_property IMAGE_FORMATS_LIST
 
 DEPLOYMENT_UNIT_ARRAY=(${DEPLOYMENT_UNIT_LIST})
+DEPLOYMENT_UNIT="${DEPLOYMENT_UNIT_ARRAY[0]}"
 CODE_COMMIT_ARRAY=(${CODE_COMMIT_LIST})
+CODE_COMMIT="${CODE_COMMIT_ARRAY[0]}"
 
 # Record key parameters for downstream jobs
 save_chain_property DEPLOYMENT_UNITS "${DEPLOYMENT_UNIT_LIST}"
-save_chain_property GIT_COMMIT "${CODE_COMMIT_ARRAY[0]}"
+save_chain_property GIT_COMMIT "${CODE_COMMIT}"
 save_chain_property IMAGE_FORMATS
+save_chain_property REGISTRY_SCOPE
 
 # Include the build information in the detail message
 ${AUTOMATION_DIR}/manageBuildReferences.sh -l
@@ -78,60 +91,61 @@ RESULT=$?
 
 # Ensure no builds exist regardless of format
 PRESENT=0
+
 for IMAGE_FORMAT in "${IMAGE_FORMATS_ARRAY[@]}"; do
     case ${IMAGE_FORMAT,,} in
         dataset)
-            ${AUTOMATION_DIR}/manageDataSetS3.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "undefined"
+            ${AUTOMATION_DIR}/manageDataSetS3.sh -v -u "${DEPLOYMENT_UNIT}" -g "undefined" -c "${REGISTRY_SCOPE}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         rdssnapshot)
-            ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "undefined"
+            ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v -u "${DEPLOYMENT_UNIT}" -g "undefined" -c "${REGISTRY_SCOPE}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         docker)
-            ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            ${AUTOMATION_DIR}/manageDocker.sh -v -s "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -c "${REGISTRY_SCOPE}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         lambda)
-            ${AUTOMATION_DIR}/manageLambda.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            ${AUTOMATION_DIR}/manageLambda.sh -v -u "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -c "${REGISTRY_SCOPE}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         pipeline)
-            ${AUTOMATION_DIR}/managePipeline.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            ${AUTOMATION_DIR}/managePipeline.sh -v -u "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -c "${REGISTRY_SCOPE}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         scripts)
-            ${AUTOMATION_DIR}/manageScripts.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            ${AUTOMATION_DIR}/manageScripts.sh -v -u "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -c "${REGISTRY_SCOPE}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         openapi|swagger)
             ${AUTOMATION_DIR}/manageOpenapi.sh -v \
-                -y "${IMAGE_FORMAT,,}" -f "${IMAGE_FORMAT,,}.zip" \
-                -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+                -y "${IMAGE_FORMAT,,}"  -c "${REGISTRY_SCOPE}" -f "${IMAGE_FORMAT,,}.zip" \
+                -u "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         spa)
-            ${AUTOMATION_DIR}/manageSpa.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            ${AUTOMATION_DIR}/manageSpa.sh -v -u "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -c "${REGISTRY_SCOPE}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;
 
         contentnode)
-            ${AUTOMATION_DIR}/manageContentNode.sh -v -u "${DEPLOYMENT_UNIT_ARRAY[0]}" -g "${CODE_COMMIT_ARRAY[0]}"
+            ${AUTOMATION_DIR}/manageContentNode.sh -v -u "${DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -c "${REGISTRY_SCOPE}"
             RESULT=$?
             [[ "${RESULT}" -eq 0 ]] && PRESENT=1
             ;;

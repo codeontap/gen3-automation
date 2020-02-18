@@ -325,21 +325,34 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                     IMAGE_FORMAT_LOWER=${IMAGE_FORMAT,,}
                     case ${IMAGE_FORMAT_LOWER} in
                         docker)
-                            ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
-                                -s "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                            ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k \
+                                -a "${IMAGE_PROVIDER}" \
+                                -s "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                -g "${CODE_COMMIT}" \
+                                -r "${ACCEPTANCE_TAG}" \
+                                -c "${REGISTRY_SCOPE}"
                             RESULT=$?
                             [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
                         lambda|spa|contentnode|scripts|pipeline|dataset|rdssnapshot)
-                            ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k -a "${IMAGE_PROVIDER}" \
-                                -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                            ${AUTOMATION_DIR}/manage${IMAGE_FORMAT_LOWER^}.sh -k \
+                                -a "${IMAGE_PROVIDER}" \
+                                -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                -g "${CODE_COMMIT}" \
+                                -r "${ACCEPTANCE_TAG}" \
+                                -c "${REGISTRY_SCOPE}"
                             RESULT=$?
                             [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
                         openapi|swagger)
-                            ${AUTOMATION_DIR}/manageOpenapi.sh -k -a "${IMAGE_PROVIDER}" \
-                                -y "${IMAGE_FORMAT_LOWER}" -f "${IMAGE_FORMAT_LOWER}.zip" \
-                                -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}" -r "${ACCEPTANCE_TAG}"
+                            ${AUTOMATION_DIR}/manageOpenapi.sh -k
+                                -a "${IMAGE_PROVIDER}" \
+                                -y "${IMAGE_FORMAT_LOWER}"
+                                -f "${IMAGE_FORMAT_LOWER}.zip" \
+                                -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                -g "${CODE_COMMIT}" \
+                                -r "${ACCEPTANCE_TAG}" \
+                                -c "${REGISTRY_SCOPE}"
                             RESULT=$?
                             [[ "${RESULT}" -ne 0 ]] && exit
                             ;;
@@ -445,41 +458,77 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                 FROM_IMAGE_PROVIDER="${!FROM_IMAGE_PROVIDER_VAR}"
                 case ${IMAGE_FORMAT,,} in
                     dataset)
-                        ${AUTOMATION_DIR}/manageDataSetS3.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageDataSetS3.sh -v \
+                            -a "${IMAGE_PROVIDER}" \
+                            -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -c "${REGISTRY_SCOPE}"
                         RESULT=$?
                         ;;
                     rdssnapshot)
-                        ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -v \
+                            -a "${IMAGE_PROVIDER}" \
+                            -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -c "${REGISTRY_SCOPE}"
                         RESULT=$?
                         ;;
                     docker)
-                        ${AUTOMATION_DIR}/manageDocker.sh -v -a "${IMAGE_PROVIDER}" -s "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageDocker.sh -v \
+                            -a "${IMAGE_PROVIDER}" \
+                            -s "${REGISTRY_DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -c "${REGISTRY_SCOPE}"
                         RESULT=$?
                         ;;
                     lambda)
-                        ${AUTOMATION_DIR}/manageLambda.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageLambda.sh -v \
+                            -a "${IMAGE_PROVIDER}" \
+                            -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -c "${REGISTRY_SCOPE}"
                         RESULT=$?
                         ;;
                     pipeline)
-                        ${AUTOMATION_DIR}/managePipeline.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/managePipeline.sh -v \
+                            -a "${IMAGE_PROVIDER}" \
+                            -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -c "${REGISTRY_SCOPE}"
                         RESULT=$?
                         ;;
                     scripts)
-                        ${AUTOMATION_DIR}/manageScripts.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageScripts.sh -v \
+                            -a "${IMAGE_PROVIDER}" \
+                            -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -c "${REGISTRY_SCOPE}"
                         RESULT=$?
                         ;;
                     openapi|swagger)
                         ${AUTOMATION_DIR}/manageOpenapi.sh -v \
-                            -y "${IMAGE_FORMAT,,}" -f "${IMAGE_FORMAT,,}.zip" \
-                            -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                            -y "${IMAGE_FORMAT,,}" \
+                            -f "${IMAGE_FORMAT,,}.zip" \
+                            -a "${IMAGE_PROVIDER}" \
+                            -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -c "${REGISTRY_SCOPE}"
                         RESULT=$?
                         ;;
                     spa)
-                        ${AUTOMATION_DIR}/manageSpa.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageSpa.sh -v \
+                            -a "${IMAGE_PROVIDER}" \
+                            -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -c "${REGISTRY_SCOPE}"
                         RESULT=$?
                         ;;
                     contentnode)
-                        ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                        ${AUTOMATION_DIR}/manageContentNode.sh -v \
+                            -a "${IMAGE_PROVIDER}" \
+                            -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                            -g "${CODE_COMMIT}" \
+                            -c "${REGISTRY_SCOPE}"
                         RESULT=$?
                         ;;
                     *)
@@ -491,41 +540,94 @@ for ((INDEX=0; INDEX<${#DEPLOYMENT_UNIT_ARRAY[@]}; INDEX++)); do
                         # Attempt to pull image in from remote provider
                         case ${IMAGE_FORMAT,,} in
                             dataset)
-                                ${AUTOMATION_DIR}/manageDataSetS3.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -b "REGISTRY_CONTENT"
+                                ${AUTOMATION_DIR}/manageDataSetS3.sh -p \
+                                    -a "${IMAGE_PROVIDER}" \
+                                    -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                    -g "${CODE_COMMIT}" \
+                                    -r "${VERIFICATION_TAG}" \
+                                    -z "${FROM_IMAGE_PROVIDER}" \
+                                    -b "REGISTRY_CONTENT" \
+                                    -c "${REGISTRY_SCOPE}"
                                 RESULT=$?
                                 ;;
                             rdssnapshot)
-                                ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}" -g "${CODE_COMMIT}"
+                                ${AUTOMATION_DIR}/manageDataSetRDSSnapshot.sh -p \
+                                    -a "${IMAGE_PROVIDER}" \
+                                    -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                    -r "${VERIFICATION_TAG}" \
+                                    -z "${FROM_IMAGE_PROVIDER}" \
+                                    -g "${CODE_COMMIT}" \
+                                    -c "${REGISTRY_SCOPE}"
                                 RESULT=$?
                                 ;;
                             docker)
-                                ${AUTOMATION_DIR}/manageDocker.sh -p -a "${IMAGE_PROVIDER}" -s "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageDocker.sh -p \
+                                    -a "${IMAGE_PROVIDER}" \
+                                    -s "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                    -g "${CODE_COMMIT}" \
+                                    -r "${VERIFICATION_TAG}" \
+                                    -z "${FROM_IMAGE_PROVIDER}" \
+                                    -c "${REGISTRY_SCOPE}"
                                 RESULT=$?
                                 ;;
                             lambda)
-                                ${AUTOMATION_DIR}/manageLambda.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageLambda.sh -p \
+                                    -a "${IMAGE_PROVIDER}" \
+                                    -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                    -g "${CODE_COMMIT}" \
+                                    -r "${VERIFICATION_TAG}" \
+                                    -z "${FROM_IMAGE_PROVIDER}" \
+                                    -c "${REGISTRY_SCOPE}"
                                 RESULT=$?
                                 ;;
                             pipeline)
-                                ${AUTOMATION_DIR}/managePipeline.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/managePipeline.sh -p \
+                                    -a "${IMAGE_PROVIDER}" \
+                                    -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                    -g "${CODE_COMMIT}" \
+                                    -r "${VERIFICATION_TAG}" \
+                                    -z "${FROM_IMAGE_PROVIDER}" \
+                                    -c "${REGISTRY_SCOPE}"
                                 RESULT=$?
                                 ;;
                             scripts)
-                                ${AUTOMATION_DIR}/manageScripts.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageScripts.sh -p \
+                                    -a "${IMAGE_PROVIDER}" \
+                                    -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                    -g "${CODE_COMMIT}" \
+                                    -r "${VERIFICATION_TAG}" \
+                                    -z "${FROM_IMAGE_PROVIDER}" \
+                                    -c "${REGISTRY_SCOPE}"
                                 RESULT=$?
                                 ;;
                             openapi|swagger)
-                                ${AUTOMATION_DIR}/manageOpenapi.sh -x -p -a "${IMAGE_PROVIDER}" \
-                                    -y "${IMAGE_FORMAT,,}" -f "${IMAGE_FORMAT,,}.zip" \
-                                    -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageOpenapi.sh -x -p \
+                                    -a "${IMAGE_PROVIDER}" \
+                                    -y "${IMAGE_FORMAT,,}" \
+                                    -f "${IMAGE_FORMAT,,}.zip" \
+                                    -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                    -g "${CODE_COMMIT}" \
+                                    -r "${VERIFICATION_TAG}" \
+                                    -z "${FROM_IMAGE_PROVIDER}" \
+                                    -c "${REGISTRY_SCOPE}"
                                 RESULT=$?
                                 ;;
                             spa)
-                                ${AUTOMATION_DIR}/manageSpa.sh -p -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"  -r "${VERIFICATION_TAG}" -z "${FROM_IMAGE_PROVIDER}"
+                                ${AUTOMATION_DIR}/manageSpa.sh -p \
+                                    -a "${IMAGE_PROVIDER}" \
+                                    -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                    -g "${CODE_COMMIT}" \
+                                    -r "${VERIFICATION_TAG}" \
+                                    -z "${FROM_IMAGE_PROVIDER}" \
+                                    -c "${REGISTRY_SCOPE}"
                                 RESULT=$?
                                 ;;
                             contentnode)
-                                ${AUTOMATION_DIR}/manageContentNode.sh -v -a "${IMAGE_PROVIDER}" -u "${REGISTRY_DEPLOYMENT_UNIT}" -g "${CODE_COMMIT}"
+                                ${AUTOMATION_DIR}/manageContentNode.sh -v \
+                                -a "${IMAGE_PROVIDER}" \
+                                -u "${REGISTRY_DEPLOYMENT_UNIT}" \
+                                -g "${CODE_COMMIT}" \
+                                -c "${REGISTRY_SCOPE}"
                                 RESULT=$?
                                 ;;
                             *)

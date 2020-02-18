@@ -54,7 +54,6 @@ function main() {
     # Perform format specific tasks if defined
     IMAGE_FORMATS_ARRAY=(${IMAGE_FORMATS_LIST})
     IFS="${IMAGE_FORMAT_SEPARATORS}" read -ra FORMATS <<< "${IMAGE_FORMATS_ARRAY[0]}"
-    REQUIRED_TASKS=( "${REQUIRED_TASKS[@]}" "${FORMATS[@]}" )
 
     # The build file existence checks below rely on nullglob
     # to return nothing if no match
@@ -62,7 +61,8 @@ function main() {
     BUILD_FILES=(?runtfile.js ?ulpfile.js package.json)
 
     # Perform build tasks in the order specified
-    for REQUIRED_TASK in "${REQUIRED_TASKS[@]}"; do
+    for REQUIRED_TASK in "${REQUIRED_TASKS[@]}" "${FORMATS[@]}"; do
+        TASK_FOUND=
         for BUILD_FILE in "${BUILD_FILES[@]}"; do
             BUILD_TASKS=()
             case ${BUILD_FILE} in
@@ -83,6 +83,7 @@ function main() {
             esac
 
             if [[ "${BUILD_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" != "${BUILD_TASKS[*]}" ]]; then
+                TASK_FOUND=true
                 ${BUILD_UTILITY} ${REQUIRED_TASK} ||
                     { exit_status=$?; fatal "${BUILD_UTILITY} \"${TASK}\" task failed";  return ${exit_status}; }
 
@@ -90,6 +91,14 @@ function main() {
                 break
             fi
         done
+        if [[ ("${TASK_FOUND}" == "true") || ("${IGNORE_MISSING_TASKS}" == "true") ]]; then
+            # Nothing more to do for this task
+          continue
+        fi
+        if [[ "${REQUIRED_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" = "${REQUIRED_TASKS[*]}" ]]; then
+            # If was a required task so fail
+            fatal "Required task ${REQUIRED_TASK} not found in build files"; return 1
+        fi
     done
 
     # Clean up dev dependencies

@@ -95,7 +95,7 @@ function main() {
             # Nothing more to do for this task
           continue
         fi
-        if [[ "${REQUIRED_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" = "${REQUIRED_TASKS[*]}" ]]; then
+        if [[ "${REQUIRED_TASKS[*]/${REQUIRED_TASK}/XXfoundXX}" != "${REQUIRED_TASKS[*]}" ]]; then
             # If was a required task so fail
             fatal "Required task ${REQUIRED_TASK} not found in build files"; return 1
         fi

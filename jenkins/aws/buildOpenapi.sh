@@ -150,9 +150,9 @@ for VALIDATOR in "${VALIDATORS[@]}"; do
 done
 
 # Remove definitions in swagger file not supported by AWS
-SWAGGER_EXTENDED_BASE_FILE="${tmpdir}/swagger-extended-base.json"
+OPENAPI_EXTENDED_BASE_FILE="${tmpdir}/${REGISTRY_TYPE}-extended-base.json"
 
-runJQ -f "${AUTOMATION_DIR}/cleanUpOpenapi.jq" < "${TEMP_OPENAPI_SPEC_FILE}" > "${SWAGGER_EXTENDED_BASE_FILE}"
+runJQ -f "${AUTOMATION_DIR}/cleanUpOpenapi.jq" < "${TEMP_OPENAPI_SPEC_FILE}" > "${OPENAPI_EXTENDED_BASE_FILE}"
 
 # Augment the swagger file if required
 APIGW_CONFIG=$(findFile \
@@ -168,7 +168,7 @@ OPENAPI_RESULT_FILE="${DIST_DIR}/${REGISTRY_TYPE}.zip"
 if [[ -f "${APIGW_CONFIG}" ]]; then
     # Generate the swagger file
     ${GENERATION_DIR}/createExtendedSwaggerSpecification.sh \
-        -s "${SWAGGER_EXTENDED_BASE_FILE}" \
+        -s "${OPENAPI_EXTENDED_BASE_FILE}" \
         -o "${OPENAPI_RESULT_FILE}" \
         -i "${APIGW_CONFIG}"
 
@@ -176,7 +176,7 @@ if [[ -f "${APIGW_CONFIG}" ]]; then
     [[ ! -f "${OPENAPI_RESULT_FILE}" ]] &&
         fatal "Can't find generated openAPI files. Were they generated successfully?" && exit 1
 else
-    zip -j "${OPENAPI_RESULT_FILE}" "${SWAGGER_EXTENDED_BASE_FILE}"
+    zip -j "${OPENAPI_RESULT_FILE}" "${OPENAPI_EXTENDED_BASE_FILE}"
 fi
 
 # All good

@@ -189,6 +189,22 @@ function main() {
     fi
   fi
 
+  if inArray "REQUIRED_TASKS" "collectstatic"; then
+    # Run collectstatic
+    if [[ -f manage.py ]]; then
+      info "Collecting static files ..."
+
+      MANAGE_OPTIONS=""
+      if [[ -n ${COLLECTSTATIC_OPTIONS} ]]; then
+        MANAGE_OPTIONS+=" ${COLLECTSTATIC_OPTIONS}"
+      fi
+      python manage.py collectstatic ${MANAGE_OPTIONS} ||
+              { exit_status=$?; fatal "Collecting static files failed"; return ${exit_status}; }
+    else
+      warning "No manage.py"
+    fi
+  fi
+
   if inArray "REQUIRED_TASKS" "build"; then
     # Clean up pyc files before packaging into zappa
     find ${AUTOMATION_BUILD_SRC_DIR} -name '*.pyc' -delete

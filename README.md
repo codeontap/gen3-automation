@@ -1,3 +1,7 @@
+**This repo has been archived** 
+
+This has been moved to hamlet - https://github.com/hamlet-io/executor-bash 
+
 # gen3-automation
 CI/CD process management via automation tools.
 
